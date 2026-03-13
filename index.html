@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhonePulse — Smartphone & Tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pulse: #FF5C1A;
+    --pulse-light: #FFF0EA;
+    --pulse-mid: #FFD4C2;
+    --ink: #111010;
+    --ink-soft: #3D3D3D;
+    --ink-muted: #888;
+    --paper: #FAF9F7;
+    --paper-dark: #F0EEE9;
+    --white: #FFFFFF;
+    --border: #E5E2DB;
+    --serif: 'Lora', Georgia, serif;
+    --display: 'Barlow Condensed', sans-serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── ORANGE TOP STRIPE ── */
+  .top-stripe {
+    background: var(--pulse);
+    height: 4px;
+    width: 100%;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250,249,247,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    background: var(--pulse);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-mark svg { width: 18px; height: 18px; fill: white; }
+
+  .logo-text {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+
+  .logo-text span { color: var(--pulse); }
+
+  nav { display: flex; align-items: center; gap: 4px; }
+
+  nav a {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  nav a:hover { background: var(--paper-dark); color: var(--ink); }
+  nav a.active { color: var(--pulse); }
+
+  .nav-telegram {
+    margin-left: 8px;
+    background: #229ED9 !important;
+    color: white !important;
+    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    padding: 6px 14px;
+  }
+
+  .nav-telegram:hover { background: #1a8abf !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34,158,217,0.3); }
+
+  .nav-telegram svg { width: 15px; height: 15px; fill: white; flex-shrink: 0; }
+
+  /* ── HERO ── */
+  .hero {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 32px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: 520px;
+    align-items: stretch;
+  }
+
+  .hero-left {
+    padding-right: 56px;
+    padding-bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--pulse-light);
+    color: var(--pulse);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--pulse);
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(52px, 6vw, 84px);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -1px;
+    color: var(--ink);
+    margin-bottom: 24px;
+    text-transform: uppercase;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--pulse);
+  }
+
+  .hero h1 .outline {
+    -webkit-text-stroke: 2px var(--ink);
+    color: transparent;
+  }
+
+  .hero-sub {
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    max-width: 420px;
+    margin-bottom: 36px;
+  }
+
+  .hero-actions { display: flex; align-items: center; gap: 16px; }
+
+  .btn-primary {
+    background: var(--pulse);
+    color: white;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary:hover { background: #e04e10; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,92,26,0.3); }
+
+  .btn-ghost {
+    color: var(--ink-soft);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+  }
+
+  .btn-ghost:hover { color: var(--pulse); }
+  .btn-ghost::after { content: '→'; transition: transform 0.2s; }
+  .btn-ghost:hover::after { transform: translateX(4px); }
+
+  /* ── HERO FEATURED ── */
+  .hero-right {
+    padding-left: 56px;
+    padding-bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    animation: fadeUp 0.7s 0.15s ease both;
+  }
+
+  .featured-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 16px;
+  }
+
+  .featured-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.3s;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+
+  .featured-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+
+  .featured-img {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .featured-img::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 50%, rgba(255,92,26,0.2) 0%, transparent 60%);
+  }
+
+  .phone-mock {
+    width: 90px;
+    height: 160px;
+    background: linear-gradient(160deg, #2a2a3e, #1a1a2e);
+    border-radius: 18px;
+    border: 2px solid rgba(255,255,255,0.15);
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .phone-mock::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+
+  .phone-mock::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    background: linear-gradient(160deg, rgba(255,92,26,0.1), transparent);
+    border-radius: 12px;
+  }
+
+  .phone-score {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--pulse);
+    color: white;
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 8px;
+    line-height: 1;
+  }
+
+  .featured-body { padding: 20px 24px 24px; }
+
+  .featured-cat {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pulse);
+    margin-bottom: 8px;
+  }
+
+  .featured-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .featured-meta {
+    font-size: 13px;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .star-row { color: var(--pulse); font-size: 13px; letter-spacing: -1px; }
+
+  /* ── SECTION HEADER ── */
+  .section-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 32px 0;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: 36px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+  }
+
+  .section-title span { color: var(--pulse); }
+
+  .section-link {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pulse);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: gap 0.2s;
+  }
+
+  .section-link:hover { gap: 8px; }
+
+  /* ── UNIFIED FEED ── */
+  .feed-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+    margin-bottom: 64px;
+    align-items: start;
+  }
+
+  /* Main feed column */
+  .feed-main { display: flex; flex-direction: column; gap: 0; }
+
+  .feed-item {
+    display: flex;
+    gap: 20px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .feed-item:first-child { padding-top: 0; }
+  .feed-item:hover .feed-item-title { color: var(--pulse); }
+
+  .feed-item:nth-child(1) { animation-delay: 0.05s; }
+  .feed-item:nth-child(2) { animation-delay: 0.1s; }
+  .feed-item:nth-child(3) { animation-delay: 0.15s; }
+  .feed-item:nth-child(4) { animation-delay: 0.2s; }
+  .feed-item:nth-child(5) { animation-delay: 0.25s; }
+
+  .feed-item-thumb {
+    width: 120px;
+    height: 90px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .feed-item-thumb.c-orange { background: linear-gradient(135deg, #FF5C1A, #ff8c5a); }
+  .feed-item-thumb.c-dark   { background: linear-gradient(135deg, #1a1a2e, #2d2d4e); }
+  .feed-item-thumb.c-teal   { background: linear-gradient(135deg, #0d7377, #14a085); }
+  .feed-item-thumb.c-slate  { background: linear-gradient(135deg, #334155, #475569); }
+  .feed-item-thumb.c-violet { background: linear-gradient(135deg, #4c1d95, #6d28d9); }
+
+  .thumb-label {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: -1px;
+    user-select: none;
+  }
+
+  .feed-item-body { flex: 1; min-width: 0; }
+
+  .feed-item-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .tag-review  { background: var(--pulse-light); color: var(--pulse); }
+  .tag-news    { background: #EEF2FF; color: #4F46E5; }
+  .tag-compare { background: #F0FDF4; color: #15803D; }
+  .tag-guide   { background: #FFF7ED; color: #C2410C; }
+  .tag-deal    { background: #FEFCE8; color: #CA8A04; }
+
+  .feed-item-title {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 6px;
+    transition: color 0.2s;
+  }
+
+  .feed-item-meta {
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .feed-item-meta .dot { opacity: 0.4; }
+
+  /* Sidebar */
+  .feed-sidebar { display: flex; flex-direction: column; gap: 24px; }
+
+  /* ── TELEGRAM BOX ── */
+  .telegram-box {
+    background: linear-gradient(135deg, #0f2744 0%, #1a3a5c 100%);
+    border-radius: 16px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .telegram-box::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(34,158,217,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .telegram-box:hover { transform: translateY(-3px); }
+
+  .tg-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .tg-icon {
+    width: 36px;
+    height: 36px;
+    background: #229ED9;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .tg-icon svg { width: 20px; height: 20px; fill: white; }
+
+  .tg-label {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: 0.3px;
+  }
+
+  .tg-desc {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .tg-deals-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tg-deal-row {
+    background: rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .tg-deal-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tg-deal-price {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 800;
+    color: #FFD700;
+    flex-shrink: 0;
+  }
+
+  .tg-deal-off {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255,92,26,0.85);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .tg-cta {
+    background: #229ED9;
+    color: white;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+
+  .tg-cta:hover { background: #1a8abf; }
+  .tg-cta svg { width: 14px; height: 14px; fill: white; }
+
+  /* ── SIDEBAR MINI CARD ── */
+  .sidebar-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.2s;
+  }
+
+  .sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.08); border-color: var(--pulse-mid); }
+
+  .sidebar-card-thumb {
+    height: 100px;
+    border-radius: 8px;
+    margin: -18px -20px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .sidebar-card-thumb.c-dark { background: linear-gradient(135deg, #1a1a2e, #2d2d4e); }
+  .sidebar-card-thumb.c-teal { background: linear-gradient(135deg, #0d7377, #14a085); }
+
+  .sidebar-card-cat {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pulse);
+    margin-bottom: 6px;
+  }
+
+  .sidebar-card-title {
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .sidebar-card-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+
+  /* ── COMPARATIVI BAND ── */
+  .band {
+    background: var(--ink);
+    padding: 64px 0;
+    margin: 64px 0;
+  }
+
+  .band-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .band .section-header { border-bottom-color: rgba(255,255,255,0.15); }
+  .band .section-title { color: var(--white); }
+  .band .section-title span { color: var(--pulse); }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .compare-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.2s;
+  }
+
+  .compare-card:hover { background: rgba(255,92,26,0.12); border-color: rgba(255,92,26,0.3); transform: translateX(4px); }
+
+  .compare-vs {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background: var(--pulse);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 0.5px;
+  }
+
+  .compare-text { flex: 1; }
+
+  .compare-title {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .compare-sub { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+  .compare-arrow { color: rgba(255,255,255,0.3); font-size: 18px; transition: transform 0.2s; }
+  .compare-card:hover .compare-arrow { transform: translateX(4px); color: var(--pulse); }
+
+  /* ── NEWSLETTER ── */
+  .newsletter-section {
+    max-width: 1200px;
+    margin: 0 auto 80px;
+    padding: 0 32px;
+  }
+
+  .newsletter-box {
+    background: linear-gradient(135deg, var(--pulse-light) 0%, #fff5ef 100%);
+    border: 1px solid var(--pulse-mid);
+    border-radius: 20px;
+    padding: 48px 56px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .newsletter-box h3 {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .newsletter-box h3 span { color: var(--pulse); }
+
+  .newsletter-box p {
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 440px;
+  }
+
+  .newsletter-form { display: flex; gap: 12px; align-items: center; }
+
+  .newsletter-input {
+    padding: 13px 18px;
+    border: 1.5px solid var(--pulse-mid);
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    background: white;
+    color: var(--ink);
+    width: 240px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .newsletter-input:focus { border-color: var(--pulse); }
+  .newsletter-input::placeholder { color: var(--ink-muted); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    color: rgba(255,255,255,0.55);
+    padding: 56px 0 32px;
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .footer-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 48px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .footer-brand .logo-text { color: white; font-size: 24px; }
+  .footer-brand .logo-text span { color: var(--pulse); }
+
+  .footer-tagline {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 10px;
+    line-height: 1.6;
+    max-width: 260px;
+  }
+
+  .footer-tg-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #229ED9;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 100px;
+    text-decoration: none;
+    margin-top: 14px;
+    transition: background 0.2s;
+  }
+
+  .footer-tg-pill:hover { background: #1a8abf; }
+  .footer-tg-pill svg { width: 12px; height: 12px; fill: white; }
+
+  .footer-col h4 {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 16px;
+  }
+
+  .footer-col a {
+    display: block;
+    font-size: 14px;
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+    margin-bottom: 10px;
+    transition: color 0.2s;
+  }
+
+  .footer-col a:hover { color: white; }
+
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-copy { font-size: 13px; }
+
+  .footer-socials { display: flex; gap: 12px; }
+
+  .social-pill {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .social-pill:hover { background: var(--pulse); color: white; }
+
+  .social-pill.tg:hover { background: #229ED9; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ORANGE STRIPE -->
+<div class="top-stripe"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a href="#" class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24"><path d="M17 1H7C5.9 1 5 1.9 5 3v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm-5 20c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm5-4H7V4h10v13z"/></svg>
+      </div>
+      <span class="logo-text">Phone<span>Pulse</span></span>
+    </a>
+    <nav>
+      <a href="#" class="active">Feed</a>
+      <a href="#">Recensioni</a>
+      <a href="#">Comparativi</a>
+      <a href="#">Guide</a>
+      <a href="#" class="nav-telegram">
+        <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        Offerte Telegram
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-tag">Prove & Tech dal 2025</div>
+      <h1>Ogni<br>smartphone<br><em>testato</em><br><span class="outline">sul campo</span></h1>
+      <p class="hero-sub">Prove reali su tutta la gamma: entry, mid-range, flagship e pieghevoli. Notizie tech, comparativi e guide — senza filtri, con prezzi italiani.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          Esplora il feed
+        </a>
+        <a href="#" class="btn-ghost">Ultime prove</a>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="featured-label">⚡ Recensione in evidenza</div>
+      <a href="#" class="featured-card">
+        <div class="featured-img">
+          <div class="phone-mock"></div>
+          <div class="phone-score">9.1</div>
+        </div>
+        <div class="featured-body">
+          <div class="featured-cat">Review flagship · Samsung</div>
+          <div class="featured-title">Galaxy S25 Ultra: il miglior Android del 2025, punto.</div>
+          <div class="featured-meta">
+            <div class="star-row">★★★★★</div>
+            <span>11 min lettura</span>
+            <span>·</span>
+            <span>10 mar 2025</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN FEED -->
+<section class="section-wrap">
+  <div class="section-header">
+    <div class="section-title">Feed <span>aggiornato</span></div>
+    <a href="#" class="section-link">Tutto il feed →</a>
+  </div>
+
+  <div class="feed-grid">
+    <!-- Main feed -->
+    <div class="feed-main">
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-orange"><div class="thumb-label">S25</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-review">Recensione</span>
+            <span class="tag tag-deal">🏷 Offerta</span>
+          </div>
+          <div class="feed-item-title">Samsung Galaxy S25 Ultra dopo 2 settimane: autonomia, foto notturna e S Pen — il verdetto completo</div>
+          <div class="feed-item-meta">
+            <span>12 mar 2025</span><span class="dot">·</span><span>10 min</span><span class="dot">·</span><span>Flagship · 1.299€</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-dark"><div class="thumb-label">AI</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-news">News</span>
+          </div>
+          <div class="feed-item-title">Gemini 2.0 arriva su tutti gli Android: cosa cambia davvero e cosa è solo marketing</div>
+          <div class="feed-item-meta">
+            <span>11 mar 2025</span><span class="dot">·</span><span>4 min</span><span class="dot">·</span><span>Google · AI</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-teal"><div class="thumb-label">R14</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-review">Recensione</span>
+          </div>
+          <div class="feed-item-title">Redmi Note 14 Pro: test autonomia reale dopo 5 giorni. Xiaomi mantiene le promesse?</div>
+          <div class="feed-item-meta">
+            <span>9 mar 2025</span><span class="dot">·</span><span>7 min</span><span class="dot">·</span><span>Mid-range · 329€</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-violet"><div class="thumb-label">VS</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-compare">Comparativo</span>
+          </div>
+          <div class="feed-item-title">iPhone 16 vs Galaxy S25: non è la solita guerra. Ecco dove vince davvero uno e dove l'altro</div>
+          <div class="feed-item-meta">
+            <span>7 mar 2025</span><span class="dot">·</span><span>12 min</span><span class="dot">·</span><span>Flagship</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-slate"><div class="thumb-label">MWC</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-news">News</span>
+          </div>
+          <div class="feed-item-title">MWC 2025: tutti gli annunci che contano — dai pieghevoli ai chip Snapdragon 8 Elite</div>
+          <div class="feed-item-meta">
+            <span>5 mar 2025</span><span class="dot">·</span><span>6 min</span><span class="dot">·</span><span>Evento · Barcellona</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="feed-item">
+        <div class="feed-item-thumb c-orange"><div class="thumb-label">Guida</div></div>
+        <div class="feed-item-body">
+          <div class="feed-item-tags">
+            <span class="tag tag-guide">Guida</span>
+          </div>
+          <div class="feed-item-title">Migliore smartphone 2025 in ogni fascia: la guida completa da 150€ a 1.500€</div>
+          <div class="feed-item-meta">
+            <span>3 mar 2025</span><span class="dot">·</span><span>15 min</span><span class="dot">·</span><span>Evergreen · Aggiornata</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Sidebar -->
+    <div class="feed-sidebar">
+
+      <!-- TELEGRAM BOX -->
+      <a href="#" class="telegram-box">
+        <div class="tg-header">
+          <div class="tg-icon">
+            <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+          </div>
+          <div class="tg-label">Offerte Telegram</div>
+        </div>
+        <p class="tg-desc">Le migliori offerte Amazon.it in tempo reale. Solo tech, solo sconti veri.</p>
+        <div class="tg-deals-preview">
+          <div class="tg-deal-row">
+            <span class="tg-deal-name">Redmi Note 14 Pro 8/256</span>
+            <span class="tg-deal-price">279€</span>
+            <span class="tg-deal-off">-20%</span>
+          </div>
+          <div class="tg-deal-row">
+            <span class="tg-deal-name">Samsung Galaxy A55 5G</span>
+            <span class="tg-deal-price">319€</span>
+            <span class="tg-deal-off">-15%</span>
+          </div>
+          <div class="tg-deal-row">
+            <span class="tg-deal-name">POCO X7 Pro 12/512</span>
+            <span class="tg-deal-price">349€</span>
+            <span class="tg-deal-off">-18%</span>
+          </div>
+        </div>
+        <div class="tg-cta">
+          <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+          Unisciti al canale →
+        </div>
+      </a>
+
+      <!-- Mini sidebar cards -->
+      <a href="#" class="sidebar-card">
+        <div class="sidebar-card-thumb c-dark"><div class="thumb-label" style="font-family:var(--display);font-size:28px;font-weight:900;color:rgba(255,255,255,0.2);">Z7</div></div>
+        <div class="sidebar-card-cat">Pieghevole · Samsung</div>
+        <div class="sidebar-card-title">Galaxy Z Fold 7: prime impressioni dalla presentazione di Londra</div>
+        <div class="sidebar-card-meta">8 mar 2025 · 5 min</div>
+      </a>
+
+      <a href="#" class="sidebar-card">
+        <div class="sidebar-card-thumb c-teal"><div class="thumb-label" style="font-family:var(--display);font-size:28px;font-weight:900;color:rgba(255,255,255,0.2);">16e</div></div>
+        <div class="sidebar-card-cat">News · Apple</div>
+        <div class="sidebar-card-title">iPhone 16e ufficiale: tutto quello che c'è da sapere sul prezzo italiano</div>
+        <div class="sidebar-card-meta">4 mar 2025 · 3 min</div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- COMPARATIVI BAND -->
+<div class="band">
+  <div class="band-inner">
+    <div class="section-header" style="margin-bottom: 28px;">
+      <div class="section-title">Comparativi <span>diretti</span></div>
+      <a href="#" class="section-link">Vedi tutti →</a>
+    </div>
+    <div class="compare-row">
+      <a href="#" class="compare-card">
+        <div class="compare-vs">VS</div>
+        <div class="compare-text">
+          <div class="compare-title">iPhone 16 vs Galaxy S25</div>
+          <div class="compare-sub">Flagship · 900-1.100€ · Ecosistema, foto, AI</div>
+        </div>
+        <div class="compare-arrow">→</div>
+      </a>
+      <a href="#" class="compare-card">
+        <div class="compare-vs">VS</div>
+        <div class="compare-text">
+          <div class="compare-title">POCO X7 Pro vs OnePlus 13R</div>
+          <div class="compare-sub">Performance · 400-500€ · Gaming e velocità</div>
+        </div>
+        <div class="compare-arrow">→</div>
+      </a>
+      <a href="#" class="compare-card">
+        <div class="compare-vs">VS</div>
+        <div class="compare-text">
+          <div class="compare-title">Xiaomi 14T vs Realme 13 Pro+</div>
+          <div class="compare-sub">Mid-premium · 500-600€ · Fotografia e display</div>
+        </div>
+        <div class="compare-arrow">→</div>
+      </a>
+      <a href="#" class="compare-card">
+        <div class="compare-vs">VS</div>
+        <div class="compare-text">
+          <div class="compare-title">Samsung A35 vs Motorola Edge 50</div>
+          <div class="compare-sub">Entry · 200-300€ · Rapporto qualità-prezzo</div>
+        </div>
+        <div class="compare-arrow">→</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- NEWSLETTER -->
+<div class="newsletter-section">
+  <div class="newsletter-box">
+    <div>
+      <h3>Rimani sul <span>pezzo</span></h3>
+      <p>Nuove recensioni, news tech e comparativi ogni settimana. Niente spam, solo contenuti che valgono il tuo tempo.</p>
+    </div>
+    <div class="newsletter-form">
+      <input type="email" class="newsletter-input" placeholder="La tua email">
+      <a href="#" class="btn-primary">Iscriviti</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <span class="logo-text">Phone<span>Pulse</span></span>
+        <p class="footer-tagline">Prove reali su ogni smartphone — dall'entry al flagship. Notizie tech, comparativi e offerte selezionate.</p>
+        <a href="#" class="footer-tg-pill">
+          <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+          Offerte su Telegram
+        </a>
+      </div>
+      <div class="footer-col">
+        <h4>Contenuti</h4>
+        <a href="#">Feed</a>
+        <a href="#">Recensioni</a>
+        <a href="#">Comparativi</a>
+        <a href="#">Guide acquisto</a>
+        <a href="#">News tech</a>
+      </div>
+      <div class="footer-col">
+        <h4>Blog</h4>
+        <a href="#">Chi siamo</a>
+        <a href="#">Come recensiamo</a>
+        <a href="#">Media kit</a>
+        <a href="#">Contatti</a>
+      </div>
+      <div class="footer-col">
+        <h4>Brand</h4>
+        <a href="#">Apple</a>
+        <a href="#">Samsung</a>
+        <a href="#">Xiaomi</a>
+        <a href="#">Google Pixel</a>
+        <a href="#">OnePlus</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2025 PhonePulse.com — Tutti i diritti riservati</span>
+      <div class="footer-socials">
+        <a href="#" class="social-pill tg">Telegram</a>
+        <a href="#" class="social-pill">Instagram</a>
+        <a href="#" class="social-pill">Twitter / X</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
