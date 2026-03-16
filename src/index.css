@@ -10,3 +10,94 @@
     @apply font-heading;
   }
 }
+
+/* Article markdown content */
+.article-content {
+  @apply text-gray-700 leading-relaxed;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.article-content h1,
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+  @apply font-heading font-bold text-dark mt-10 mb-4;
+}
+
+.article-content h1 { @apply text-3xl; }
+.article-content h2 { @apply text-2xl; }
+.article-content h3 { @apply text-xl; }
+.article-content h4 { @apply text-lg; }
+
+.article-content p {
+  @apply mb-5;
+}
+
+.article-content a {
+  @apply text-primary underline underline-offset-2 hover:text-primary-dark transition-colors;
+}
+
+.article-content strong {
+  @apply font-semibold text-dark;
+}
+
+.article-content ul,
+.article-content ol {
+  @apply mb-5 pl-6 space-y-2;
+}
+
+.article-content ul {
+  list-style-type: disc;
+}
+
+.article-content ol {
+  list-style-type: decimal;
+}
+
+.article-content li {
+  @apply text-gray-700;
+}
+
+.article-content blockquote {
+  @apply border-l-4 border-primary/40 pl-5 my-6 text-gray-500 italic;
+}
+
+.article-content pre {
+  @apply bg-dark text-gray-200 rounded-xl p-5 overflow-x-auto my-6 text-sm;
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  line-height: 1.6;
+}
+
+.article-content code {
+  @apply bg-gray-100 text-primary text-sm px-1.5 py-0.5 rounded font-mono;
+}
+
+.article-content pre code {
+  @apply bg-transparent text-gray-200 p-0 text-sm;
+}
+
+.article-content img {
+  @apply rounded-xl border border-border my-8 w-full object-cover;
+}
+
+.article-content table {
+  @apply w-full border-collapse my-6 text-sm;
+}
+
+.article-content th {
+  @apply bg-gray-50 text-left font-body font-semibold text-dark px-4 py-3 border border-border;
+}
+
+.article-content td {
+  @apply px-4 py-3 border border-border text-gray-600;
+}
+
+.article-content tr:nth-child(even) td {
+  @apply bg-gray-50/50;
+}
+
+.article-content hr {
+  @apply border-border my-10;
+}
