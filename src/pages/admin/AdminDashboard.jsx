@@ -28,10 +28,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchStats() {
-      const [total, published, categories] = await Promise.all([
+      const [total, published, categories, pending] = await Promise.all([
         supabase.from('articles').select('id', { count: 'exact', head: true }),
         supabase.from('articles').select('id', { count: 'exact', head: true }).eq('is_published', true),
         supabase.from('categories').select('id', { count: 'exact', head: true }),
+        supabase.from('articles').select('id', { count: 'exact', head: true }).eq('needs_review', true).eq('discarded', false).eq('is_published', false),
       ])
 
       setStats({
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
         published: published.count ?? 0,
         drafts: (total.count ?? 0) - (published.count ?? 0),
         categories: categories.count ?? 0,
+        pending: pending.count ?? 0,
       })
       setLoading(false)
     }
@@ -54,11 +56,35 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Tot. articoli" value={stats?.total} color="#0D0D0D" loading={loading} />
         <StatCard label="Pubblicati" value={stats?.published} color="#22c55e" loading={loading} />
         <StatCard label="Bozze" value={stats?.drafts} color="#f59e0b" loading={loading} />
         <StatCard label="Categorie" value={stats?.categories} color="#FF5C1A" loading={loading} />
+      </div>
+
+      {/* Pending review card */}
+      <div className="mb-10">
+        <Link
+          to="/admin/review"
+          className="flex items-center justify-between bg-white border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors group max-w-sm"
+        >
+          <div>
+            <p className="text-xs font-body font-medium text-gray-400 uppercase tracking-wide mb-1">
+              Bozze in attesa
+            </p>
+            {loading ? (
+              <div className="h-8 bg-gray-200 rounded w-10 animate-pulse" />
+            ) : (
+              <p className="text-3xl font-heading font-bold text-primary">{stats?.pending ?? '—'}</p>
+            )}
+          </div>
+          <span className="text-primary/40 group-hover:text-primary transition-colors">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M9 5l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </Link>
       </div>
 
       {/* Quick links */}

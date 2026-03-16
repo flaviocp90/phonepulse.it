@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 
@@ -43,7 +43,24 @@ const navItems = [
 export default function AdminLayout() {
   const [userEmail, setUserEmail] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   const navigate = useNavigate()
+
+  const fetchPendingCount = useCallback(async () => {
+    const { count } = await supabase
+      .from('articles')
+      .select('id', { count: 'exact', head: true })
+      .eq('needs_review', true)
+      .eq('discarded', false)
+      .eq('is_published', false)
+    setPendingCount(count ?? 0)
+  }, [])
+
+  useEffect(() => {
+    fetchPendingCount()
+    const interval = setInterval(fetchPendingCount, 60000)
+    return () => clearInterval(interval)
+  }, [fetchPendingCount])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -102,6 +119,29 @@ export default function AdminLayout() {
               {item.label}
             </NavLink>
           ))}
+          {/* Review bozze */}
+          <NavLink
+            to="/admin/review"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary text-white'
+                  : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`
+            }
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M2 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M6 9l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="flex-1">Review bozze</span>
+            {pendingCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-body font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center leading-none">
+                {pendingCount}
+              </span>
+            )}
+          </NavLink>
         </nav>
 
         {/* User + logout */}
