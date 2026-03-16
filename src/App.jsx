@@ -10,6 +10,7 @@ import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminArticles from './pages/admin/AdminArticles.jsx'
 import AdminArticleEditor from './pages/admin/AdminArticleEditor.jsx'
+import AdminReview from './pages/admin/AdminReview.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
         <Route path="articoli" element={<AdminArticles />} />
         <Route path="articoli/nuovo" element={<AdminArticleEditor />} />
         <Route path="articoli/:id" element={<AdminArticleEditor />} />
+        <Route path="review" element={<AdminReview />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
