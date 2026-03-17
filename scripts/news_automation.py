@@ -211,7 +211,7 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048},
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192},
     }
     try:
         resp = requests.post(
@@ -238,7 +238,7 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
         "model": "qwen/qwen3-235b-a22b:free",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 2048,
+        "max_tokens": 4096,
     }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
