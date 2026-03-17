@@ -177,28 +177,27 @@ def get_gemini_calls_oggi(supabase: Client) -> int:
     result = supabase.table("daily_counters").select("gemini_calls").eq("date", oggi).execute()
     if result.data:
         return result.data[0]["gemini_calls"]
-    # Prima chiamata del giorno: crea il record
-    supabase.table("daily_counters").insert({"date": oggi, "gemini_calls": 0}).execute()
+    # Prima chiamata del giorno: crea il record (se fallisce per RLS si parte da 0)
+    try:
+        supabase.table("daily_counters").insert({"date": oggi, "gemini_calls": 0}).execute()
+    except Exception as e:
+        logger.warning(f"Impossibile creare record daily_counters: {e}")
     return 0
 
 
 def incrementa_gemini_calls(supabase: Client):
-    """Incrementa di 1 il contatore Gemini per oggi."""
+    """Incrementa di 1 il contatore Gemini per oggi (read + write, nessun upsert)."""
     oggi = date.today().isoformat()
-    # upsert: se il record non esiste lo crea
-    supabase.table("daily_counters").upsert(
-        {"date": oggi, "gemini_calls": 1},
-        on_conflict="date",
-        # non supporta increment diretto via REST, usiamo rpc se disponibile
-        # alternativa: read + write (accettabile per volumi bassi)
-    ).execute()
-    # Leggi il valore attuale e aggiorna
-    result = supabase.table("daily_counters").select("gemini_calls").eq("date", oggi).execute()
-    if result.data:
-        nuovo_valore = result.data[0]["gemini_calls"] + 1
-        supabase.table("daily_counters").update(
-            {"gemini_calls": nuovo_valore, "updated_at": datetime.now(timezone.utc).isoformat()}
-        ).eq("date", oggi).execute()
+    try:
+        result = supabase.table("daily_counters").select("gemini_calls").eq("date", oggi).execute()
+        if result.data:
+            nuovo_valore = result.data[0]["gemini_calls"] + 1
+            supabase.table("daily_counters").update(
+                {"gemini_calls": nuovo_valore, "updated_at": datetime.now(timezone.utc).isoformat()}
+            ).eq("date", oggi).execute()
+    except Exception as e:
+        # Non bloccare l'elaborazione dell'articolo se il contatore fallisce
+        logger.warning(f"Impossibile aggiornare contatore Gemini: {e}")
 
 
 # ---------------------------------------------------------------------------
