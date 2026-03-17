@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import concurrent.futures
+import time
 from datetime import date, datetime, timezone
 
 import feedparser
@@ -54,7 +55,7 @@ KEYWORDS_FILTRO = [
 
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash:generateContent"
+    "gemini-1.5-flash:generateContent"
 )
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
@@ -235,7 +236,7 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
     payload = {
-        "model": "qwen/qwen3-235b-a22b:free",
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
         "max_tokens": 4096,
@@ -267,6 +268,7 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
         testo_risposta = chiama_gemini(title, excerpt)
         if testo_risposta:
             incrementa_gemini_calls(supabase)
+            time.sleep(4)  # rispetta il limite ~15 RPM di gemini-1.5-flash free
         else:
             # Gemini fallito → prova OpenRouter
             logger.warning("Gemini fallito, fallback su OpenRouter")
@@ -311,7 +313,10 @@ def cerca_cover_image(title: str) -> str | None:
         resp.raise_for_status()
         data = resp.json()
         if data.get("results"):
-            return data["results"][0]["urls"]["regular"]
+            url = data["results"][0]["urls"]["regular"]
+            logger.info(f"Unsplash cover trovata: {url[:60]}…")
+            return url
+        logger.warning("Unsplash: nessun risultato per la query")
     except Exception as e:
         logger.warning(f"Unsplash non disponibile: {e}")
     return None

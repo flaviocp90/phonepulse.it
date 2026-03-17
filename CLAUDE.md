@@ -40,6 +40,7 @@ src/
     ArticleCard.jsx     — card with cover, category badge, score badge
     SEO.jsx             — react-helmet-async meta tags
     ProtectedRoute.jsx  — auth guard, redirects to /admin/login
+    Toast.jsx           — useToast hook + ToastContainer (fixed bottom-right, auto-dismiss 3.5s)
   pages/
     Home.jsx            — hero + 9 latest articles + categories grid
     ArticlePage.jsx     — /articoli/:slug, markdown rendering, affiliate links
@@ -53,8 +54,14 @@ src/
       AdminDashboard.jsx    — /admin/dashboard, stats counters
       AdminArticles.jsx     — /admin/articoli, table with edit/delete
       AdminArticleEditor.jsx — /admin/articoli/nuovo + /admin/articoli/:id
+      AdminReview.jsx       — /admin/review, review/publish/discard AI-generated drafts (is_published=false)
   lib/
     supabase.js         — Supabase client
+scripts/
+  news_automation.py    — Python script: fetches RSS feeds, filters by keywords, generates drafts via Gemini/OpenRouter LLM, fetches cover image from Unsplash, inserts as unpublished articles in Supabase; sends Telegram notification on completion
+  requirements.txt      — Python deps (feedparser, requests, supabase, etc.)
+.github/workflows/
+  news-automation.yml   — GitHub Actions: runs news_automation.py every 2 hours (cron) + manual trigger; secrets: GEMINI_API_KEY, OPENROUTER_API_KEY, UNSPLASH_ACCESS_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ```
 
 ## Database schema (Supabase, schema public)
