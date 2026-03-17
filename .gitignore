@@ -20,3 +20,8 @@ npm-debug.log*
 # Editor
 .vscode/
 .idea/
+
+# Python scripts
+scripts/__pycache__/
+scripts/*.pyc
+scripts/.env
