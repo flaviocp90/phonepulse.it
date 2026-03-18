@@ -12,6 +12,7 @@ import AdminArticles from './pages/admin/AdminArticles.jsx'
 import AdminArticleEditor from './pages/admin/AdminArticleEditor.jsx'
 import AdminReview from './pages/admin/AdminReview.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import SitemapPage from './pages/SitemapPage.jsx'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Route path="/categoria/:slug" element={<CategoryPage />} />
       <Route path="/chi-siamo" element={<AboutPage />} />
       <Route path="/contatti" element={<ContactPage />} />
+      <Route path="/sitemap" element={<SitemapPage />} />
 
       {/* Admin auth */}
       <Route path="/admin/login" element={<AdminLogin />} />

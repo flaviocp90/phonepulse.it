@@ -1,20 +1,21 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { marked } from 'marked'
-import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import SEO from '../components/SEO'
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { marked } from "marked";
+import { supabase } from "../lib/supabase";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import SEO from "../components/SEO";
+import { ArticleSchema, BreadcrumbSchema } from "../components/SchemaMarkup";
 
-marked.setOptions({ breaks: true, gfm: true })
+marked.setOptions({ breaks: true, gfm: true });
 
 function formatDate(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function ArticleSkeleton() {
@@ -27,54 +28,79 @@ function ArticleSkeleton() {
       <div className="aspect-[16/9] bg-gray-200 rounded-xl mb-8" />
       <div className="space-y-3">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className={`h-4 bg-gray-100 rounded ${i % 3 === 2 ? 'w-3/4' : 'w-full'}`} />
+          <div
+            key={i}
+            className={`h-4 bg-gray-100 rounded ${i % 3 === 2 ? "w-3/4" : "w-full"}`}
+          />
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 export default function ArticlePage() {
-  const { slug } = useParams()
-  const [article, setArticle] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { slug } = useParams();
+  const [article, setArticle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function fetchArticle() {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
         const { data, error: err } = await supabase
-          .from('articles')
-          .select('*, categories(id, name, slug, color), article_tags(tags(id, name, slug))')
-          .eq('slug', slug)
-          .eq('is_published', true)
-          .single()
+          .from("articles")
+          .select(
+            "*, categories(id, name, slug, color), article_tags(tags(id, name, slug))",
+          )
+          .eq("slug", slug)
+          .eq("is_published", true)
+          .single();
 
-        if (err) throw err
-        setArticle(data)
+        if (err) throw err;
+        setArticle(data);
       } catch (err) {
-        setError('Articolo non trovato o non più disponibile.')
-        console.error(err)
+        setError("Articolo non trovato o non più disponibile.");
+        console.error(err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchArticle()
-  }, [slug])
+    fetchArticle();
+  }, [slug]);
 
   return (
     <div className="min-h-screen flex flex-col">
       {article && (
-        <SEO
-          title={article.seo_title || article.title}
-          description={article.seo_description || article.excerpt}
-          image={article.cover_image_url}
-          canonical={`/articoli/${article.slug}`}
-          type="article"
-        />
+        <>
+          <SEO
+            title={article.seo_title || article.title}
+            description={article.seo_description || article.excerpt}
+            image={article.cover_image_url}
+            canonical={`/articoli/${article.slug}`}
+            type="article"
+          />
+          <ArticleSchema
+            title={article.title}
+            description={article.excerpt}
+            publishedAt={article.published_at}
+            updatedAt={article.updated_at}
+            slug={article.slug}
+            coverImage={article.cover_image_url}
+          />
+          <BreadcrumbSchema
+            items={[
+              { name: 'Home', url: 'https://phonepulse.it/' },
+              {
+                name: article.categories?.name || 'Articoli',
+                url: `https://phonepulse.it/categoria/${article.categories?.slug || 'news'}`,
+              },
+              { name: article.title, url: `https://phonepulse.it/articoli/${article.slug}` },
+            ]}
+          />
+        </>
       )}
       <Header />
 
@@ -97,7 +123,9 @@ export default function ArticlePage() {
           <article className="max-w-3xl mx-auto px-4 py-12">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-xs text-gray-400 font-body mb-6">
-              <Link to="/" className="hover:text-gray-600 transition-colors">Home</Link>
+              <Link to="/" className="hover:text-gray-600 transition-colors">
+                Home
+              </Link>
               <span>/</span>
               {article.categories && (
                 <>
@@ -110,7 +138,9 @@ export default function ArticlePage() {
                   <span>/</span>
                 </>
               )}
-              <span className="text-gray-500 line-clamp-1">{article.title}</span>
+              <span className="text-gray-500 line-clamp-1">
+                {article.title}
+              </span>
             </nav>
 
             {/* Category + Score row */}
@@ -120,8 +150,10 @@ export default function ArticlePage() {
                   to={`/categoria/${article.categories.slug}`}
                   className="inline-block text-xs font-body font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
                   style={{
-                    backgroundColor: article.categories.color ? `${article.categories.color}18` : '#FF5C1A18',
-                    color: article.categories.color || '#FF5C1A',
+                    backgroundColor: article.categories.color
+                      ? `${article.categories.color}18`
+                      : "#FF5C1A18",
+                    color: article.categories.color || "#FF5C1A",
                   }}
                 >
                   {article.categories.name}
@@ -148,9 +180,9 @@ export default function ArticlePage() {
 
             {/* Meta */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 font-body mb-8 pb-8 border-b border-border">
-              {article.author && (
+              {/* {article.author && (
                 <span>Di <strong className="text-gray-600">{article.author}</strong></span>
-              )}
+              )} */}
               {article.published_at && (
                 <time>{formatDate(article.published_at)}</time>
               )}
@@ -172,20 +204,26 @@ export default function ArticlePage() {
               <div className="mb-10 bg-dark rounded-2xl p-6 flex items-center gap-6">
                 <div className="shrink-0 flex flex-col items-center">
                   <div className="w-20 h-20 rounded-full bg-primary flex flex-col items-center justify-center shadow-lg">
-                    <span className="text-white text-3xl font-heading font-bold leading-none">{article.score}</span>
-                    <span className="text-white/60 text-xs font-body">/100</span>
+                    <span className="text-white text-3xl font-heading font-bold leading-none">
+                      {article.score}
+                    </span>
+                    <span className="text-white/60 text-xs font-body">
+                      /100
+                    </span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-white font-heading font-bold text-xl mb-1">Il nostro voto</p>
+                  <p className="text-white font-heading font-bold text-xl mb-1">
+                    Il nostro voto
+                  </p>
                   <p className="text-white/50 text-sm font-body leading-relaxed">
                     {article.score >= 85
-                      ? 'Eccellente. Uno dei migliori nel suo segmento.'
+                      ? "Eccellente. Uno dei migliori nel suo segmento."
                       : article.score >= 70
-                      ? 'Buono. Promosso con qualche riserva.'
-                      : article.score >= 55
-                      ? 'Sufficiente. Vale la pena ma con compromessi.'
-                      : 'Insufficiente. Ci sono alternative migliori.'}
+                        ? "Buono. Promosso con qualche riserva."
+                        : article.score >= 55
+                          ? "Sufficiente. Vale la pena ma con compromessi."
+                          : "Insufficiente. Ci sono alternative migliori."}
                   </p>
                 </div>
               </div>
@@ -195,7 +233,9 @@ export default function ArticlePage() {
             {article.content && (
               <div
                 className="article-content"
-                dangerouslySetInnerHTML={{ __html: marked.parse(article.content) }}
+                dangerouslySetInnerHTML={{
+                  __html: marked.parse(article.content),
+                }}
               />
             )}
 
@@ -211,41 +251,54 @@ export default function ArticlePage() {
                       >
                         #{tag.name}
                       </span>
-                    ) : null
+                    ) : null,
                   )}
                 </div>
               </div>
             )}
 
             {/* Affiliate links */}
-            {article.affiliate_links && Array.isArray(article.affiliate_links) && article.affiliate_links.length > 0 && (
-              <div className="mt-10 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
-                <h3 className="text-sm font-body font-semibold text-primary uppercase tracking-wide mb-4">
-                  Dove acquistare
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {article.affiliate_links.map((link, i) => (
-                    <a
-                      key={i}
-                      href={link.url || link}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      className="inline-flex items-center justify-between gap-3 bg-white border border-border px-4 py-3 rounded-xl hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
-                    >
-                      <span className="text-sm font-body font-medium text-dark group-hover:text-primary transition-colors">
-                        {link.label || link.url || link}
-                      </span>
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 20 20" fill="none">
-                        <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </a>
-                  ))}
+            {article.affiliate_links &&
+              Array.isArray(article.affiliate_links) &&
+              article.affiliate_links.length > 0 && (
+                <div className="mt-10 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
+                  <h3 className="text-sm font-body font-semibold text-primary uppercase tracking-wide mb-4">
+                    Dove acquistare
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {article.affiliate_links.map((link, i) => (
+                      <a
+                        key={i}
+                        href={link.url || link}
+                        target="_blank"
+                        rel="noopener noreferrer sponsored"
+                        className="inline-flex items-center justify-between gap-3 bg-white border border-border px-4 py-3 rounded-xl hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <span className="text-sm font-body font-medium text-dark group-hover:text-primary transition-colors">
+                          {link.label || link.url || link}
+                        </span>
+                        <svg
+                          className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors shrink-0"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M4 10h12M10 4l6 6-6 6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 font-body mt-3">
+                    * I link sopra possono contenere codici di affiliazione. Non
+                    influenzano la valutazione.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400 font-body mt-3">
-                  * I link sopra possono contenere codici di affiliazione. Non influenzano la valutazione.
-                </p>
-              </div>
-            )}
+              )}
 
             {/* Back link */}
             <div className="mt-12 pt-8 border-t border-border">
@@ -262,5 +315,5 @@ export default function ArticlePage() {
 
       <Footer />
     </div>
-  )
+  );
 }
