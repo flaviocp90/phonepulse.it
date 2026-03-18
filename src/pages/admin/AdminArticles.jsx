@@ -17,6 +17,7 @@ export default function AdminArticles() {
   const [error, setError] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [statusFilter, setStatusFilter] = useState('all')
 
   async function fetchArticles() {
     setLoading(true)
@@ -35,6 +36,12 @@ export default function AdminArticles() {
 
   useEffect(() => { fetchArticles() }, [])
 
+  const filteredArticles = articles.filter(a => {
+    if (statusFilter === 'published') return a.is_published
+    if (statusFilter === 'draft') return !a.is_published
+    return true
+  })
+
   async function handleDelete(id) {
     setDeletingId(id)
     // Delete article_tags first (FK)
@@ -51,11 +58,11 @@ export default function AdminArticles() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-heading font-bold text-dark">Articoli</h1>
           <p className="text-sm text-gray-400 font-body mt-1">
-            {loading ? '...' : `${articles.length} articoli`}
+            {loading ? '...' : `${filteredArticles.length} articoli`}
           </p>
         </div>
         <Link
@@ -69,6 +76,26 @@ export default function AdminArticles() {
           </svg>
           Nuovo
         </Link>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        {[
+          { value: 'all', label: 'Tutti' },
+          { value: 'published', label: 'Pubblicati' },
+          { value: 'draft', label: 'Bozze' },
+        ].map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setStatusFilter(value)}
+            className={`text-xs font-body font-semibold px-3 py-1.5 rounded-full transition-colors ${
+              statusFilter === value
+                ? 'bg-dark text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -92,12 +119,14 @@ export default function AdminArticles() {
             </div>
           ))}
         </div>
-      ) : articles.length === 0 ? (
+      ) : filteredArticles.length === 0 ? (
         <div className="bg-white border border-border rounded-2xl p-12 text-center">
-          <p className="text-gray-400 font-body mb-4">Nessun articolo ancora.</p>
-          <Link to="/admin/articoli/nuovo" className="text-primary font-body text-sm font-medium hover:underline">
-            Crea il primo →
-          </Link>
+          <p className="text-gray-400 font-body mb-4">Nessun articolo trovato.</p>
+          {statusFilter === 'all' && (
+            <Link to="/admin/articoli/nuovo" className="text-primary font-body text-sm font-medium hover:underline">
+              Crea il primo →
+            </Link>
+          )}
         </div>
       ) : (
         <div className="bg-white border border-border rounded-2xl overflow-hidden">
@@ -110,7 +139,7 @@ export default function AdminArticles() {
             <span className="w-28 text-right">Azioni</span>
           </div>
 
-          {articles.map(article => (
+          {filteredArticles.map(article => (
             <div
               key={article.id}
               className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center gap-2 md:gap-4 px-6 py-4 border-b border-border last:border-0 hover:bg-gray-50 transition-colors"
