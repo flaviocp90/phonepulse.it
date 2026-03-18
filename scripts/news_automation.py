@@ -45,11 +45,6 @@ FEED_URLS = [
     "https://www.theverge.com/rss/index.xml"
 ]
 
-# Keyword per il filtro pre-LLM (titolo in lowercase)
-KEYWORDS_FILTRO = [
-    "lancio", "launch", "prezzo", "vs", "review",
-    "migliore", "specs", "ufficiale", "annuncio", "disponibile", "best",
-]
 
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -123,15 +118,6 @@ def raccogli_tutti_i_feed() -> list[dict]:
             tutti.extend(future.result())
     logger.info(f"Totale articoli raccolti da tutti i feed: {len(tutti)}")
     return tutti
-
-
-# ---------------------------------------------------------------------------
-# Filtro keyword pre-LLM
-# ---------------------------------------------------------------------------
-def passa_filtro_keyword(title: str) -> bool:
-    """Restituisce True se il titolo contiene almeno una keyword di interesse."""
-    titolo_lower = title.lower()
-    return any(kw in titolo_lower for kw in KEYWORDS_FILTRO)
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +212,7 @@ def incrementa_gemini_calls(supabase: Client):
 # ---------------------------------------------------------------------------
 def chiama_gemini(title: str, excerpt: str) -> str | None:
     """
-    Chiama Gemini 2.5 Flash e restituisce il testo grezzo della risposta.
+    Chiama Gemini 2.0 Flash con un retry su 429 (attende 15s prima di riprovare).
     Restituisce None in caso di errore.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
@@ -234,23 +220,28 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192},
     }
-    try:
-        resp = requests.post(
-            f"{GEMINI_ENDPOINT}?key={GEMINI_API_KEY}",
-            json=payload,
-            timeout=60,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        # Estrai il testo dalla risposta Gemini
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        logger.error(f"Errore Gemini: {e}")
-        return None
+    for tentativo in range(2):
+        try:
+            resp = requests.post(
+                f"{GEMINI_ENDPOINT}?key={GEMINI_API_KEY}",
+                json=payload,
+                timeout=60,
+            )
+            if resp.status_code == 429 and tentativo == 0:
+                logger.warning("Gemini 429, attendo 15s e riprovo...")
+                time.sleep(15)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            logger.error(f"Errore Gemini: {e}")
+            return None
+    return None
 
 
 OPENROUTER_MODELS = [
-    "qwen/qwen3-235b-a22b:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
     "google/gemma-3-27b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
 ]
@@ -275,6 +266,10 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
         }
         try:
             resp = requests.post(OPENROUTER_ENDPOINT, json=payload, headers=headers, timeout=90)
+            if resp.status_code == 429:
+                logger.warning(f"OpenRouter [{model}] 429 rate limit, attendo 10s e provo il prossimo")
+                time.sleep(10)
+                continue
             resp.raise_for_status()
             data = resp.json()
             testo = data["choices"][0]["message"]["content"]
@@ -421,7 +416,7 @@ def invia_telegram(messaggio: str):
 # ---------------------------------------------------------------------------
 # Pipeline principale per un singolo articolo
 # ---------------------------------------------------------------------------
-def processa_articolo(item: dict, supabase: Client, category_id: str | None):
+def processa_articolo(item: dict, supabase: Client, category_id: str | None):    
     """
     Elabora un singolo articolo RSS attraverso tutte le fasi.
     Gestisce gli errori in modo che un fallimento non blocchi gli altri.
@@ -430,11 +425,6 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
     link = item["link"]
     excerpt = item.get("excerpt", "")
     source = item.get("source", "")
-
-    # --- Filtro keyword ---
-    if not passa_filtro_keyword(title):
-        logger.info(f"[SKIP keyword] {title}")
-        return
 
     # --- Deduplicazione hash ---
     hash_md5 = calcola_hash(title)
@@ -463,8 +453,8 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         logger.warning("category_id 'news' non trovato, uso None")
         articolo["category_id"] = None
 
-    # --- Cover image ---
-    cover_url = cerca_cover_image(articolo.get("title", title))
+    # --- Cover image (usa titolo RSS originale in inglese per query Unsplash migliore) ---
+    cover_url = cerca_cover_image(title)
     articolo["cover_image_url"] = cover_url
 
     # --- Quality gate ---
@@ -498,12 +488,12 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         supabase.table("articles").insert(record).execute()
         # Hash inserito solo dopo INSERT riuscito
         inserisci_hash(supabase, hash_md5, link)
-        logger.info(f"[PUBBLICATO] {articolo['title']} (fonte: {source})")
+        logger.info(f"[BOZZA] {articolo['title']} (fonte: {source})")
         invia_telegram(
             f"🆕 Nuova bozza pronta per review\n\n"
-            f"📰 {articolo['title']}\n\n"
-            f"👉 Vai su phonepulse.it/admin/review per approvare"
-        )
+                f"📰 {articolo['title']}\n\n"
+                f"👉 Vai su phonepulse.it/admin/review per approvare"
+            )
     except Exception as e:
         logger.error(f"[ERRORE INSERT] {title}: {e}")
 
