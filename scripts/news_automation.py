@@ -473,10 +473,30 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
     # --- Quality gate ---
     ok, motivo = supera_quality_gate(articolo, supabase)
     if not ok:
-        logger.warning(f"[SCARTATO] {title} — {motivo}")
-        invia_telegram(
-            f"⚠️ Articolo scartato dal quality gate\n\n📰 {articolo.get('title', title)}\nMotivo: {motivo}"
-        )
+        logger.warning(f"[SCARTATO quality gate] {title} — {motivo}")
+        # Inserisce in Supabase come scartato — visibile in /admin/review tab Scartati
+        record_scartato = {
+            "title": articolo.get("title", title),
+            "slug": articolo.get("slug", calcola_hash(title)[:20]),
+            "excerpt": articolo.get("excerpt", "")[:155],
+            "content": articolo.get("content", ""),
+            "seo_title": articolo.get("seo_title", articolo.get("title", title)),
+            "seo_description": articolo.get("seo_description", "")[:155],
+            "category_id": articolo.get("category_id"),
+            "cover_image_url": articolo.get("cover_image_url"),
+            "author": "PhonePulse Bot",
+            "is_published": False,
+            "needs_review": False,
+            "discarded": True,
+            "affiliate_links": {},
+            "score": None,
+        }
+        try:
+            supabase.table("articles").insert(record_scartato).execute()
+            inserisci_hash(supabase, hash_md5, link)
+            logger.info(f"[SCARTATO salvato] {title}")
+        except Exception as e:
+            logger.error(f"[ERRORE INSERT scartato] {title}: {e}")
         return
 
     # --- INSERT in Supabase ---

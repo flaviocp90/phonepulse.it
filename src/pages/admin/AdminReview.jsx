@@ -26,6 +26,17 @@ function formatDate(iso) {
   })
 }
 
+function formatDateShort(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`
+}
+
 function SkeletonCard() {
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-6 animate-pulse space-y-4">
@@ -167,35 +178,78 @@ function DraftCard({ article, onPublish, onDiscard }) {
   )
 }
 
+function ScartatiCard({ article, onRecover, onDelete }) {
+  const excerpt = article.excerpt
+    ? article.excerpt.slice(0, 120) + (article.excerpt.length > 120 ? '…' : '')
+    : ''
+
+  return (
+    <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+      <h2 className="font-heading font-bold text-dark text-lg leading-tight mb-1">
+        {article.title}
+      </h2>
+      {excerpt && (
+        <p className="font-body text-sm text-gray-500 mb-2">{excerpt}</p>
+      )}
+      <p className="font-body text-xs text-gray-400 mb-4">{formatDateShort(article.created_at)}</p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => onRecover(article.id)}
+          className="font-body font-medium text-sm px-4 py-2 rounded-lg text-white transition-colors"
+          style={{ backgroundColor: '#FF5C1A' }}
+        >
+          Recupera
+        </button>
+        <button
+          onClick={() => onDelete(article.id)}
+          className="text-red-500 hover:text-red-700 font-body text-sm px-2 py-1 transition-colors"
+        >
+          Elimina
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminReview() {
   const [drafts, setDrafts] = useState([])
+  const [scartati, setScartati] = useState([])
+  const [activeTab, setActiveTab] = useState('review')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { toasts, addToast } = useToast()
 
-  const fetchDrafts = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setError(null)
-    const { data, error: err } = await supabase
-      .from('articles')
-      .select('*, categories(id, name, slug, color)')
-      .eq('needs_review', true)
-      .eq('discarded', false)
-      .eq('is_published', false)
-      .order('created_at', { ascending: false })
+    const [draftsRes, scartatiRes] = await Promise.all([
+      supabase
+        .from('articles')
+        .select('*, categories(id, name, slug, color)')
+        .eq('needs_review', true)
+        .eq('discarded', false)
+        .eq('is_published', false)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('articles')
+        .select('id, title, excerpt, created_at')
+        .eq('discarded', true)
+        .order('created_at', { ascending: false }),
+    ])
 
-    if (err) {
-      setError(err.message)
+    if (draftsRes.error) {
+      setError(draftsRes.error.message)
     } else {
-      setDrafts(data || [])
+      setDrafts(draftsRes.data || [])
     }
+    setScartati(scartatiRes.data || [])
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchDrafts()
-    const interval = setInterval(fetchDrafts, 30000)
+    fetchAll()
+    const interval = setInterval(fetchAll, 30000)
     return () => clearInterval(interval)
-  }, [fetchDrafts])
+  }, [fetchAll])
 
   async function handlePublish(id) {
     setDrafts(prev => prev.filter(d => d.id !== id))
@@ -206,7 +260,7 @@ export default function AdminReview() {
 
     if (err) {
       addToast('Errore durante la pubblicazione', 'error')
-      fetchDrafts()
+      fetchAll()
     } else {
       addToast('✓ Articolo pubblicato')
     }
@@ -221,9 +275,36 @@ export default function AdminReview() {
 
     if (err) {
       addToast('Errore durante lo scarto', 'error')
-      fetchDrafts()
+      fetchAll()
     } else {
       addToast('Bozza scartata')
+      fetchAll()
+    }
+  }
+
+  async function handleRecover(id) {
+    const { error: err } = await supabase
+      .from('articles')
+      .update({ discarded: false, needs_review: true })
+      .eq('id', id)
+
+    if (err) {
+      addToast('Errore durante il recupero', 'error')
+    } else {
+      addToast('Articolo recuperato')
+      fetchAll()
+    }
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Eliminare definitivamente questo articolo?')) return
+    const { error: err } = await supabase.from('articles').delete().eq('id', id)
+
+    if (err) {
+      addToast("Errore durante l'eliminazione", 'error')
+    } else {
+      addToast('Articolo eliminato')
+      fetchAll()
     }
   }
 
@@ -232,22 +313,53 @@ export default function AdminReview() {
       <ToastContainer toasts={toasts} />
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-heading font-bold text-dark">
-              Bozze in attesa di review
-            </h1>
-            {!loading && (
-              <span className="bg-primary text-white text-xs font-body font-semibold px-2.5 py-1 rounded-full min-w-[1.5rem] text-center">
-                {drafts.length}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-gray-400 font-body mt-1">
-            Articoli generati in attesa di approvazione
-          </p>
+          <h1 className="text-2xl font-heading font-bold text-dark">Review articoli</h1>
+          <p className="text-sm text-gray-400 font-body mt-1">Gestisci le bozze generate dal bot</p>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-0 mb-8 border-b border-border">
+        <button
+          onClick={() => setActiveTab('review')}
+          className={`flex items-center gap-2 px-4 py-2.5 font-body font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'review'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          Da revisionare
+          {!loading && (
+            <span
+              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                activeTab === 'review' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {drafts.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('scartati')}
+          className={`flex items-center gap-2 px-4 py-2.5 font-body font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'scartati'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          Scartati
+          {!loading && (
+            <span
+              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                activeTab === 'scartati' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {scartati.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Loading */}
@@ -264,7 +376,7 @@ export default function AdminReview() {
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-3xl">
           <p className="font-body text-red-600 text-sm mb-3">{error}</p>
           <button
-            onClick={() => { setLoading(true); fetchDrafts() }}
+            onClick={() => { setLoading(true); fetchAll() }}
             className="text-sm font-body font-medium text-red-600 hover:text-red-800 underline"
           >
             Riprova
@@ -272,33 +384,54 @@ export default function AdminReview() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && !error && drafts.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mb-4 text-gray-200">
-            <rect x="8" y="8" width="32" height="32" rx="6" stroke="currentColor" strokeWidth="2" />
-            <path d="M16 20h16M16 26h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M30 32l4 4M34 32l-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <p className="font-heading font-bold text-dark text-lg">Nessuna bozza in attesa</p>
-          <p className="font-body text-sm text-gray-400 mt-1">
-            Tutte le bozze sono state gestite
-          </p>
-        </div>
+      {/* Tab: Da revisionare */}
+      {!loading && !error && activeTab === 'review' && (
+        drafts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mb-4 text-gray-200">
+              <rect x="8" y="8" width="32" height="32" rx="6" stroke="currentColor" strokeWidth="2" />
+              <path d="M16 20h16M16 26h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M30 32l4 4M34 32l-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <p className="font-heading font-bold text-dark text-lg">Nessuna bozza in attesa</p>
+            <p className="font-body text-sm text-gray-400 mt-1">
+              Tutte le bozze sono state gestite
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-w-3xl">
+            {drafts.map(article => (
+              <DraftCard
+                key={article.id}
+                article={article}
+                onPublish={handlePublish}
+                onDiscard={handleDiscard}
+              />
+            ))}
+          </div>
+        )
       )}
 
-      {/* Draft list */}
-      {!loading && !error && drafts.length > 0 && (
-        <div className="space-y-4 max-w-3xl">
-          {drafts.map(article => (
-            <DraftCard
-              key={article.id}
-              article={article}
-              onPublish={handlePublish}
-              onDiscard={handleDiscard}
-            />
-          ))}
-        </div>
+      {/* Tab: Scartati */}
+      {!loading && !error && activeTab === 'scartati' && (
+        scartati.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl">
+            <p className="font-body text-gray-400 text-sm">
+              Nessun articolo scartato dal quality gate.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-w-3xl">
+            {scartati.map(article => (
+              <ScartatiCard
+                key={article.id}
+                article={article}
+                onRecover={handleRecover}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   )
