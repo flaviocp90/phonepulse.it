@@ -35,8 +35,8 @@ React 18 SPA built with Vite, styled with Tailwind CSS, backed by Supabase, depl
 ```
 src/
   components/
-    Header.jsx          — sticky dark nav with mobile hamburger
-    Footer.jsx          — minimal dark footer
+    Header.jsx          — sticky dark nav with mobile hamburger; Instagram + Telegram icons (desktop nav + mobile menu)
+    Footer.jsx          — minimal dark footer with Instagram + Telegram icons
     ArticleCard.jsx     — card with cover, category badge, score badge
     SEO.jsx             — react-helmet-async meta tags
     ProtectedRoute.jsx  — auth guard, redirects to /admin/login
@@ -75,6 +75,13 @@ scripts/
 | `products` | id, name, brand, slug, image_url, price_it, amazon_url, specs (jsonb) |
 
 When querying articles with category: `.select('*, categories(id, name, slug, color)')` — the join comes back as `article.categories` (object, not array).
+
+## Social channels
+
+- Instagram: `https://www.instagram.com/phonepulse.it`
+- Telegram: `https://t.me/PhonePulseIT`
+
+Icons are SVG inline (no external library) in `Header.jsx` and `Footer.jsx`. When adding new social channels, follow the same pattern.
 
 ## Admin setup
 
