@@ -1,27 +1,21 @@
-name: News Automation
+name: Job A — Scraping e generazione bozze
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # ogni 2 ore
-  workflow_dispatch:          # trigger manuale da GitHub Actions UI
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 
 jobs:
-  run-news-automation:
+  scraping:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Installa dipendenze
         run: pip install -r scripts/requirements.txt
-
-      - name: Esegui news automation
+      - name: Esegui scraping e generazione bozze
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

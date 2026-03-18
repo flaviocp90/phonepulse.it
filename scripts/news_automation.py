@@ -241,9 +241,9 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
 
 
 OPENROUTER_MODELS = [
-    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "qwen/qwen3-235b-a22b:free",
     "google/gemma-3-27b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
 ]
 
 
@@ -266,8 +266,11 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
         }
         try:
             resp = requests.post(OPENROUTER_ENDPOINT, json=payload, headers=headers, timeout=90)
+            if resp.status_code == 402:
+                logger.error(f"OpenRouter [{model}] richiede credito (402), salto")
+                continue
             if resp.status_code == 429:
-                logger.warning(f"OpenRouter [{model}] 429 rate limit, attendo 10s e provo il prossimo")
+                logger.warning(f"OpenRouter [{model}] 429, attendo 10s")
                 time.sleep(10)
                 continue
             resp.raise_for_status()
@@ -432,12 +435,6 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         logger.info(f"[SKIP duplicato hash] {title}")
         return
 
-    # --- Controllo pre-LLM: titolo già in articles ---
-    if titolo_gia_presente(supabase, title):
-        logger.info(f"[SKIP duplicato articles] {title}")
-        inserisci_hash(supabase, hash_md5, link)  # evita controlli futuri
-        return
-
     # --- Generazione bozza ---
     logger.info(f"[LLM] Genero bozza per: {title}")
     articolo = genera_bozza(supabase, title, excerpt)
@@ -526,6 +523,7 @@ def main():
     for item in articoli:
         try:
             processa_articolo(item, supabase, category_id)
+            time.sleep(5)  # rispetta rate limit Gemini ~12 RPM
         except Exception as e:
             logger.error(f"[ERRORE NON GESTITO] {item.get('title', '???')}: {e}")
 
