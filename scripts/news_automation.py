@@ -40,11 +40,9 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 # Costanti
 # ---------------------------------------------------------------------------
 FEED_URLS = [
-    "https://www.gsmarena.com/rss-news-review.php3",
     "https://www.androidauthority.com/feed/",
     "https://www.phonearena.com/feed",
-    "https://www.theverge.com/rss/index.xml",
-    "https://9to5google.com/feed",
+    "https://www.theverge.com/rss/index.xml"
 ]
 
 # Keyword per il filtro pre-LLM (titolo in lowercase)
@@ -158,15 +156,37 @@ def inserisci_hash(supabase: Client, hash_md5: str, source_url: str):
 
 
 def cleanup_hash_vecchi(supabase: Client):
-    """Elimina gli hash più vecchi di 48 ore."""
+    """Elimina gli hash più vecchi di 30 giorni."""
     try:
-        # Usa rpc o raw sql tramite postgrest — usiamo lt con timestamp ISO
         from datetime import timedelta
-        cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         supabase.table("news_hashes").delete().lt("created_at", cutoff).execute()
         logger.info("Cleanup hash vecchi completato")
     except Exception as e:
         logger.error(f"Errore cleanup hash: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Controllo duplicati pre-LLM: cerca titolo simile nella tabella articles
+# ---------------------------------------------------------------------------
+def titolo_gia_presente(supabase: Client, title: str) -> bool:
+    """
+    Restituisce True se un articolo con titolo molto simile esiste già in articles.
+    Normalizza il titolo a slug per il confronto, così cattura varianti minori.
+    """
+    import re
+    slug_tentativo = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:80]
+    try:
+        result = (
+            supabase.table("articles")
+            .select("id")
+            .ilike("slug", f"{slug_tentativo[:30]}%")
+            .execute()
+        )
+        return len(result.data) > 0
+    except Exception as e:
+        logger.warning(f"Impossibile verificare duplicati pre-LLM: {e}")
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -229,30 +249,42 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
         return None
 
 
+OPENROUTER_MODELS = [
+    "qwen/qwen3-235b-a22b:free",
+    "google/gemma-3-27b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+]
+
+
 def chiama_openrouter(title: str, excerpt: str) -> str | None:
     """
-    Chiama Qwen3 235B via OpenRouter e restituisce il testo grezzo della risposta.
-    Restituisce None in caso di errore.
+    Prova in sequenza i modelli OpenRouter free, restituisce la prima risposta valida.
+    Restituisce None se tutti falliscono.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
-    payload = {
-        "model": "meta-llama/llama-3.3-70b-instruct:free",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 4096,
-    }
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
-    try:
-        resp = requests.post(OPENROUTER_ENDPOINT, json=payload, headers=headers, timeout=90)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        logger.error(f"Errore OpenRouter: {e}")
-        return None
+    for model in OPENROUTER_MODELS:
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 4096,
+        }
+        try:
+            resp = requests.post(OPENROUTER_ENDPOINT, json=payload, headers=headers, timeout=90)
+            resp.raise_for_status()
+            data = resp.json()
+            testo = data["choices"][0]["message"]["content"]
+            if testo:
+                logger.info(f"OpenRouter: risposta da {model}")
+                return testo
+        except Exception as e:
+            logger.warning(f"OpenRouter [{model}] fallito: {e}, provo il prossimo")
+    logger.error("Tutti i modelli OpenRouter hanno fallito")
+    return None
 
 
 def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
@@ -404,10 +436,16 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         logger.info(f"[SKIP keyword] {title}")
         return
 
-    # --- Deduplicazione ---
+    # --- Deduplicazione hash ---
     hash_md5 = calcola_hash(title)
     if hash_esiste(supabase, hash_md5):
-        logger.info(f"[SKIP duplicato] {title}")
+        logger.info(f"[SKIP duplicato hash] {title}")
+        return
+
+    # --- Controllo pre-LLM: titolo già in articles ---
+    if titolo_gia_presente(supabase, title):
+        logger.info(f"[SKIP duplicato articles] {title}")
+        inserisci_hash(supabase, hash_md5, link)  # evita controlli futuri
         return
 
     # --- Generazione bozza ---
