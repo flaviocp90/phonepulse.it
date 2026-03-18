@@ -81,7 +81,17 @@ function DraftCard({ article, onPublish, onDiscard }) {
   const plainPreview = markdownToPlainText(article.content)
 
   return (
-    <div className="bg-white border border-border rounded-xl shadow-sm p-6">
+    <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+      {/* Cover image */}
+      {article.cover_image_url && (
+        <img
+          src={article.cover_image_url}
+          alt=""
+          className="w-full h-48 object-cover"
+        />
+      )}
+
+      <div className="p-6">
       {/* Category badge */}
       <div className="flex items-center gap-3 mb-3">
         {article.categories && (
@@ -174,6 +184,7 @@ function DraftCard({ article, onPublish, onDiscard }) {
           </button>
         )}
       </div>
+      </div>
     </div>
   )
 }
@@ -211,12 +222,15 @@ function ScartatiCard({ article, onRecover, onDelete }) {
   )
 }
 
+const PAGE_SIZE = 10
+
 export default function AdminReview() {
   const [drafts, setDrafts] = useState([])
   const [scartati, setScartati] = useState([])
   const [activeTab, setActiveTab] = useState('review')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [page, setPage] = useState(1)
   const { toasts, addToast } = useToast()
 
   const fetchAll = useCallback(async () => {
@@ -323,7 +337,7 @@ export default function AdminReview() {
       {/* Tabs */}
       <div className="flex items-center gap-0 mb-8 border-b border-border">
         <button
-          onClick={() => setActiveTab('review')}
+          onClick={() => { setActiveTab('review'); setPage(1) }}
           className={`flex items-center gap-2 px-4 py-2.5 font-body font-medium text-sm border-b-2 transition-colors ${
             activeTab === 'review'
               ? 'border-primary text-primary'
@@ -342,7 +356,7 @@ export default function AdminReview() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('scartati')}
+          onClick={() => { setActiveTab('scartati'); setPage(1) }}
           className={`flex items-center gap-2 px-4 py-2.5 font-body font-medium text-sm border-b-2 transition-colors ${
             activeTab === 'scartati'
               ? 'border-primary text-primary'
@@ -364,7 +378,7 @@ export default function AdminReview() {
 
       {/* Loading */}
       {loading && (
-        <div className="space-y-4 max-w-3xl">
+        <div className="space-y-4 max-w-3xl mx-auto">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -373,7 +387,7 @@ export default function AdminReview() {
 
       {/* Error */}
       {!loading && error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-3xl">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-3xl mx-auto">
           <p className="font-body text-red-600 text-sm mb-3">{error}</p>
           <button
             onClick={() => { setLoading(true); fetchAll() }}
@@ -385,43 +399,82 @@ export default function AdminReview() {
       )}
 
       {/* Tab: Da revisionare */}
-      {!loading && !error && activeTab === 'review' && (
-        drafts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl">
+      {!loading && !error && activeTab === 'review' && (() => {
+        const totalPages = Math.ceil(drafts.length / PAGE_SIZE)
+        const paginated = drafts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        return drafts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl mx-auto">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mb-4 text-gray-200">
               <rect x="8" y="8" width="32" height="32" rx="6" stroke="currentColor" strokeWidth="2" />
               <path d="M16 20h16M16 26h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <path d="M30 32l4 4M34 32l-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
             <p className="font-heading font-bold text-dark text-lg">Nessuna bozza in attesa</p>
-            <p className="font-body text-sm text-gray-400 mt-1">
-              Tutte le bozze sono state gestite
-            </p>
+            <p className="font-body text-sm text-gray-400 mt-1">Tutte le bozze sono state gestite</p>
           </div>
         ) : (
-          <div className="space-y-4 max-w-3xl">
-            {drafts.map(article => (
-              <DraftCard
-                key={article.id}
-                article={article}
-                onPublish={handlePublish}
-                onDiscard={handleDiscard}
-              />
-            ))}
+          <div className="max-w-3xl mx-auto">
+            <div className="space-y-4">
+              {paginated.map(article => (
+                <DraftCard
+                  key={article.id}
+                  article={article}
+                  onPublish={handlePublish}
+                  onDiscard={handleDiscard}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+                <span className="text-sm font-body text-gray-400">
+                  Pagina {page} di {totalPages} · {drafts.length} bozze totali
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 rounded-lg text-sm font-body font-medium border border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    ← Prec
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-8 h-8 rounded-lg text-sm font-body font-medium transition-colors ${
+                        p === page
+                          ? 'bg-primary text-white'
+                          : 'border border-border hover:bg-gray-50 text-dark'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-sm font-body font-medium border border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Succ →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )
-      )}
+      })()}
 
       {/* Tab: Scartati */}
       {!loading && !error && activeTab === 'scartati' && (
         scartati.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl">
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-3xl mx-auto">
             <p className="font-body text-gray-400 text-sm">
               Nessun articolo scartato dal quality gate.
             </p>
           </div>
         ) : (
-          <div className="space-y-4 max-w-3xl">
+          <div className="space-y-4 max-w-3xl mx-auto">
             {scartati.map(article => (
               <ScartatiCard
                 key={article.id}
