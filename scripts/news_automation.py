@@ -55,7 +55,7 @@ KEYWORDS_FILTRO = [
 
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-1.5-flash:generateContent"
+    "gemini-2.0-flash:generateContent"
 )
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
@@ -268,7 +268,7 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
         testo_risposta = chiama_gemini(title, excerpt)
         if testo_risposta:
             incrementa_gemini_calls(supabase)
-            time.sleep(4)  # rispetta il limite ~15 RPM di gemini-1.5-flash free
+            time.sleep(4)  # rispetta il limite ~15 RPM di gemini-2.0-flash free
         else:
             # Gemini fallito → prova OpenRouter
             logger.warning("Gemini fallito, fallback su OpenRouter")
