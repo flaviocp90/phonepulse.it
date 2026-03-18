@@ -241,47 +241,63 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
 
 
 OPENROUTER_MODELS = [
-    "qwen/qwen3-235b-a22b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "mistralai/mistral-small-3.1-24b-instruct:free",
     "google/gemma-3-27b-it:free",
-    "mistralai/mistral-7b-instruct:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "openrouter/free",  # router automatico OpenRouter, fallback finale
 ]
 
 
 def chiama_openrouter(title: str, excerpt: str) -> str | None:
     """
-    Prova in sequenza i modelli OpenRouter free, restituisce la prima risposta valida.
-    Restituisce None se tutti falliscono.
+    Chiama OpenRouter con fallback a cascata sui modelli in OPENROUTER_MODELS.
+    Per ogni modello:
+      - successo → restituisce subito il testo (esce dal loop)
+      - 404 → modello non disponibile, passa al successivo
+      - 429 → rate limit, passa al successivo senza attendere
+      - altro errore → logga e passa al successivo
+    Se tutti i modelli falliscono, restituisce None.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://phonepulse.it",
+        "X-Title": "PhonePulse",
     }
+
     for model in OPENROUTER_MODELS:
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
-            "max_tokens": 4096,
+            "max_tokens": 2048,
         }
         try:
-            resp = requests.post(OPENROUTER_ENDPOINT, json=payload, headers=headers, timeout=90)
-            if resp.status_code == 402:
-                logger.error(f"OpenRouter [{model}] richiede credito (402), salto")
-                continue
+            resp = requests.post(
+                OPENROUTER_ENDPOINT,
+                json=payload,
+                headers=headers,
+                timeout=90,
+            )
             if resp.status_code == 429:
-                logger.warning(f"OpenRouter [{model}] 429, attendo 10s")
-                time.sleep(10)
+                logger.warning(f"OpenRouter [{model}] 429, provo il prossimo")
+                continue
+            if resp.status_code == 404:
+                logger.warning(f"OpenRouter [{model}] 404 (modello non trovato), provo il prossimo")
                 continue
             resp.raise_for_status()
-            data = resp.json()
-            testo = data["choices"][0]["message"]["content"]
+            testo = resp.json()["choices"][0]["message"]["content"]
             if testo:
-                logger.info(f"OpenRouter: risposta da {model}")
+                logger.info(f"OpenRouter [{model}] OK")
                 return testo
+            logger.warning(f"OpenRouter [{model}] risposta vuota, provo il prossimo")
         except Exception as e:
-            logger.warning(f"OpenRouter [{model}] fallito: {e}, provo il prossimo")
-    logger.error("Tutti i modelli OpenRouter hanno fallito")
+            logger.warning(f"OpenRouter [{model}] errore: {e}, provo il prossimo")
+            continue
+
+    logger.error("Tutti i modelli OpenRouter hanno fallito — nessun testo generato")
     return None
 
 
