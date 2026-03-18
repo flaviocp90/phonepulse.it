@@ -48,7 +48,7 @@ FEED_URLS = [
 
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash:generateContent"
+    "gemini-3.1-flash-lite-preview"
 )
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
