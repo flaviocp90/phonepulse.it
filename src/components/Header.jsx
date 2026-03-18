@@ -17,7 +17,7 @@ export default function Header() {
     <header className="bg-dark border-b border-white/10 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
         <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="PhonePulse home">
-          <img src="/logo.png" alt="PhonePulse logo" className="h-8 w-8 rounded-full object-cover" />
+          <img src="/logo.png" alt="PhonePulse logo" className="h-10 w-10 rounded-full object-cover ring-1 ring-primary/40" />
           <span className="text-primary text-2xl font-heading font-bold tracking-tight leading-none">PHONE</span>
           <span className="text-white text-2xl font-heading font-bold tracking-tight leading-none">PULSE</span>
         </Link>
