@@ -46,10 +46,11 @@ FEED_URLS = [
 ]
 
 
-GEMINI_ENDPOINT = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash-lite"
-)
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
+GEMINI_MODELS = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash-lite",
+]
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
 
@@ -215,31 +216,38 @@ def incrementa_gemini_calls(supabase: Client):
 # ---------------------------------------------------------------------------
 def chiama_gemini(title: str, excerpt: str) -> str | None:
     """
-    Chiama Gemini 2.0 Flash con un retry su 429 (attende 15s prima di riprovare).
-    Restituisce None in caso di errore.
+    Chiama Gemini con fallback a cascata sui modelli in GEMINI_MODELS.
+    Prova prima gemini-3.1-flash-lite-preview, poi gemini-2.5-flash-lite.
+    Retry su 429 (attende 15s). Restituisce None se tutti i modelli falliscono.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192},
     }
-    for tentativo in range(2):
-        try:
-            resp = requests.post(
-                f"{GEMINI_ENDPOINT}?key={GEMINI_API_KEY}",
-                json=payload,
-                timeout=60,
-            )
-            if resp.status_code == 429 and tentativo == 0:
-                logger.warning("Gemini 429, attendo 15s e riprovo...")
-                time.sleep(15)
-                continue
-            resp.raise_for_status()
-            data = resp.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception as e:
-            logger.error(f"Errore Gemini: {e}")
-            return None
+    for model in GEMINI_MODELS:
+        endpoint = f"{GEMINI_BASE_URL}{model}:generateContent"
+        for tentativo in range(2):
+            try:
+                resp = requests.post(
+                    f"{endpoint}?key={GEMINI_API_KEY}",
+                    json=payload,
+                    timeout=60,
+                )
+                if resp.status_code == 429 and tentativo == 0:
+                    logger.warning(f"Gemini 429 ({model}), attendo 15s e riprovo...")
+                    time.sleep(15)
+                    continue
+                if resp.status_code == 404:
+                    logger.warning(f"Gemini modello non trovato ({model}), provo il prossimo...")
+                    break
+                resp.raise_for_status()
+                data = resp.json()
+                logger.info(f"Gemini risposta OK con modello: {model}")
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            except Exception as e:
+                logger.error(f"Errore Gemini ({model}): {e}")
+                break
     return None
 
 
@@ -317,7 +325,7 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
         testo_risposta = chiama_gemini(title, excerpt)
         if testo_risposta:
             incrementa_gemini_calls(supabase)
-            time.sleep(4)  # rispetta il limite ~30 RPM di gemini-2.0-flash-lite free
+            time.sleep(4)  # rispetta i rate limit del tier free Gemini
         else:
             # Gemini fallito → prova OpenRouter
             logger.warning("Gemini fallito, fallback su OpenRouter")
