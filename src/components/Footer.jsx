@@ -8,7 +8,7 @@ export default function Footer() {
           <span className="text-primary font-heading font-bold text-xl leading-none">PHONE</span>
           <span className="text-white font-heading font-bold text-xl leading-none">PULSE</span>
         </Link>
-        <p className="text-white/30 text-sm font-body">© PhonePulse 2025 — Tutti i diritti riservati</p>
+        <p className="text-white/30 text-sm font-body">© PhonePulse {new Date().getFullYear()} — Tutti i diritti riservati</p>
         <Link
           to="/privacy"
           className="text-white/30 text-sm font-body hover:text-white/60 transition-colors"

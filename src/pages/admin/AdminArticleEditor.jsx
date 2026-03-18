@@ -430,25 +430,28 @@ export default function AdminArticleEditor() {
 
             {/* Cover image */}
             <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label="Cover image URL">
-                <input
-                  type="url"
-                  value={form.cover_image_url}
-                  onChange={e => handleChange('cover_image_url', e.target.value)}
-                  placeholder="https://..."
-                  className={inputClass}
-                />
-              </Field>
+              <label className="block text-sm font-medium mb-1">Cover Image URL</label>
+
               {form.cover_image_url && (
-                <div className="mt-3 rounded-lg overflow-hidden border border-border aspect-video">
-                  <img
-                    src={form.cover_image_url}
-                    alt="Cover preview"
-                    className="w-full h-full object-cover"
-                    onError={e => { e.target.style.display = 'none' }}
-                  />
-                </div>
+                <img
+                  src={form.cover_image_url}
+                  alt="Preview cover"
+                  className="w-full h-40 object-cover rounded mb-2 border border-[#E5E2DB]"
+                  onError={e => { e.target.style.display = 'none' }}
+                />
               )}
+
+              <input
+                type="text"
+                placeholder="https://images.unsplash.com/..."
+                value={form.cover_image_url || ''}
+                onChange={e => handleChange('cover_image_url', e.target.value)}
+                className="w-full border border-[#E5E2DB] rounded px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Incolla l&apos;URL diretto da Unsplash o da qualsiasi fonte. La preview si aggiorna
+                automaticamente.
+              </p>
             </div>
 
             {/* Tags */}

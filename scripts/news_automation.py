@@ -48,13 +48,13 @@ FEED_URLS = [
 
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent"
+    "gemini-3.1-flash-lite-preview"
 )
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
 
 SYSTEM_PROMPT_TEMPLATE = """Sei il redattore di PhonePulse (phonepulse.it), un blog tech italiano.
-Scrivi una news in italiano partendo da queste informazioni: {title} — {excerpt}.
+La data di oggi è {today}. Scrivi una news in italiano partendo da queste informazioni: {title} — {excerpt}.
 
 Regole:
 - Tono: diretto, tecnico ma accessibile, prospettiva italiana (prezzi €, garanzia IT)
@@ -62,6 +62,9 @@ Regole:
 - Il titolo deve contenere la keyword principale ed essere max 60 caratteri
 - L'excerpt deve essere autonomo e leggibile fuori contesto (max 155 char)
 - Non copiare il testo fonte: rielabora con valore aggiunto
+- USA SOLO i dati presenti nel titolo e nell'excerpt: non inventare specifiche tecniche, prezzi, date o funzionalità non menzionati esplicitamente
+- Se un'informazione non è presente nel contesto fornito, omettila o usa formule come "secondo le prime indiscrezioni" o "i dettagli non sono ancora confermati"
+- Il frame temporale deve essere coerente con la data di oggi: non trattare come futuri eventi già accaduti
 - Rispondi SOLO con il JSON descritto, senza testo aggiuntivo o backtick markdown
 
 Produci esattamente questo JSON:
@@ -215,7 +218,7 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
     Chiama Gemini 2.0 Flash con un retry su 429 (attende 15s prima di riprovare).
     Restituisce None in caso di errore.
     """
-    prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
+    prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192},
@@ -259,7 +262,7 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
       - altro errore → logga e passa al successivo
     Se tutti i modelli falliscono, restituisce None.
     """
-    prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt)
+    prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -473,10 +476,30 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
     # --- Quality gate ---
     ok, motivo = supera_quality_gate(articolo, supabase)
     if not ok:
-        logger.warning(f"[SCARTATO] {title} — {motivo}")
-        invia_telegram(
-            f"⚠️ Articolo scartato dal quality gate\n\n📰 {articolo.get('title', title)}\nMotivo: {motivo}"
-        )
+        logger.warning(f"[SCARTATO quality gate] {title} — {motivo}")
+        # Inserisce in Supabase come scartato — visibile in /admin/review tab Scartati
+        record_scartato = {
+            "title": articolo.get("title", title),
+            "slug": articolo.get("slug", calcola_hash(title)[:20]),
+            "excerpt": articolo.get("excerpt", "")[:155],
+            "content": articolo.get("content", ""),
+            "seo_title": articolo.get("seo_title", articolo.get("title", title)),
+            "seo_description": articolo.get("seo_description", "")[:155],
+            "category_id": articolo.get("category_id"),
+            "cover_image_url": articolo.get("cover_image_url"),
+            "author": "PhonePulse Bot",
+            "is_published": False,
+            "needs_review": False,
+            "discarded": True,
+            "affiliate_links": {},
+            "score": None,
+        }
+        try:
+            supabase.table("articles").insert(record_scartato).execute()
+            inserisci_hash(supabase, hash_md5, link)
+            logger.info(f"[SCARTATO salvato] {title}")
+        except Exception as e:
+            logger.error(f"[ERRORE INSERT scartato] {title}: {e}")
         return
 
     # --- INSERT in Supabase ---

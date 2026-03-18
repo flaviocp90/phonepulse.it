@@ -1,4 +1,32 @@
 import { useEffect, useState } from 'react'
+
+const CATEGORY_ICONS = {
+  recensioni: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+  comparativi: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  ),
+  guide: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
+  news: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  ),
+  offerte: (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  ),
+}
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
@@ -67,7 +95,7 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero */}
         <section className="bg-dark relative overflow-hidden">
-          <div className="absolute inset-0 opacity-5 pointer-events-none"
+          <div className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
               backgroundImage: 'radial-gradient(circle at 70% 50%, #FF5C1A 0%, transparent 60%)',
             }}
@@ -77,7 +105,7 @@ export default function Home() {
               <span className="inline-block text-primary text-xs font-body font-semibold uppercase tracking-widest mb-4 border border-primary/30 px-3 py-1 rounded-full">
                 Tech italiana
               </span>
-              <h1 className="text-5xl md:text-6xl font-heading font-bold text-white leading-tight mb-5">
+              <h1 className="text-4xl md:text-6xl font-heading font-bold text-white leading-tight mb-5">
                 Recensioni e guide smartphone<br />
                 <span className="text-primary">per scegliere bene.</span>
               </h1>
@@ -132,9 +160,13 @@ export default function Home() {
                     }}
                   >
                     <div
-                      className="w-2.5 h-2.5 rounded-full mb-3 group-hover:scale-125 transition-transform"
-                      style={{ backgroundColor: cat.color || '#FF5C1A' }}
-                    />
+                      className="mb-3 group-hover:scale-110 transition-transform"
+                      style={{ color: cat.color || '#FF5C1A' }}
+                    >
+                      {CATEGORY_ICONS[cat.slug] || (
+                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cat.color || '#FF5C1A' }} />
+                      )}
+                    </div>
                     <span
                       className="text-sm font-heading font-bold uppercase tracking-wide"
                       style={{ color: cat.color || '#FF5C1A' }}

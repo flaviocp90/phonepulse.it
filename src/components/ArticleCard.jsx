@@ -75,7 +75,7 @@ export default function ArticleCard({ article }) {
           </p>
         )}
 
-        <time className="text-xs text-gray-400 font-body mt-auto pt-1">{formatDate(published_at)}</time>
+        <time className="text-xs text-gray-500 font-body mt-auto pt-1">{formatDate(published_at)}</time>
       </div>
     </Link>
   )
