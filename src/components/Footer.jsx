@@ -37,12 +37,20 @@ export default function Footer() {
             </a>
           </div>
         </div>
-        <Link
-          to="/privacy"
-          className="text-white/30 text-sm font-body hover:text-white/60 transition-colors"
-        >
-          Privacy Policy
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/sitemap"
+            className="text-white/30 text-sm font-body hover:text-white/60 transition-colors"
+          >
+            Sitemap
+          </Link>
+          <Link
+            to="/privacy"
+            className="text-white/30 text-sm font-body hover:text-white/60 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </footer>
   )

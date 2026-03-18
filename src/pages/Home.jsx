@@ -33,6 +33,7 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import ArticleCard from '../components/ArticleCard'
 import SEO from '../components/SEO'
+import { OrganizationSchema } from '../components/SchemaMarkup'
 
 function CardSkeleton() {
   return (
@@ -90,6 +91,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO />
+      <OrganizationSchema />
       <Header />
 
       <main className="flex-1">

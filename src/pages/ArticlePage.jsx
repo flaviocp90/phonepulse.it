@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SEO from "../components/SEO";
+import { ArticleSchema, BreadcrumbSchema } from "../components/SchemaMarkup";
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -73,13 +74,33 @@ export default function ArticlePage() {
   return (
     <div className="min-h-screen flex flex-col">
       {article && (
-        <SEO
-          title={article.seo_title || article.title}
-          description={article.seo_description || article.excerpt}
-          image={article.cover_image_url}
-          canonical={`/articoli/${article.slug}`}
-          type="article"
-        />
+        <>
+          <SEO
+            title={article.seo_title || article.title}
+            description={article.seo_description || article.excerpt}
+            image={article.cover_image_url}
+            canonical={`/articoli/${article.slug}`}
+            type="article"
+          />
+          <ArticleSchema
+            title={article.title}
+            description={article.excerpt}
+            publishedAt={article.published_at}
+            updatedAt={article.updated_at}
+            slug={article.slug}
+            coverImage={article.cover_image_url}
+          />
+          <BreadcrumbSchema
+            items={[
+              { name: 'Home', url: 'https://phonepulse.it/' },
+              {
+                name: article.categories?.name || 'Articoli',
+                url: `https://phonepulse.it/categoria/${article.categories?.slug || 'news'}`,
+              },
+              { name: article.title, url: `https://phonepulse.it/articoli/${article.slug}` },
+            ]}
+          />
+        </>
       )}
       <Header />
 
