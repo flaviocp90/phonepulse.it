@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import { supabase } from "../lib/supabase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -234,7 +235,7 @@ export default function ArticlePage() {
               <div
                 className="article-content"
                 dangerouslySetInnerHTML={{
-                  __html: marked.parse(article.content),
+                  __html: DOMPurify.sanitize(marked.parse(article.content)),
                 }}
               />
             )}
