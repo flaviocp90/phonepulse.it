@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { supabase } from '../../lib/supabase'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -251,7 +252,7 @@ export default function AdminArticleEditor() {
         <div className="bg-white border border-border rounded-2xl p-8">
           <h2 className="text-3xl font-heading font-bold text-dark mb-3">{form.title || 'Titolo'}</h2>
           {form.excerpt && <p className="text-gray-500 text-base mb-6 border-l-4 border-primary/30 pl-4">{form.excerpt}</p>}
-          <div className="article-content" dangerouslySetInnerHTML={{ __html: marked.parse(form.content || '_Nessun contenuto ancora._') }} />
+          <div className="article-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(form.content || '_Nessun contenuto ancora._')) }} />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
