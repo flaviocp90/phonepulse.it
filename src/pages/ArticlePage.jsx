@@ -127,7 +127,7 @@ export default function ArticlePage() {
               <Link to="/" className="hover:text-gray-600 transition-colors">
                 Home
               </Link>
-              <span>/</span>
+              <span className="text-gray-400">&rsaquo;</span>
               {article.categories && (
                 <>
                   <Link
@@ -136,7 +136,7 @@ export default function ArticlePage() {
                   >
                     {article.categories.name}
                   </Link>
-                  <span>/</span>
+                  <span className="text-gray-400">&rsaquo;</span>
                 </>
               )}
               <span className="text-gray-500 line-clamp-1">
@@ -168,13 +168,13 @@ export default function ArticlePage() {
             </div>
 
             {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-heading font-bold text-dark leading-tight mb-4">
+            <h1 className="text-5xl md:text-7xl font-heading text-dark leading-none mb-4 uppercase">
               {article.title}
             </h1>
 
             {/* Excerpt */}
             {article.excerpt && (
-              <p className="text-lg text-gray-500 font-body leading-relaxed mb-6 border-l-4 border-primary/30 pl-4">
+              <p className="text-lg text-[#6B6560] font-body italic leading-relaxed mb-6 border-l-[5px] border-primary/40 pl-4">
                 {article.excerpt}
               </p>
             )}
@@ -273,7 +273,7 @@ export default function ArticlePage() {
                         href={link.url || link}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
-                        className="inline-flex items-center justify-between gap-3 bg-white border border-border px-4 py-3 rounded-xl hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
+                        className="inline-flex items-center justify-between gap-3 bg-white border border-border px-4 py-2.5 rounded-xl hover:border-primary/60 hover:shadow-md transition-all duration-200 group"
                       >
                         <span className="text-sm font-body font-medium text-dark group-hover:text-primary transition-colors">
                           {link.label || link.url || link}
