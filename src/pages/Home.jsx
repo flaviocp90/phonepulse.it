@@ -37,16 +37,7 @@ import { OrganizationSchema } from '../components/SchemaMarkup'
 
 function CardSkeleton() {
   return (
-    <div className="bg-white border border-border rounded-xl overflow-hidden animate-pulse">
-      <div className="aspect-[16/9] bg-gray-200" />
-      <div className="p-4 space-y-3">
-        <div className="h-3 bg-gray-200 rounded-full w-20" />
-        <div className="h-5 bg-gray-200 rounded w-4/5" />
-        <div className="h-4 bg-gray-100 rounded w-full" />
-        <div className="h-4 bg-gray-100 rounded w-3/4" />
-        <div className="h-3 bg-gray-100 rounded w-24 mt-2" />
-      </div>
-    </div>
+    <div className="rounded-xl overflow-hidden animate-pulse aspect-[3/4] bg-gray-200" />
   )
 }
 
@@ -96,23 +87,15 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="bg-dark relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 70% 50%, #FF5C1A 0%, transparent 60%)',
-            }}
-          />
-          <div className="max-w-6xl mx-auto px-4 py-14 md:py-20 relative">
-            <div className="max-w-2xl">
-              <span className="inline-block text-primary text-xs font-body font-semibold uppercase tracking-widest mb-4 border border-primary/30 px-3 py-1 rounded-full">
-                Tech italiana
-              </span>
-              <h1 className="text-4xl md:text-6xl font-heading font-bold text-white leading-tight mb-5">
+        <section className="hero-section bg-dark">
+          <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+            <div className="max-w-4xl">
+              <h1 className="text-7xl md:text-[120px] font-heading text-white leading-none mb-4 uppercase">
                 Recensioni e guide smartphone<br />
                 <span className="text-primary">per scegliere bene.</span>
               </h1>
-              <p className="text-white/50 text-lg font-body leading-relaxed mb-8">
-                Analisi approfondite, comparativi onesti e guide pratiche per trovare il telefono giusto senza perdere tempo.
+              <p className="text-white/50 text-base font-body leading-relaxed mb-8 max-w-md">
+                Analisi approfondite, comparativi onesti e guide pratiche per trovare il telefono giusto.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
@@ -126,7 +109,7 @@ export default function Home() {
                 </Link>
                 <Link
                   to="/categoria/guide"
-                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-body font-semibold px-5 py-2.5 rounded-full transition-colors"
+                  className="inline-flex items-center gap-2 border border-white/20 hover:border-white/40 text-white text-sm font-body font-semibold px-5 py-2.5 rounded-full transition-colors"
                 >
                   Guide all'acquisto
                 </Link>
@@ -138,7 +121,7 @@ export default function Home() {
         {/* Articles grid */}
         <section className="max-w-6xl mx-auto px-4 py-14">
           <div className="flex items-baseline justify-between mb-8">
-            <h2 className="text-2xl font-heading font-bold text-dark">Ultimi articoli</h2>
+            <h2 className="text-3xl font-heading text-dark uppercase">Ultimi articoli</h2>
           </div>
 
           {error && (
@@ -155,8 +138,10 @@ export default function Home() {
             <p className="text-gray-400 font-body text-center py-16">Nessun articolo pubblicato ancora.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {articles.map(article => (
-                <ArticleCard key={article.id} article={article} />
+              {articles.map((article, index) => (
+                <div key={article.id} className={index === 0 ? 'lg:col-span-2' : ''}>
+                  <ArticleCard article={article} featured={index === 0} />
+                </div>
               ))}
             </div>
           )}
@@ -164,39 +149,22 @@ export default function Home() {
 
         {/* Categories */}
         {categories.length > 0 && (
-          <section className="bg-white border-t border-border">
-            <div className="max-w-6xl mx-auto px-4 py-14">
-              <h2 className="text-2xl font-heading font-bold text-dark mb-8">Esplora per categoria</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <section className="bg-dark">
+            <div className="max-w-6xl mx-auto px-4 py-12">
+              <h2 className="text-3xl font-heading text-white uppercase mb-6">Esplora per categoria</h2>
+              <div className="flex flex-wrap justify-center gap-3">
                 {categories.map(cat => (
                   <Link
                     key={cat.id}
                     to={`/categoria/${cat.slug}`}
-                    className="group flex flex-col items-center justify-center text-center px-4 py-6 rounded-xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                    style={{
-                      borderColor: cat.color ? `${cat.color}40` : '#FF5C1A40',
-                      backgroundColor: cat.color ? `${cat.color}08` : '#FF5C1A08',
-                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors"
                   >
-                    <div
-                      className="mb-3 group-hover:scale-110 transition-transform"
-                      style={{ color: cat.color || '#FF5C1A' }}
-                    >
+                    <span style={{ color: cat.color || '#FF5C1A' }}>
                       {CATEGORY_ICONS[cat.slug] || (
-                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cat.color || '#FF5C1A' }} />
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color || '#FF5C1A' }} />
                       )}
-                    </div>
-                    <span
-                      className="text-sm font-heading font-bold uppercase tracking-wide"
-                      style={{ color: cat.color || '#FF5C1A' }}
-                    >
-                      {cat.name}
                     </span>
-                    {cat.description && (
-                      <span className="text-xs text-gray-400 font-body mt-1.5 leading-tight line-clamp-2">
-                        {cat.description}
-                      </span>
-                    )}
+                    <span className="text-sm font-body uppercase tracking-widest">{cat.name}</span>
                   </Link>
                 ))}
               </div>

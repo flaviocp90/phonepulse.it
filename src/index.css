@@ -1,3 +1,24 @@
+/* Hero grain texture */
+.hero-section {
+  position: relative;
+  overflow: hidden;
+}
+.hero-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  background-repeat: repeat;
+  z-index: 0;
+}
+.hero-section > * {
+  position: relative;
+  z-index: 1;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,7 +35,7 @@
 /* Article markdown content */
 .article-content {
   @apply text-gray-700 leading-relaxed;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Figtree', sans-serif;
   font-size: 1rem;
   line-height: 1.8;
 }
@@ -24,6 +45,7 @@
 .article-content h3,
 .article-content h4 {
   @apply font-heading font-bold text-dark mt-10 mb-4;
+  font-family: 'Bebas Neue', sans-serif;
 }
 
 .article-content h1 { @apply text-3xl; }
