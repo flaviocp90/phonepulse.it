@@ -14,8 +14,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <header className="bg-dark border-b border-white/10 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
+    <header className="bg-dark border-b border-white/5 sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
         <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="PhonePulse home">
           <img src="/logo.png" alt="PhonePulse logo" className="h-10 w-10 rounded-full object-cover ring-1 ring-primary/40" />
           <span className="text-primary text-2xl font-heading font-bold tracking-tight leading-none">PHONE</span>
@@ -30,7 +30,7 @@ export default function Header() {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `text-sm font-body font-medium transition-colors ${
+                `text-xs font-body font-medium uppercase tracking-widest transition-colors ${
                   isActive ? 'text-primary' : 'text-white/60 hover:text-white'
                 }`
               }
@@ -96,7 +96,7 @@ export default function Header() {
               end={to === '/'}
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
-                `text-sm font-body font-medium py-2.5 px-3 rounded-lg transition-colors ${
+                `text-xs font-body font-medium uppercase tracking-widest py-2.5 px-3 rounded-lg transition-colors ${
                   isActive ? 'text-primary bg-white/5' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`
               }
