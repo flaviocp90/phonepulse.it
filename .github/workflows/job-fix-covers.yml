@@ -1,12 +1,10 @@
-name: Job A — Scraping e generazione bozze
+name: Job — Fix Cover Images (manuale)
 
 on:
-  schedule:
-    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
-  scraping:
+  fix-covers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +13,7 @@ jobs:
           python-version: "3.11"
       - name: Installa dipendenze
         run: pip install -r scripts/requirements.txt
-      - name: Esegui scraping e generazione bozze
+      - name: Esegui fix cover images
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -25,6 +23,5 @@ jobs:
           GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python scripts/news_automation.py
+        working-directory: scripts
+        run: python fix_cover_images.py

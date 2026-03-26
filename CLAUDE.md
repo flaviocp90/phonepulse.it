@@ -58,10 +58,13 @@ src/
   lib/
     supabase.js         — Supabase client
 scripts/
-  news_automation.py    — Python script: fetches RSS feeds, filters by keywords, generates drafts via Gemini/OpenRouter LLM, fetches cover image from Unsplash, inserts as unpublished articles in Supabase; sends Telegram notification on completion
+  news_automation.py    — Python script: fetches RSS feeds, generates drafts via Gemini/OpenRouter LLM, assigns cover image via stratified pipeline, inserts as unpublished articles in Supabase; sends Telegram notification on completion
+  fix_cover_images.py   — Python script: finds review-pending articles with no cover_image_url, generates image_query via LLM, assigns cover via stratified pipeline; run manually via GitHub Actions
   requirements.txt      — Python deps (feedparser, requests, supabase, etc.)
 .github/workflows/
-  news-automation.yml   — GitHub Actions: runs news_automation.py every 2 hours (cron) + manual trigger; secrets: GEMINI_API_KEY, OPENROUTER_API_KEY, UNSPLASH_ACCESS_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+  job-a-scraping.yml    — GitHub Actions: runs news_automation.py once/day at 02:00 UTC + manual trigger; secrets: GEMINI_API_KEY, OPENROUTER_API_KEY, UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, GOOGLE_CSE_API_KEY, GOOGLE_CSE_CX, SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+  job-b-publish.yml     — GitHub Actions: (see file for details)
+  job-fix-covers.yml    — GitHub Actions: runs fix_cover_images.py on manual trigger only (workflow_dispatch); same secrets as job-a except TELEGRAM_*
 ```
 
 ## Database schema (Supabase, schema public)
@@ -82,6 +85,17 @@ When querying articles with category: `.select('*, categories(id, name, slug, co
 - Telegram: `https://t.me/PhonePulseIT`
 
 Icons are SVG inline (no external library) in `Header.jsx` and `Footer.jsx`. When adding new social channels, follow the same pattern.
+
+## News automation — Cover image pipeline
+
+`news_automation.py` include un campo `image_query` nel JSON prodotto dall'LLM: 3-5 keyword in inglese che descrivono il soggetto visivo dell'articolo. Questa query alimenta la pipeline stratificata:
+
+1. **Google CSE** (`GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_CX`) — fonte primaria, ricerca web completa, alta pertinenza
+2. **Unsplash** (`UNSPLASH_ACCESS_KEY`) — primo fallback, foto stock
+3. **Pexels** (`PEXELS_API_KEY`) — secondo fallback, foto stock
+4. **None** — safety net: nessuna immagine, l'admin assegna manualmente da `/admin/review`
+
+`fix_cover_images.py` applica la stessa pipeline agli articoli già in Supabase (`needs_review=True`, `cover_image_url IS NULL`). Viene lanciato manualmente da GitHub Actions → `job-fix-covers.yml`.
 
 ## Admin setup
 

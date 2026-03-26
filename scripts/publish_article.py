@@ -147,6 +147,8 @@ def main():
         .eq("is_published", False)
         .eq("needs_review", True)
         .eq("discarded", False)
+        .eq("llm_model", "gemini-3.1-flash-lite-preview")
+        .eq("image_source", "google_cse")
         .order("created_at", desc=False)
         .limit(PUBLISH_COUNT)
         .execute()

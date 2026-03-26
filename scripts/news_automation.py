@@ -33,6 +33,9 @@ SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "")
+GOOGLE_CSE_API_KEY = os.environ.get("GOOGLE_CSE_API_KEY", "")
+GOOGLE_CSE_CX = os.environ.get("GOOGLE_CSE_CX", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
@@ -78,7 +81,8 @@ Produci esattamente questo JSON:
   "seo_description": "Meta description (max 155 char)",
   "category_id": "DA_CONFIGURARE",
   "tags": ["smartphone", "android"],
-  "affiliate_links": {{}}
+  "affiliate_links": {{}},
+  "image_query": "3-5 parole chiave in inglese per la ricerca immagine di copertina, descrivono il soggetto visivo principale dell'articolo (es: 'samsung galaxy s25 ultra smartphone')"
 }}"""
 
 
@@ -214,11 +218,11 @@ def incrementa_gemini_calls(supabase: Client):
 # ---------------------------------------------------------------------------
 # FASE 2 — Chiamate LLM
 # ---------------------------------------------------------------------------
-def chiama_gemini(title: str, excerpt: str) -> str | None:
+def chiama_gemini(title: str, excerpt: str) -> tuple[str | None, str | None]:
     """
     Chiama Gemini con fallback a cascata sui modelli in GEMINI_MODELS.
     Prova prima gemini-3.1-flash-lite-preview, poi gemini-2.5-flash-lite.
-    Retry su 429 (attende 15s). Restituisce None se tutti i modelli falliscono.
+    Retry su 429 (attende 15s). Restituisce (None, None) se tutti i modelli falliscono.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     payload = {
@@ -244,11 +248,11 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
                 resp.raise_for_status()
                 data = resp.json()
                 logger.info(f"Gemini risposta OK con modello: {model}")
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["candidates"][0]["content"]["parts"][0]["text"], model
             except Exception as e:
                 logger.error(f"Errore Gemini ({model}): {e}")
                 break
-    return None
+    return None, None
 
 
 OPENROUTER_MODELS = [
@@ -260,7 +264,7 @@ OPENROUTER_MODELS = [
 ]
 
 
-def chiama_openrouter(title: str, excerpt: str) -> str | None:
+def chiama_openrouter(title: str, excerpt: str) -> tuple[str | None, str | None]:
     """
     Chiama OpenRouter con fallback a cascata sui modelli in OPENROUTER_MODELS.
     Per ogni modello:
@@ -268,7 +272,7 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
       - 404 → modello non disponibile, passa al successivo
       - 429 → rate limit, passa al successivo senza attendere
       - altro errore → logga e passa al successivo
-    Se tutti i modelli falliscono, restituisce None.
+    Se tutti i modelli falliscono, restituisce (None, None).
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     headers = {
@@ -302,41 +306,42 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
             testo = resp.json()["choices"][0]["message"]["content"]
             if testo:
                 logger.info(f"OpenRouter [{model}] OK")
-                return testo
+                return testo, model
             logger.warning(f"OpenRouter [{model}] risposta vuota, provo il prossimo")
         except Exception as e:
             logger.warning(f"OpenRouter [{model}] errore: {e}, provo il prossimo")
             continue
 
     logger.error("Tutti i modelli OpenRouter hanno fallito — nessun testo generato")
-    return None
+    return None, None
 
 
-def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
+def genera_bozza(supabase: Client, title: str, excerpt: str) -> tuple[dict | None, str | None]:
     """
-    Seleziona il motore LLM corretto, chiama l'API e restituisce il dict JSON.
+    Seleziona il motore LLM corretto, chiama l'API e restituisce il dict JSON + nome modello.
     Gestisce il dual-engine: Gemini < 220 chiamate/giorno, poi OpenRouter.
     """
     gemini_calls = get_gemini_calls_oggi(supabase)
     testo_risposta = None
+    llm_model = None
 
     if gemini_calls < GEMINI_DAILY_LIMIT:
         logger.info(f"Uso Gemini (chiamate oggi: {gemini_calls})")
-        testo_risposta = chiama_gemini(title, excerpt)
+        testo_risposta, llm_model = chiama_gemini(title, excerpt)
         if testo_risposta:
             incrementa_gemini_calls(supabase)
             time.sleep(4)  # rispetta i rate limit del tier free Gemini
         else:
             # Gemini fallito → prova OpenRouter
             logger.warning("Gemini fallito, fallback su OpenRouter")
-            testo_risposta = chiama_openrouter(title, excerpt)
+            testo_risposta, llm_model = chiama_openrouter(title, excerpt)
     else:
         logger.info(f"Limite Gemini raggiunto ({gemini_calls}), uso OpenRouter")
-        testo_risposta = chiama_openrouter(title, excerpt)
+        testo_risposta, llm_model = chiama_openrouter(title, excerpt)
 
     if not testo_risposta:
         logger.error("Entrambi i motori LLM hanno fallito")
-        return None
+        return None, None
 
     # Parsing JSON
     try:
@@ -344,22 +349,53 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
         testo_pulito = testo_risposta.strip().strip("`")
         if testo_pulito.startswith("json"):
             testo_pulito = testo_pulito[4:].strip()
-        return json.loads(testo_pulito)
+        return json.loads(testo_pulito), llm_model
     except json.JSONDecodeError as e:
         logger.error(f"JSON non valido dalla risposta LLM: {e}\nRisposta: {testo_risposta[:200]}")
+        return None, None
+
+
+# ---------------------------------------------------------------------------
+# FASE 3 — Cover image: pipeline stratificata
+# Ordine: Google CSE → Unsplash → Pexels → None
+# La query viene dall'LLM (image_query nel JSON), non dalle parole del titolo.
+# ---------------------------------------------------------------------------
+
+def _cerca_cover_google_cse(query: str) -> str | None:
+    """Cerca un'immagine via Google Custom Search (fonte primaria)."""
+    if not GOOGLE_CSE_API_KEY or not GOOGLE_CSE_CX:
         return None
+    try:
+        resp = requests.get(
+            "https://www.googleapis.com/customsearch/v1",
+            params={
+                "key": GOOGLE_CSE_API_KEY,
+                "cx": GOOGLE_CSE_CX,
+                "q": query,
+                "searchType": "image",
+                "imgType": "photo",
+                "imgSize": "large",
+                "num": 1,
+                "safe": "active",
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        items = resp.json().get("items", [])
+        if items:
+            url = items[0]["link"]
+            logger.info(f"Google CSE cover trovata: {url[:60]}…")
+            return url
+        logger.warning("Google CSE: nessun risultato per la query")
+    except Exception as e:
+        logger.warning(f"Google CSE non disponibile: {e}")
+    return None
 
 
-# ---------------------------------------------------------------------------
-# FASE 3 — Cover image da Unsplash
-# ---------------------------------------------------------------------------
-def cerca_cover_image(title: str) -> str | None:
-    """Cerca su Unsplash una cover image usando le prime 3 keyword del titolo."""
+def _cerca_cover_unsplash(query: str) -> str | None:
+    """Cerca un'immagine su Unsplash (primo fallback)."""
     if not UNSPLASH_ACCESS_KEY:
         return None
-    # Prendi le prime 2-3 parole significative (almeno 4 caratteri)
-    parole = [p for p in title.split() if len(p) >= 4][:3]
-    query = " ".join(parole) if parole else title
     try:
         resp = requests.get(
             "https://api.unsplash.com/search/photos",
@@ -377,6 +413,55 @@ def cerca_cover_image(title: str) -> str | None:
     except Exception as e:
         logger.warning(f"Unsplash non disponibile: {e}")
     return None
+
+
+def _cerca_cover_pexels(query: str) -> str | None:
+    """Cerca un'immagine su Pexels (secondo fallback)."""
+    if not PEXELS_API_KEY:
+        return None
+    try:
+        resp = requests.get(
+            "https://api.pexels.com/v1/search",
+            params={"query": query, "per_page": 1, "orientation": "landscape"},
+            headers={"Authorization": PEXELS_API_KEY},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        photos = resp.json().get("photos", [])
+        if photos:
+            url = photos[0]["src"]["large"]
+            logger.info(f"Pexels cover trovata: {url[:60]}…")
+            return url
+        logger.warning("Pexels: nessun risultato per la query")
+    except Exception as e:
+        logger.warning(f"Pexels non disponibile: {e}")
+    return None
+
+
+def cerca_cover_image(image_query: str, title_fallback: str) -> tuple[str | None, str | None]:
+    """
+    Pipeline stratificata per la cover image.
+    Usa image_query generata dall'LLM; title_fallback solo se image_query è vuota.
+    Ordine: Google CSE → Unsplash → Pexels → None
+    Restituisce (url, nome_fonte) dove nome_fonte è 'google_cse' | 'unsplash' | 'pexels' | None.
+    """
+    query = image_query.strip() if image_query and image_query.strip() else title_fallback
+    logger.info(f"Cover image query: '{query}'")
+
+    url = _cerca_cover_google_cse(query)
+    if url:
+        return url, "google_cse"
+
+    url = _cerca_cover_unsplash(query)
+    if url:
+        return url, "unsplash"
+
+    url = _cerca_cover_pexels(query)
+    if url:
+        return url, "pexels"
+
+    logger.warning("Cover image: tutti i provider hanno fallito, nessuna immagine impostata")
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -446,7 +531,7 @@ def invia_telegram(messaggio: str):
 # ---------------------------------------------------------------------------
 # Pipeline principale per un singolo articolo
 # ---------------------------------------------------------------------------
-def processa_articolo(item: dict, supabase: Client, category_id: str | None):    
+def processa_articolo(item: dict, supabase: Client, category_id: str | None):
     """
     Elabora un singolo articolo RSS attraverso tutte le fasi.
     Gestisce gli errori in modo che un fallimento non blocchi gli altri.
@@ -464,7 +549,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
 
     # --- Generazione bozza ---
     logger.info(f"[LLM] Genero bozza per: {title}")
-    articolo = genera_bozza(supabase, title, excerpt)
+    articolo, llm_model = genera_bozza(supabase, title, excerpt)
 
     if not articolo:
         logger.error(f"[ERRORE LLM] {title}")
@@ -477,8 +562,9 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         logger.warning("category_id 'news' non trovato, uso None")
         articolo["category_id"] = None
 
-    # --- Cover image (usa titolo RSS originale in inglese per query Unsplash migliore) ---
-    cover_url = cerca_cover_image(title)
+    # --- Cover image: pipeline stratificata con query generata dall'LLM ---
+    image_query = articolo.pop("image_query", "") or ""
+    cover_url, image_source = cerca_cover_image(image_query, title)
     articolo["cover_image_url"] = cover_url
 
     # --- Quality gate ---
@@ -501,6 +587,8 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
             "discarded": True,
             "affiliate_links": {},
             "score": None,
+            "llm_model": llm_model,
+            "image_source": image_source,
         }
         try:
             supabase.table("articles").insert(record_scartato).execute()
@@ -526,6 +614,8 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         "discarded": False,
         "affiliate_links": {},
         "score": None,
+        "llm_model": llm_model,
+        "image_source": image_source,
     }
 
     try:
