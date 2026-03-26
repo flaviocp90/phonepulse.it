@@ -218,11 +218,11 @@ def incrementa_gemini_calls(supabase: Client):
 # ---------------------------------------------------------------------------
 # FASE 2 — Chiamate LLM
 # ---------------------------------------------------------------------------
-def chiama_gemini(title: str, excerpt: str) -> str | None:
+def chiama_gemini(title: str, excerpt: str) -> tuple[str | None, str | None]:
     """
     Chiama Gemini con fallback a cascata sui modelli in GEMINI_MODELS.
     Prova prima gemini-3.1-flash-lite-preview, poi gemini-2.5-flash-lite.
-    Retry su 429 (attende 15s). Restituisce None se tutti i modelli falliscono.
+    Retry su 429 (attende 15s). Restituisce (None, None) se tutti i modelli falliscono.
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     payload = {
@@ -248,11 +248,11 @@ def chiama_gemini(title: str, excerpt: str) -> str | None:
                 resp.raise_for_status()
                 data = resp.json()
                 logger.info(f"Gemini risposta OK con modello: {model}")
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["candidates"][0]["content"]["parts"][0]["text"], model
             except Exception as e:
                 logger.error(f"Errore Gemini ({model}): {e}")
                 break
-    return None
+    return None, None
 
 
 OPENROUTER_MODELS = [
@@ -264,7 +264,7 @@ OPENROUTER_MODELS = [
 ]
 
 
-def chiama_openrouter(title: str, excerpt: str) -> str | None:
+def chiama_openrouter(title: str, excerpt: str) -> tuple[str | None, str | None]:
     """
     Chiama OpenRouter con fallback a cascata sui modelli in OPENROUTER_MODELS.
     Per ogni modello:
@@ -272,7 +272,7 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
       - 404 → modello non disponibile, passa al successivo
       - 429 → rate limit, passa al successivo senza attendere
       - altro errore → logga e passa al successivo
-    Se tutti i modelli falliscono, restituisce None.
+    Se tutti i modelli falliscono, restituisce (None, None).
     """
     prompt = SYSTEM_PROMPT_TEMPLATE.format(title=title, excerpt=excerpt, today=date.today().strftime("%d %B %Y"))
     headers = {
@@ -306,41 +306,42 @@ def chiama_openrouter(title: str, excerpt: str) -> str | None:
             testo = resp.json()["choices"][0]["message"]["content"]
             if testo:
                 logger.info(f"OpenRouter [{model}] OK")
-                return testo
+                return testo, model
             logger.warning(f"OpenRouter [{model}] risposta vuota, provo il prossimo")
         except Exception as e:
             logger.warning(f"OpenRouter [{model}] errore: {e}, provo il prossimo")
             continue
 
     logger.error("Tutti i modelli OpenRouter hanno fallito — nessun testo generato")
-    return None
+    return None, None
 
 
-def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
+def genera_bozza(supabase: Client, title: str, excerpt: str) -> tuple[dict | None, str | None]:
     """
-    Seleziona il motore LLM corretto, chiama l'API e restituisce il dict JSON.
+    Seleziona il motore LLM corretto, chiama l'API e restituisce il dict JSON + nome modello.
     Gestisce il dual-engine: Gemini < 220 chiamate/giorno, poi OpenRouter.
     """
     gemini_calls = get_gemini_calls_oggi(supabase)
     testo_risposta = None
+    llm_model = None
 
     if gemini_calls < GEMINI_DAILY_LIMIT:
         logger.info(f"Uso Gemini (chiamate oggi: {gemini_calls})")
-        testo_risposta = chiama_gemini(title, excerpt)
+        testo_risposta, llm_model = chiama_gemini(title, excerpt)
         if testo_risposta:
             incrementa_gemini_calls(supabase)
             time.sleep(4)  # rispetta i rate limit del tier free Gemini
         else:
             # Gemini fallito → prova OpenRouter
             logger.warning("Gemini fallito, fallback su OpenRouter")
-            testo_risposta = chiama_openrouter(title, excerpt)
+            testo_risposta, llm_model = chiama_openrouter(title, excerpt)
     else:
         logger.info(f"Limite Gemini raggiunto ({gemini_calls}), uso OpenRouter")
-        testo_risposta = chiama_openrouter(title, excerpt)
+        testo_risposta, llm_model = chiama_openrouter(title, excerpt)
 
     if not testo_risposta:
         logger.error("Entrambi i motori LLM hanno fallito")
-        return None
+        return None, None
 
     # Parsing JSON
     try:
@@ -348,10 +349,10 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
         testo_pulito = testo_risposta.strip().strip("`")
         if testo_pulito.startswith("json"):
             testo_pulito = testo_pulito[4:].strip()
-        return json.loads(testo_pulito)
+        return json.loads(testo_pulito), llm_model
     except json.JSONDecodeError as e:
         logger.error(f"JSON non valido dalla risposta LLM: {e}\nRisposta: {testo_risposta[:200]}")
-        return None
+        return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -437,29 +438,30 @@ def _cerca_cover_pexels(query: str) -> str | None:
     return None
 
 
-def cerca_cover_image(image_query: str, title_fallback: str) -> str | None:
+def cerca_cover_image(image_query: str, title_fallback: str) -> tuple[str | None, str | None]:
     """
     Pipeline stratificata per la cover image.
     Usa image_query generata dall'LLM; title_fallback solo se image_query è vuota.
     Ordine: Google CSE → Unsplash → Pexels → None
+    Restituisce (url, nome_fonte) dove nome_fonte è 'google_cse' | 'unsplash' | 'pexels' | None.
     """
     query = image_query.strip() if image_query and image_query.strip() else title_fallback
     logger.info(f"Cover image query: '{query}'")
 
     url = _cerca_cover_google_cse(query)
     if url:
-        return url
+        return url, "google_cse"
 
     url = _cerca_cover_unsplash(query)
     if url:
-        return url
+        return url, "unsplash"
 
     url = _cerca_cover_pexels(query)
     if url:
-        return url
+        return url, "pexels"
 
     logger.warning("Cover image: tutti i provider hanno fallito, nessuna immagine impostata")
-    return None
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -547,7 +549,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
 
     # --- Generazione bozza ---
     logger.info(f"[LLM] Genero bozza per: {title}")
-    articolo = genera_bozza(supabase, title, excerpt)
+    articolo, llm_model = genera_bozza(supabase, title, excerpt)
 
     if not articolo:
         logger.error(f"[ERRORE LLM] {title}")
@@ -562,7 +564,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
 
     # --- Cover image: pipeline stratificata con query generata dall'LLM ---
     image_query = articolo.pop("image_query", "") or ""
-    cover_url = cerca_cover_image(image_query, title)
+    cover_url, image_source = cerca_cover_image(image_query, title)
     articolo["cover_image_url"] = cover_url
 
     # --- Quality gate ---
@@ -585,6 +587,8 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
             "discarded": True,
             "affiliate_links": {},
             "score": None,
+            "llm_model": llm_model,
+            "image_source": image_source,
         }
         try:
             supabase.table("articles").insert(record_scartato).execute()
@@ -610,6 +614,8 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         "discarded": False,
         "affiliate_links": {},
         "score": None,
+        "llm_model": llm_model,
+        "image_source": image_source,
     }
 
     try:
