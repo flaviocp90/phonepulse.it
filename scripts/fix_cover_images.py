@@ -160,10 +160,13 @@ def fetch_articoli_senza_cover(supabase: Client) -> list[dict]:
         return []
 
 
-def aggiorna_cover(supabase: Client, article_id: str, cover_url: str):
-    """Aggiorna cover_image_url per l'articolo specificato."""
+def aggiorna_cover(supabase: Client, article_id: str, cover_url: str, image_source: str | None = None):
+    """Aggiorna cover_image_url (e image_source) per l'articolo specificato."""
     try:
-        supabase.table("articles").update({"cover_image_url": cover_url}).eq("id", article_id).execute()
+        payload = {"cover_image_url": cover_url}
+        if image_source:
+            payload["image_source"] = image_source
+        supabase.table("articles").update(payload).eq("id", article_id).execute()
         logger.info(f"[AGGIORNATO] id={article_id} → {cover_url[:60]}…")
     except Exception as e:
         logger.error(f"[ERRORE UPDATE] id={article_id}: {e}")
@@ -191,10 +194,10 @@ def main():
 
         try:
             image_query = genera_image_query(title, excerpt)
-            cover_url = cerca_cover_image(image_query, title)
+            cover_url, image_source = cerca_cover_image(image_query, title, supabase)
 
             if cover_url:
-                aggiorna_cover(supabase, article_id, cover_url)
+                aggiorna_cover(supabase, article_id, cover_url, image_source)
                 aggiornati += 1
             else:
                 logger.warning(f"[NESSUNA COVER] {title} — tutti i provider hanno fallito")

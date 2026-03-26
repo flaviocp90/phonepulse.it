@@ -56,6 +56,7 @@ GEMINI_MODELS = [
 ]
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 220
+GOOGLE_CSE_DAILY_LIMIT = 99
 
 SYSTEM_PROMPT_TEMPLATE = """Sei il redattore di PhonePulse (phonepulse.it), un blog tech italiano.
 La data di oggi è {today}. Scrivi una news in italiano partendo da queste informazioni: {title} — {excerpt}.
@@ -215,6 +216,32 @@ def incrementa_gemini_calls(supabase: Client):
         logger.warning(f"Impossibile aggiornare contatore Gemini: {e}")
 
 
+def get_google_cse_calls_oggi(supabase: Client) -> int:
+    """Restituisce il numero di chiamate Google CSE effettuate oggi."""
+    oggi = date.today().isoformat()
+    try:
+        result = supabase.table("daily_counters").select("google_cse_calls").eq("date", oggi).execute()
+        if result.data:
+            return result.data[0].get("google_cse_calls") or 0
+    except Exception as e:
+        logger.warning(f"Impossibile leggere contatore Google CSE: {e}")
+    return 0
+
+
+def incrementa_google_cse_calls(supabase: Client):
+    """Incrementa di 1 il contatore Google CSE per oggi."""
+    oggi = date.today().isoformat()
+    try:
+        result = supabase.table("daily_counters").select("google_cse_calls").eq("date", oggi).execute()
+        if result.data:
+            nuovo_valore = (result.data[0].get("google_cse_calls") or 0) + 1
+            supabase.table("daily_counters").update(
+                {"google_cse_calls": nuovo_valore, "updated_at": datetime.now(timezone.utc).isoformat()}
+            ).eq("date", oggi).execute()
+    except Exception as e:
+        logger.warning(f"Impossibile aggiornare contatore Google CSE: {e}")
+
+
 # ---------------------------------------------------------------------------
 # FASE 2 — Chiamate LLM
 # ---------------------------------------------------------------------------
@@ -361,9 +388,12 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> tuple[dict | Non
 # La query viene dall'LLM (image_query nel JSON), non dalle parole del titolo.
 # ---------------------------------------------------------------------------
 
-def _cerca_cover_google_cse(query: str) -> str | None:
+def _cerca_cover_google_cse(query: str, supabase: "Client | None" = None) -> str | None:
     """Cerca un'immagine via Google Custom Search (fonte primaria)."""
     if not GOOGLE_CSE_API_KEY or not GOOGLE_CSE_CX:
+        return None
+    if supabase and get_google_cse_calls_oggi(supabase) >= GOOGLE_CSE_DAILY_LIMIT:
+        logger.info(f"Google CSE: limite giornaliero ({GOOGLE_CSE_DAILY_LIMIT}) raggiunto, skip a Unsplash")
         return None
     try:
         resp = requests.get(
@@ -384,6 +414,8 @@ def _cerca_cover_google_cse(query: str) -> str | None:
         items = resp.json().get("items", [])
         if items:
             url = items[0]["link"]
+            if supabase:
+                incrementa_google_cse_calls(supabase)
             logger.info(f"Google CSE cover trovata: {url[:60]}…")
             return url
         logger.warning("Google CSE: nessun risultato per la query")
@@ -438,7 +470,7 @@ def _cerca_cover_pexels(query: str) -> str | None:
     return None
 
 
-def cerca_cover_image(image_query: str, title_fallback: str) -> tuple[str | None, str | None]:
+def cerca_cover_image(image_query: str, title_fallback: str, supabase: "Client | None" = None) -> tuple[str | None, str | None]:
     """
     Pipeline stratificata per la cover image.
     Usa image_query generata dall'LLM; title_fallback solo se image_query è vuota.
@@ -448,7 +480,7 @@ def cerca_cover_image(image_query: str, title_fallback: str) -> tuple[str | None
     query = image_query.strip() if image_query and image_query.strip() else title_fallback
     logger.info(f"Cover image query: '{query}'")
 
-    url = _cerca_cover_google_cse(query)
+    url = _cerca_cover_google_cse(query, supabase)
     if url:
         return url, "google_cse"
 
@@ -564,7 +596,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
 
     # --- Cover image: pipeline stratificata con query generata dall'LLM ---
     image_query = articolo.pop("image_query", "") or ""
-    cover_url, image_source = cerca_cover_image(image_query, title)
+    cover_url, image_source = cerca_cover_image(image_query, title, supabase)
     articolo["cover_image_url"] = cover_url
 
     # --- Quality gate ---
