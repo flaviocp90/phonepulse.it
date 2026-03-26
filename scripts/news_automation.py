@@ -33,6 +33,9 @@ SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY", "")
+GOOGLE_CSE_API_KEY = os.environ.get("GOOGLE_CSE_API_KEY", "")
+GOOGLE_CSE_CX = os.environ.get("GOOGLE_CSE_CX", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
@@ -78,7 +81,8 @@ Produci esattamente questo JSON:
   "seo_description": "Meta description (max 155 char)",
   "category_id": "DA_CONFIGURARE",
   "tags": ["smartphone", "android"],
-  "affiliate_links": {{}}
+  "affiliate_links": {{}},
+  "image_query": "3-5 parole chiave in inglese per la ricerca immagine di copertina, descrivono il soggetto visivo principale dell'articolo (es: 'samsung galaxy s25 ultra smartphone')"
 }}"""
 
 
@@ -351,15 +355,46 @@ def genera_bozza(supabase: Client, title: str, excerpt: str) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# FASE 3 — Cover image da Unsplash
+# FASE 3 — Cover image: pipeline stratificata
+# Ordine: Google CSE → Unsplash → Pexels → None
+# La query viene dall'LLM (image_query nel JSON), non dalle parole del titolo.
 # ---------------------------------------------------------------------------
-def cerca_cover_image(title: str) -> str | None:
-    """Cerca su Unsplash una cover image usando le prime 3 keyword del titolo."""
+
+def _cerca_cover_google_cse(query: str) -> str | None:
+    """Cerca un'immagine via Google Custom Search (fonte primaria)."""
+    if not GOOGLE_CSE_API_KEY or not GOOGLE_CSE_CX:
+        return None
+    try:
+        resp = requests.get(
+            "https://www.googleapis.com/customsearch/v1",
+            params={
+                "key": GOOGLE_CSE_API_KEY,
+                "cx": GOOGLE_CSE_CX,
+                "q": query,
+                "searchType": "image",
+                "imgType": "photo",
+                "imgSize": "large",
+                "num": 1,
+                "safe": "active",
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        items = resp.json().get("items", [])
+        if items:
+            url = items[0]["link"]
+            logger.info(f"Google CSE cover trovata: {url[:60]}…")
+            return url
+        logger.warning("Google CSE: nessun risultato per la query")
+    except Exception as e:
+        logger.warning(f"Google CSE non disponibile: {e}")
+    return None
+
+
+def _cerca_cover_unsplash(query: str) -> str | None:
+    """Cerca un'immagine su Unsplash (primo fallback)."""
     if not UNSPLASH_ACCESS_KEY:
         return None
-    # Prendi le prime 2-3 parole significative (almeno 4 caratteri)
-    parole = [p for p in title.split() if len(p) >= 4][:3]
-    query = " ".join(parole) if parole else title
     try:
         resp = requests.get(
             "https://api.unsplash.com/search/photos",
@@ -376,6 +411,54 @@ def cerca_cover_image(title: str) -> str | None:
         logger.warning("Unsplash: nessun risultato per la query")
     except Exception as e:
         logger.warning(f"Unsplash non disponibile: {e}")
+    return None
+
+
+def _cerca_cover_pexels(query: str) -> str | None:
+    """Cerca un'immagine su Pexels (secondo fallback)."""
+    if not PEXELS_API_KEY:
+        return None
+    try:
+        resp = requests.get(
+            "https://api.pexels.com/v1/search",
+            params={"query": query, "per_page": 1, "orientation": "landscape"},
+            headers={"Authorization": PEXELS_API_KEY},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        photos = resp.json().get("photos", [])
+        if photos:
+            url = photos[0]["src"]["large"]
+            logger.info(f"Pexels cover trovata: {url[:60]}…")
+            return url
+        logger.warning("Pexels: nessun risultato per la query")
+    except Exception as e:
+        logger.warning(f"Pexels non disponibile: {e}")
+    return None
+
+
+def cerca_cover_image(image_query: str, title_fallback: str) -> str | None:
+    """
+    Pipeline stratificata per la cover image.
+    Usa image_query generata dall'LLM; title_fallback solo se image_query è vuota.
+    Ordine: Google CSE → Unsplash → Pexels → None
+    """
+    query = image_query.strip() if image_query and image_query.strip() else title_fallback
+    logger.info(f"Cover image query: '{query}'")
+
+    url = _cerca_cover_google_cse(query)
+    if url:
+        return url
+
+    url = _cerca_cover_unsplash(query)
+    if url:
+        return url
+
+    url = _cerca_cover_pexels(query)
+    if url:
+        return url
+
+    logger.warning("Cover image: tutti i provider hanno fallito, nessuna immagine impostata")
     return None
 
 
@@ -446,7 +529,7 @@ def invia_telegram(messaggio: str):
 # ---------------------------------------------------------------------------
 # Pipeline principale per un singolo articolo
 # ---------------------------------------------------------------------------
-def processa_articolo(item: dict, supabase: Client, category_id: str | None):    
+def processa_articolo(item: dict, supabase: Client, category_id: str | None):
     """
     Elabora un singolo articolo RSS attraverso tutte le fasi.
     Gestisce gli errori in modo che un fallimento non blocchi gli altri.
@@ -477,8 +560,9 @@ def processa_articolo(item: dict, supabase: Client, category_id: str | None):
         logger.warning("category_id 'news' non trovato, uso None")
         articolo["category_id"] = None
 
-    # --- Cover image (usa titolo RSS originale in inglese per query Unsplash migliore) ---
-    cover_url = cerca_cover_image(title)
+    # --- Cover image: pipeline stratificata con query generata dall'LLM ---
+    image_query = articolo.pop("image_query", "") or ""
+    cover_url = cerca_cover_image(image_query, title)
     articolo["cover_image_url"] = cover_url
 
     # --- Quality gate ---
