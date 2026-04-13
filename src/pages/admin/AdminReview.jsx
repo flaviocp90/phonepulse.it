@@ -78,6 +78,7 @@ function DraftCard({ article, onPublish, onDiscard }) {
   const [seoOpen, setSeoOpen] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [postTo, setPostTo] = useState({ telegram: true, instagram: true })
+  const [publishing, setPublishing] = useState(false)
 
   const plainPreview = markdownToPlainText(article.content)
   const hasImage = Boolean(article.cover_image_url)
@@ -189,10 +190,15 @@ function DraftCard({ article, onPublish, onDiscard }) {
       {/* Actions */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
-          onClick={() => onPublish(article, postTo)}
-          className="bg-primary hover:bg-primary-dark text-white font-body font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          onClick={async () => {
+            setPublishing(true)
+            await onPublish(article, postTo)
+            setPublishing(false)
+          }}
+          disabled={publishing}
+          className="bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-body font-medium px-4 py-2 rounded-lg text-sm transition-colors"
         >
-          Pubblica
+          {publishing ? 'Pubblicazione…' : 'Pubblica'}
         </button>
         <button
           onClick={() => navigate(`/admin/articoli/${article.id}`)}
@@ -295,7 +301,7 @@ export default function AdminReview() {
     return () => clearInterval(interval)
   }, [fetchAll])
 
-  async function handlePublish(article, postTo) {
+  const handlePublish = useCallback(async (article, postTo) => {
     const id = article.id
     setDrafts(prev => prev.filter(d => d.id !== id))
 
@@ -313,7 +319,7 @@ export default function AdminReview() {
     addToast('✓ Articolo pubblicato')
 
     const platforms = Object.entries(postTo)
-      .filter(([, enabled]) => enabled)
+      .filter(([, enabled]) => enabled && Boolean(article.cover_image_url))
       .map(([key]) => key)
 
     if (platforms.length === 0) return
@@ -321,7 +327,7 @@ export default function AdminReview() {
     const { data: socialResult, error: fnErr } = await supabase.functions.invoke('post-to-social', {
       body: {
         title: article.title,
-        excerpt: article.excerpt,
+        excerpt: article.excerpt ?? '',
         cover_image_url: article.cover_image_url,
         slug: article.slug,
         platforms,
@@ -334,12 +340,15 @@ export default function AdminReview() {
       return
     }
 
-    if (socialResult?.telegram === 'ok') addToast('✓ Postato su Telegram')
-    if (socialResult?.telegram?.startsWith('error')) addToast('Errore Telegram: ' + socialResult.telegram.replace('error: ', ''), 'error')
-
-    if (socialResult?.instagram === 'ok') addToast('✓ Postato su Instagram')
-    if (socialResult?.instagram?.startsWith('error')) addToast('Errore Instagram: ' + socialResult.instagram.replace('error: ', ''), 'error')
-  }
+    function toastSocialResult(result, platform, label) {
+      const val = result?.[platform]
+      if (val === 'ok') addToast(`✓ Postato su ${label}`)
+      else if (typeof val === 'string' && val.startsWith('error'))
+        addToast(`Errore ${label}: ${val.replace('error: ', '')}`, 'error')
+    }
+    toastSocialResult(socialResult, 'telegram', 'Telegram')
+    toastSocialResult(socialResult, 'instagram', 'Instagram')
+  }, [addToast, fetchAll])
 
   async function handleDiscard(id) {
     setDrafts(prev => prev.filter(d => d.id !== id))
