@@ -77,8 +77,14 @@ function DraftCard({ article, onPublish, onDiscard }) {
   const navigate = useNavigate()
   const [seoOpen, setSeoOpen] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [postTo, setPostTo] = useState({ telegram: true, instagram: true })
 
   const plainPreview = markdownToPlainText(article.content)
+  const hasImage = Boolean(article.cover_image_url)
+
+  function togglePlatform(platform) {
+    setPostTo(prev => ({ ...prev, [platform]: !prev[platform] }))
+  }
 
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
@@ -156,10 +162,34 @@ function DraftCard({ article, onPublish, onDiscard }) {
         )}
       </div>
 
+      {/* Social toggles */}
+      <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border">
+        <span className="text-xs font-body text-gray-400 font-medium">Pubblica anche su:</span>
+        {[
+          { key: 'telegram', label: 'Telegram' },
+          { key: 'instagram', label: 'Instagram' },
+        ].map(({ key, label }) => (
+          <label
+            key={key}
+            className={`flex items-center gap-1.5 cursor-pointer select-none ${!hasImage ? 'opacity-40 cursor-not-allowed' : ''}`}
+            title={!hasImage ? 'Nessuna immagine di copertina' : undefined}
+          >
+            <input
+              type="checkbox"
+              checked={postTo[key]}
+              onChange={() => hasImage && togglePlatform(key)}
+              disabled={!hasImage}
+              className="accent-primary w-3.5 h-3.5"
+            />
+            <span className="text-xs font-body text-gray-600">{label}</span>
+          </label>
+        ))}
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
-          onClick={() => onPublish(article.id)}
+          onClick={() => onPublish(article, postTo)}
           className="bg-primary hover:bg-primary-dark text-white font-body font-medium px-4 py-2 rounded-lg text-sm transition-colors"
         >
           Pubblica
@@ -265,8 +295,10 @@ export default function AdminReview() {
     return () => clearInterval(interval)
   }, [fetchAll])
 
-  async function handlePublish(id) {
+  async function handlePublish(article, postTo) {
+    const id = article.id
     setDrafts(prev => prev.filter(d => d.id !== id))
+
     const { error: err } = await supabase
       .from('articles')
       .update({ is_published: true, needs_review: false, published_at: new Date().toISOString() })
@@ -275,9 +307,38 @@ export default function AdminReview() {
     if (err) {
       addToast('Errore durante la pubblicazione', 'error')
       fetchAll()
-    } else {
-      addToast('✓ Articolo pubblicato')
+      return
     }
+
+    addToast('✓ Articolo pubblicato')
+
+    const platforms = Object.entries(postTo)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key)
+
+    if (platforms.length === 0) return
+
+    const { data: socialResult, error: fnErr } = await supabase.functions.invoke('post-to-social', {
+      body: {
+        title: article.title,
+        excerpt: article.excerpt,
+        cover_image_url: article.cover_image_url,
+        slug: article.slug,
+        platforms,
+        category_slug: article.categories?.slug || '',
+      },
+    })
+
+    if (fnErr) {
+      addToast('Articolo pubblicato, ma errore social', 'error')
+      return
+    }
+
+    if (socialResult?.telegram === 'ok') addToast('✓ Postato su Telegram')
+    if (socialResult?.telegram?.startsWith('error')) addToast('Errore Telegram: ' + socialResult.telegram.replace('error: ', ''), 'error')
+
+    if (socialResult?.instagram === 'ok') addToast('✓ Postato su Instagram')
+    if (socialResult?.instagram?.startsWith('error')) addToast('Errore Instagram: ' + socialResult.instagram.replace('error: ', ''), 'error')
   }
 
   async function handleDiscard(id) {
