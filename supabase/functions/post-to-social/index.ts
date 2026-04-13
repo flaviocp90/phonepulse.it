@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +19,7 @@ serve(async (req) => {
     return new Response('ok', { headers: CORS_HEADERS })
   }
 
+  // Presence-only auth gate — token validity is enforced by the Supabase client session upstream
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -27,7 +28,39 @@ serve(async (req) => {
     })
   }
 
-  const { title, excerpt, cover_image_url, slug, platforms, category_slug } = await req.json()
+  let body: {
+    title: string
+    excerpt: string
+    cover_image_url: string
+    slug: string
+    platforms: string[]
+    category_slug: string
+  }
+
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { title, excerpt, cover_image_url, slug, platforms, category_slug } = body
+
+  if (!Array.isArray(platforms)) {
+    return new Response(JSON.stringify({ error: '`platforms` must be an array' }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (!cover_image_url || !cover_image_url.startsWith('https://')) {
+    return new Response(JSON.stringify({ error: '`cover_image_url` must be a public https:// URL' }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+  }
 
   const results: Record<string, string> = {}
 
@@ -55,10 +88,12 @@ async function postToTelegram({
   cover_image_url: string
   slug: string
 }): Promise<string> {
-  const token = Deno.env.get('TELEGRAM_BOT_TOKEN')!
-  const chatId = Deno.env.get('TELEGRAM_CHAT_ID')!
+  const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+  const chatId = Deno.env.get('TELEGRAM_CHAT_ID')
+  if (!token || !chatId) return 'error: missing secrets (TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID)'
 
-  const caption = `📱 ${title}\n\n${excerpt}\n\n👉 https://phonepulse.it/articoli/${slug}`
+  let caption = `📱 ${title}\n\n${excerpt}\n\n👉 https://phonepulse.it/articoli/${slug}`
+  if (caption.length > 1000) caption = caption.slice(0, 997) + '…'
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
@@ -83,8 +118,9 @@ async function postToInstagram({
   cover_image_url: string
   category_slug: string
 }): Promise<string> {
-  const accessToken = Deno.env.get('INSTAGRAM_ACCESS_TOKEN')!
-  const accountId = Deno.env.get('INSTAGRAM_ACCOUNT_ID')!
+  const accessToken = Deno.env.get('INSTAGRAM_ACCESS_TOKEN')
+  const accountId = Deno.env.get('INSTAGRAM_ACCOUNT_ID')
+  if (!accessToken || !accountId) return 'error: missing secrets (INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_ACCOUNT_ID)'
 
   const hashtags = HASHTAGS[category_slug] ?? FALLBACK_HASHTAGS
   const truncated = excerpt.length > 400 ? excerpt.slice(0, 400) + '…' : excerpt
@@ -92,22 +128,23 @@ async function postToInstagram({
 
   try {
     const containerRes = await fetch(
-      `https://graph.facebook.com/v19.0/${accountId}/media`,
+      `https://graph.facebook.com/v19.0/${accountId}/media?access_token=${encodeURIComponent(accessToken)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: cover_image_url, caption, access_token: accessToken }),
+        body: JSON.stringify({ image_url: cover_image_url, caption }),
       }
     )
     const containerData = await containerRes.json()
     if (containerData.error) throw new Error(containerData.error.message)
+    if (!containerData.id) throw new Error('No container ID returned from Instagram')
 
     const publishRes = await fetch(
-      `https://graph.facebook.com/v19.0/${accountId}/media_publish`,
+      `https://graph.facebook.com/v19.0/${accountId}/media_publish?access_token=${encodeURIComponent(accessToken)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creation_id: containerData.id, access_token: accessToken }),
+        body: JSON.stringify({ creation_id: containerData.id }),
       }
     )
     const publishData = await publishRes.json()
