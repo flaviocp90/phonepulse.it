@@ -70,6 +70,7 @@ Regole:
 - USA SOLO i dati presenti nel titolo e nell'excerpt: non inventare specifiche tecniche, prezzi, date o funzionalità non menzionati esplicitamente
 - Se un'informazione non è presente nel contesto fornito, omettila o usa formule come "secondo le prime indiscrezioni" o "i dettagli non sono ancora confermati"
 - Il frame temporale deve essere coerente con la data di oggi: non trattare come futuri eventi già accaduti
+- NON fare mai riferimento a date specifiche, al giorno corrente o a espressioni come "oggi", "questa settimana", "siamo arrivati a [mese/anno]": l'articolo deve restare valido anche se pubblicato giorni dopo la generazione
 - Rispondi SOLO con il JSON descritto, senza testo aggiuntivo o backtick markdown
 
 Produci esattamente questo JSON:
