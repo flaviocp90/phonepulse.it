@@ -299,3 +299,118 @@ Fonti tecniche consultate: [Supabase Auth getUser](https://supabase.com/docs/ref
 [Telegram Bot API](https://core.telegram.org/bots/api),
 [collezione ufficiale Meta Instagram](https://www.postman.com/meta/instagram/documentation/6yqw8pt/instagram-api).
 Queste fonti documentano i contratti, non provano readiness dei canali PhonePulse.
+
+
+## Task 8 — CI e registro delle esecuzioni
+
+Implementazione locale; migrazione `20261005162723_automation_runs.sql` da applicare
+prima in staging e prima di aggiornare gli script A/fix-cover. I vecchi run non
+vengono ricostruiti. Tabella con RLS: anon senza accesso, editor solo SELECT via
+app_metadata, service-role INSERT/UPDATE/SELECT. Nessuna nuova scrittura pubblica.
+
+Ogni avvio registra `running`, poi `completed`, `failed`, `skipped_queue_full` o
+`no_candidates`, con data di fine e conteggi. Inizio e fine sono registrati dallo stesso clock
+del worker, così il disallineamento rispetto al DB non fa fallire run brevi. Le ultime due condizioni attestano
+un controllo riuscito, non articoli prodotti. Errori DB/feed o tutte le generazioni
+fallite terminano con errore. Se il processo viene ucciso, il run resta `running`;
+il monitor non lo considera un completamento. Un errore nel salvataggio del run
+non viene trasformato in successo. Un riepilogo JSON nei log e, per A riuscito,
+una sola notifica Telegram al destinatario già configurato sostituiscono le
+notifiche per ogni bozza. Nessuna notifica viene eseguita dai test o dal monitor.
+
+CI su PR e push develop/master, permesso contents:read, nessun secret live:
+`npm ci`, lint focalizzato su errori/React hooks, build, 37 test browser con
+Supabase sintetico, unittest Python 3.11, Deno check/test. Python diretto fissato
+alle versioni provate: feedparser 6.0.14, requests 2.34.2, supabase 2.32.0.
+Nessun cambio major di React/Tailwind/router/Vite. ESLint 10 e plugin hooks 7
+sono soltanto strumenti di sviluppo. Il lint ignora nomi PascalCase per evitare
+falsi positivi JSX nel controllo core delle variabili; non certifica l'utilizzo
+di ogni import di componente. La build verifica gli import e le prove browser
+verificano le pagine, senza aggiungere un altro plugin incompatibile con ESLint10.
+
+Aggiornamento Supabase JS 2.117.2 provato ma differito: cinque regressioni browser
+(retry/gestione risposta maybeSingle/logout) e bundle pubblico maggiore.
+Conservato e fissato 2.99.1; gestire l'upgrade Auth/PostgREST in un incremento
+separato con test delle nuove semantiche. Gli altri aggiornamenti compatibili
+sono nel lockfile. Audit dopo gli aggiornamenti: sette segnalazioni residue
+(cinque high nella catena Tailwind3/braces e due moderate router6); npm propone
+major Tailwind4/router7, non forzati in questo incremento. Nessun risultato
+“audit pulito” dichiarato. [Retry Supabase](https://supabase.com/changelog/45071-automatic-postgrest-retries-for-transient-errors).
+
+### Monitor indipendente, configurazione pronta ma non attivata
+
+`scripts/check_operations.py` legge soltanto: ultimi completamenti A entro36h,
+un articolo via API anon pubblica e conteggio delivery failed/unknown o sending
+oltre5min. B è manuale: la sua assenza non è un guasto. Nessuna modifica ad
+articoli/delivery e nessun retry/invio. Output JSON `alerts`, exit0 sano, exit1
+attenzione/errore/configurazione assente. Un API200 senza contenuto non è sano.
+`--now` accetta un timestamp ISO con timezone per verifiche controllate.
+Le eccezioni non stampano credenziali o risposte private.
+
+Variabili server-only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+`SUPABASE_ANON_KEY`. La verifica pubblica usa il client anon, non il service-role.
+Il service-role non va distribuito al browser né incluso nei file versionati.
+
+Configurazione concreta proposta per un **server Linux esistente esterno a
+GitHub Actions**, da confermare dall'utente prima di installare/attivare:
+checkout verificato in `/opt/phonepulse-monitor`, venv Python3.11 in `.venv`,
+utente locale `phonepulse-monitor`, environment file `/etc/phonepulse-monitor.env`
+leggibile solo dall'amministratore (0600). Non serve acquistare un nuovo servizio.
+
+`/etc/systemd/system/phonepulse-monitor.service`:
+
+```ini
+[Unit]
+Description=PhonePulse read-only operations monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=phonepulse-monitor
+WorkingDirectory=/opt/phonepulse-monitor
+EnvironmentFile=/etc/phonepulse-monitor.env
+ExecStart=/opt/phonepulse-monitor/.venv/bin/python scripts/check_operations.py
+TimeoutStartSec=120
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+```
+
+`/etc/systemd/system/phonepulse-monitor.timer`:
+
+```ini
+[Unit]
+Description=PhonePulse hourly operations check
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target
+```
+
+Prima dell'attivazione: installare requirements, applicare la migrazione in
+staging, provare API/RLS/Auth reali e far leggere JSON/exitcode al monitor già
+scelto. La consegna dell'allerta va provata verso un destinatario autorizzato;
+la sola unit systemd produce stato/log, non una notifica consegnata. Controllare
+anche la presenza del monitor (heartbeat dal servizio esterno scelto), altrimenti
+un server spento resta invisibile. GitHub cron nello stesso repository non è
+un sostituto: può smettere di partire per inattività insieme ad A.
+
+Host, servizio di allerta/heartbeat, destinatario e attivazione non sono ancora
+confermati. Task8 globale rimane aperto finché c'è una prova reale di esecuzione
+indipendente e consegna; nessun cron o provider reale riattivato da questo commit.
+
+Verifica locale SQL completa:
+
+```sh
+python3 supabase/tests/run_editorial_rpcs.py --social --automation
+```
+
+Il runner usa soltanto fixture sintetiche PG16, prova ruolo anon/editor/fake e
+vincolo data di fine, poi arresta il cluster. Non sostituisce staging PG17/Auth.
+CI e cache seguono la [documentazione GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax),
+lint la [configurazione ESLint](https://eslint.org/docs/latest/use/configure/configuration-files).

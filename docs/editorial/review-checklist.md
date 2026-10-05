@@ -21,3 +21,19 @@ Le liste usano count e pagine server da dieci righe, con ordine stabile. “— 
 L’editor avvisa alla chiusura/ricaricamento della scheda e per i link interni dell’app nella stessa scheda. Il router BrowserRouter attuale non consente un blocco affidabile di Indietro/Avanti o navigazioni programmatiche senza cambiarne configurazione: salvare prima di usarle. Questo limite non altera la concorrenza server o la conservazione del testo in caso di errore RPC.
 
 I link affiliate legacy possono essere un oggetto JSON: il controllo ne mostra il contenuto completo. Lasciandolo invariato, il salvataggio lo conserva senza conversione automatica. Per sostituirlo esplicitamente o per un nuovo articolo usare un array JSON (per esempio `[]` se vuoto); JSON object nuovo/modificato viene rifiutato. Non svuotare un valore legacy soltanto per poter salvare il resto dell’articolo.
+
+
+## Primo lotto dell'archivio e pilot
+
+Nel [registro](archive-review.csv) `proposal` riporta l'ipotesi dell'audit;
+`decision` vuota significa che nessuna modifica è autorizzata per quell'URL.
+Per ogni caso leggere la versione corrente e completare fonti consultate,
+motivazione, responsabile e data effettiva. Registrare versione e data di
+pubblicazione originaria prima della modifica. Scelte: mantenere, correggere,
+aggiornare, ritirare, unire. Nessuna scelta automatica per keyword.
+
+Una correzione pubblica significativa richiede nota datata; conservare URL e
+pubblicazione originaria. Se si unisce un contenuto o cambia URL, registrare il
+redirect e verificarlo prima del cambiamento. Non far sembrare nuova una news
+storica cambiando soltanto la data. Il [pilot](pilot.md) resta da avviare e
+raccoglie tempi reali, qualità del flusso e decisioni settimanali.

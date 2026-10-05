@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timezone
 from supabase import Client
 from news_automation import cerca_cover_image, get_supabase
+from automation_runs import run_tracked
 
 logger = logging.getLogger(__name__)
 
@@ -36,18 +37,14 @@ def aggiorna_cover(supabase: Client, article_id: str, cover_url: str,
     return bool(result.data and result.data[0]['id'] == article_id)
 
 
-def main():
-    logger.info("=== Fix Cover Images avviato ===")
-
-    supabase = get_supabase()
+def run_cover_repair(supabase, counts):
     articoli = fetch_articoli_senza_cover(supabase)
 
     if not articoli:
         logger.info("Nessun articolo da processare. Uscita.")
-        return
+        return 'no_candidates'
 
-    aggiornati = 0
-    falliti = 0
+    counts.update(updated=0, failed=0)
 
     for art in articoli:
         article_id = art["id"]
@@ -60,21 +57,25 @@ def main():
 
             if cover_url:
                 if aggiorna_cover(supabase, article_id, cover_url, image_source, art['version']):
-                    aggiornati += 1
+                    counts['updated'] += 1
                 else:
-                    falliti += 1
+                    counts['failed'] += 1
             else:
                 logger.warning(f"[NESSUNA COVER] {title} — tutti i provider hanno fallito")
-                falliti += 1
+                counts['failed'] += 1
 
             time.sleep(3)  # evita burst sulle API
         except Exception as e:
             logger.error("Cover repair failed (%s)", type(e).__name__)
             raise
 
-    if falliti and not aggiornati:
+    if counts['failed'] and not counts['updated']:
         raise RuntimeError("No cover could be updated")
-    logger.info(f"=== Fix Cover Images completato — aggiornati: {aggiornati}, falliti: {falliti} ===")
+    return 'completed'
+
+
+def main():
+    run_tracked(get_supabase(), 'cover_repair', run_cover_repair)
 
 
 if __name__ == "__main__":

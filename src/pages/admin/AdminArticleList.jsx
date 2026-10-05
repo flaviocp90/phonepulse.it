@@ -61,6 +61,8 @@ export default function AdminArticleList({ review = false }) {
       if (page > 0 && page * PAGE_SIZE >= count) { setPage(Math.max(0, Math.ceil(count / PAGE_SIZE) - 1)); return }
       setArticles(data || []); setCount(count); setLoading(false)
     }).catch(() => { if (token === generation.current) { setArticles([]); setError('Elenco indisponibile. Riprova.'); setLoading(false) } })
+    // This ref is a request counter, not a DOM node; cleanup invalidates pending callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { generation.current++ }
   }, [filter, search, page, reload])
 

@@ -16,6 +16,7 @@ import re
 import feedparser
 import requests
 from supabase import create_client, Client
+from automation_runs import run_tracked
 from editorial_rules import (has_list_items, is_fresh, normalize_source_url, plain_text,
                              promised_list_size, validate_generated_article)
 
@@ -527,16 +528,12 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
     if not result.data:
         raise RuntimeError('Draft insert returned no row')
     logger.info('RSS draft created: %s', article['slug'])
-    invia_telegram('Nuova bozza da verificare: ' + article['title'] +
-                   '\nhttps://phonepulse.it/admin/review')
     return 'created'
 
 
-def main():
-    author = os.environ.get('PHONEPULSE_EDITOR_AUTHOR', '').strip()
+def run_generation(supabase, counts, author):
     if not author:
         raise RuntimeError('Configure a real responsible PHONEPULSE_EDITOR_AUTHOR')
-    supabase = get_supabase()
     queued = supabase.table('articles').select('id', count='exact', head=True).eq(
         'origin', 'rss').eq('status', 'draft').execute()
     if queued.count is None:
@@ -544,11 +541,11 @@ def main():
     capacity = min(MAX_DRAFTS_PER_RUN, MAX_OPEN_DRAFTS - queued.count)
     if capacity <= 0:
         logger.info('RSS queue is full; no provider calls')
-        return
+        return 'skipped_queue_full'
     category_id = get_category_id_news(supabase)
     candidates = raccogli_tutti_i_feed()
     seen = set()
-    created = failed = 0
+    counts.update(created=0, failed=0, skipped=0)
     for source in candidates:
         if not eligible_item(source):
             continue
@@ -557,13 +554,20 @@ def main():
             continue
         seen.add(key)
         outcome = processa_articolo(source, supabase, category_id, author)
-        created += outcome == 'created'
-        failed += outcome == 'failed'
-        if created >= capacity:
+        counts[outcome] += 1
+        if counts['created'] >= capacity:
             break
-    logger.info('Generation complete: created=%s failed=%s', created, failed)
-    if failed and not created:
+    if counts['failed'] and not counts['created']:
         raise RuntimeError('All draft generation attempts failed')
+    return 'completed' if counts['created'] else 'no_candidates'
+
+
+def main():
+    author = os.environ.get('PHONEPULSE_EDITOR_AUTHOR', '').strip()
+    result = run_tracked(get_supabase(), 'generation',
+                         lambda db, counts: run_generation(db, counts, author))
+    invia_telegram('Generazione bozze: ' + result['status'] + '\n' +
+                   json.dumps(result['counts']) + '\nhttps://phonepulse.it/admin/review')
 
 
 if __name__ == '__main__':
