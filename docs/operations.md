@@ -424,3 +424,32 @@ Il runner usa soltanto fixture sintetiche PG16, prova ruolo anon/editor/fake e
 vincolo data di fine, poi arresta il cluster. Non sostituisce staging PG17/Auth.
 CI e cache seguono la [documentazione GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax),
 lint la [configurazione ESLint](https://eslint.org/docs/latest/use/configure/configuration-files).
+
+### Presentazione editoriale pubblica — U2, incremento locale
+
+Autore e formato vengono dal record; nessuna attribuzione automatica dell’archivio
+al responsabile Flavio Coppola. Fonti HTTP(S) senza credenziali sono cliccabili,
+schemi non sicuri e righe malformate vengono ignorati. UI e JSON-LD usano lo stesso
+mapping. Prima pubblicazione valida da published_at; aggiornamento sostanziale da
+content_updated_at solo se successivo. Per legacy richiede last_verified_at e
+approvazione della versione corrente: updated_at tecnico non diventa dateModified.
+
+Origin rss dichiara assistenza AI; legacy segnala che le informazioni incomplete
+non attestano prove dirette. Voti e giudizi automatici rimossi da articolo e card:
+il campo score resta nell’editor/database, ma un metodo pubblico verificabile
+serve prima di renderlo nuovamente. I suggerimenti leggono fino a tre articoli
+pubblicati nella stessa categoria; un errore dei suggerimenti non nasconde
+l’articolo. Le liste conservano query compatibili con lo schema precedente;
+il formato è esposto nel dettaglio quando presente, non inventato dalla categoria.
+
+Verifica: pilota sintetico browser con autore/fonti/date, legacy incompleto,
+URL fonte pericoloso, firma PhonePulse Organization e disclosure AI; schermata
+mobile390px controllata. Nessuna riscrittura di testi live, nuovo evento analytics
+o attivazione monitor. Pilota reale, consenso, HTML server U4 e rollout coordinato
+restano aperti; questa verifica locale non autorizza l’attivazione dei job.
+
+Review indipendente: nessun Critical; contrasto dei nuovi link corretto con il
+colore scuro esistente e test sul rapporto effettivo (prima2.81:1, minimo4.5:1).
+Lint, build e41/41 prove browser passate. Nota minore differita: aggiungere casi
+browser legacy con data valida e versioni approvate coincidenti/diverse per
+rendere più specifica la regressione del guard, già verificato direttamente.

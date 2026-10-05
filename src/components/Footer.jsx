@@ -10,7 +10,7 @@ export default function Footer() {
             <span className="text-primary font-heading font-bold text-xl leading-none">PHONE</span>
             <span className="text-white font-heading font-bold text-xl leading-none">PULSE</span>
           </Link>
-          <p className="text-white/70 text-sm font-body">Recensioni smartphone per scegliere meglio.</p>
+          <p className="text-white/70 text-sm font-body">Smartphone e app, news e guide pratiche.</p>
         </div>
 
         {/* Col 2: copyright + social */}

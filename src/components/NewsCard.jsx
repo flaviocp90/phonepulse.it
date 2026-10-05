@@ -10,7 +10,7 @@ function formatDate(dateString) {
 }
 
 export default function NewsCard({ article }) {
-  const { slug, title, excerpt, cover_image_url, published_at, score, categories } = article
+  const { slug, title, excerpt, cover_image_url, published_at, categories } = article
 
   return (
     <Link
@@ -54,12 +54,7 @@ export default function NewsCard({ article }) {
         </time>
       </div>
 
-      {/* Score */}
-      {score != null && (
-        <div className="flex-shrink-0 bg-primary text-white text-xs font-body font-bold rounded-full w-8 h-8 flex flex-col items-center justify-center leading-none">
-          <span className="text-[11px] font-bold">{score}</span>
-        </div>
-      )}
+
     </Link>
   )
 }

@@ -36,6 +36,13 @@ Stima orientativa 4–8 giornate, esclusi riscrittura dell'archivio e tempi d'in
 
 ## Task U2 — Promessa editoriale e gerarchia delle informazioni
 
+**Incremento locale 2026-10-05:** layout verificato con articolo pilota sintetico;
+autore, formato, fonti e date condividono lo stesso mapping con JSON-LD. Home,
+Chi siamo e Contatti aggiornati; voti senza metodo documentato rimossi dalla
+presentazione pubblica. Restano pilota reale, decisioni sui testi dell’archivio,
+metodo delle prove e integrazione metriche dopo definizione del consenso.
+Nessun contenuto live modificato. Il Done completo resta aperto.
+
 **Files:** modificare `src/pages/{Home,ArticlePage,AboutPage,ContactPage}.jsx`, `src/components/{ArticleCard,NewsCard,SchemaMarkup,SEO}.jsx`; eventuali campi mancanti in migrazione additiva successiva al task editoriale 2.
 
 **Interfaces:** render pubblico di fonti, autore responsabile, formato reale, pubblicato/aggiornato; voto e dati di prova soltanto quando documentati. Riutilizzare `content_format` e autore del task editoriale 2; non dedurli dal titolo e non creare una seconda migrazione per gli stessi campi.
