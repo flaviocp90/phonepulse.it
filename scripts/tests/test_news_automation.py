@@ -94,7 +94,7 @@ class AutomationTests(unittest.TestCase):
         with patch.object(news, 'genera_bozza', return_value=(brief(
                 author='Invented', status='published', approved_version=1), 'model')), \
              patch.object(news, 'cerca_cover_image', return_value=(None, None)), \
-             patch.object(news, 'invia_telegram'):
+             patch.object(news, 'invia_telegram') as notification:
             self.assertEqual(news.processa_articolo(item(), db, 'news', 'Editor'), 'created')
         record = db.table.return_value.insert.call_args.args[0]
         self.assertEqual(record['author'], 'Editor')
@@ -104,6 +104,7 @@ class AutomationTests(unittest.TestCase):
         self.assertEqual(record['source_key'], URL)
         self.assertEqual(record['content_format'], 'news')
         self.assertNotIn('approved_version', record)
+        notification.assert_not_called()
         with patch.object(news, 'genera_bozza', return_value=([], 'model')), \
              patch.object(news, 'cerca_cover_image') as cover:
             self.assertEqual(news.processa_articolo(item(), database(), 'news', 'Editor'), 'failed')
@@ -126,7 +127,7 @@ class AutomationTests(unittest.TestCase):
         with patch.dict(os.environ, {'PHONEPULSE_EDITOR_AUTHOR': 'Editor'}), \
              patch.object(news, 'get_supabase', return_value=db), \
              patch.object(news, 'raccogli_tutti_i_feed') as feeds:
-            news.main()
+            news.run_generation(db, {}, 'Editor')
             feeds.assert_not_called()
         filters = db.table.return_value.eq.call_args_list
         self.assertTrue(any(call.args == ('origin', 'rss') for call in filters))
@@ -140,14 +141,14 @@ class AutomationTests(unittest.TestCase):
              patch.object(news, 'get_supabase', return_value=db), \
              patch.object(news, 'raccogli_tutti_i_feed', return_value=sources), \
              patch.object(news, 'processa_articolo', return_value='created') as process:
-            news.main()
+            news.run_generation(db, {}, 'Editor')
             self.assertEqual(process.call_count, 5)
         with patch.dict(os.environ, {'PHONEPULSE_EDITOR_AUTHOR': 'Editor'}), \
              patch.object(news, 'get_supabase', return_value=db), \
              patch.object(news, 'raccogli_tutti_i_feed', return_value=[item()]), \
              patch.object(news, 'processa_articolo', return_value='failed'):
             with self.assertRaises(RuntimeError):
-                news.main()
+                news.run_generation(db, {}, 'Editor')
 
     def test_gemini_counts_retry_before_each_request(self):
         first = Mock(status_code=429)

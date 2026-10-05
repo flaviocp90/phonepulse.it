@@ -23,8 +23,11 @@ Restano aperti PG17/Supabase Auth/PostgREST reali, ruolo editor identificato,
 conservazione durevole del backup e rollout coordinato. Task7 richiede anche U4
 (HTML/versione/canonical verificabile) e readiness del canale/Meta API confermata:
 flag readiness spenti di default, nessun invio senza prova dell'URL pubblico.
-Prossimo incremento locale: Task8 CI/continuità; Task9 richiede decisioni editoriali
-reali. I checkbox sotto rappresentano i contratti complessivi, non attestano staging.
+Gli incrementi Task2–7 sono stati integrati in develop (`b72543c`, anche remoto).
+Task8 locale aggiunge CI, lint, dipendenze compatibili verificate in Python3.11,
+registro run e monitor read-only con prove sintetiche. Monitor indipendente e
+consegna reale non ancora attivati: Task8 globale rimane aperto.
+Task9 richiede decisioni editoriali reali. I checkbox sotto rappresentano i contratti complessivi, non attestano staging.
 Runbook aggiornato: [operations.md](../../operations.md).
 
 ## Global Constraints

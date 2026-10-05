@@ -88,7 +88,7 @@ export default function CategoryPage() {
 
     fetchData()
     return () => { active = false }
-  }, [slug, page])
+  }, [slug, page, requestKey])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 

@@ -16,6 +16,8 @@ parser.add_argument('--pg-bin', default='/opt/homebrew/opt/postgresql@16/bin')
 parser.add_argument('--red-only', action='store_true')
 parser.add_argument('--social', action='store_true')
 parser.add_argument('--social-red-only', action='store_true')
+parser.add_argument('--automation', action='store_true')
+parser.add_argument('--automation-red-only', action='store_true')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 base = Path(tempfile.mkdtemp(prefix='phonepulse-editorial-rpcs-', dir='/private/tmp'))
@@ -160,6 +162,14 @@ try:
                 run('social-migration', psql + ['-f', str(migrations[0])])
                 run('social-green', psql + ['-f', 'supabase/tests/social_delivery.sql'])
                 concurrency_probe(social=True)
+        if args.automation:
+            run('automation-red', psql + ['-f', 'supabase/tests/automation_runs.sql'], expected=3)
+            assert 'automation runs absent' in (base / 'automation-red.stderr').read_text(), 'wrong automation RED failure'
+            if not args.automation_red_only:
+                migrations = list((repo / 'supabase/migrations').glob('*_automation_runs.sql'))
+                assert len(migrations) == 1, 'exactly one automation migration required'
+                run('automation-migration', psql + ['-f', str(migrations[0])])
+                run('automation-green', psql + ['-f', 'supabase/tests/automation_runs.sql'])
 finally:
     if started:
         run('stop', [str(pg / 'pg_ctl'), '-D', str(base / 'cluster'), 'stop', '-m', 'fast'])
