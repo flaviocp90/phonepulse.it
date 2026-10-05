@@ -14,6 +14,8 @@ os.umask(0o077)
 parser = argparse.ArgumentParser()
 parser.add_argument('--pg-bin', default='/opt/homebrew/opt/postgresql@16/bin')
 parser.add_argument('--red-only', action='store_true')
+parser.add_argument('--social', action='store_true')
+parser.add_argument('--social-red-only', action='store_true')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 base = Path(tempfile.mkdtemp(prefix='phonepulse-editorial-rpcs-', dir='/private/tmp'))
@@ -54,7 +56,8 @@ psql = [str(pg / 'psql'), '-X', '-h', str(base / 'socket'), '-p', '55441', '-U',
 env = os.environ.copy()
 env['PGOPTIONS'] = '-c statement_timeout=15000 -c lock_timeout=10000'
 os.environ.update({'PGOPTIONS': env['PGOPTIONS']})
-def concurrency_probe():
+def concurrency_probe(social=False):
+    prefix = 'social-' if social else ''
     claims = '{"sub":"77777777-7777-4777-8777-777777777777","app_metadata":{"phonepulse_role":"editor"}}'
     review = '{"title_matches_content":true,"claims_sourced":true,"dates_checked":true,"experience_documented":true,"reader_value":true,"cover_checked":true,"metadata_checked":true}'
     setup = f"""insert into auth.users(id) values ('77777777-7777-4777-8777-777777777777');
@@ -63,12 +66,15 @@ select set_config('request.jwt.claims','{claims}',false);
 select public.save_article('{{"title":"Concurrent publication","slug":"concurrency-probe","content":"Synthetic body","author":"Synthetic editor","content_format":"guide","sources":[{{"url":"https://example.com","title":"Synthetic source","publisher":"Synthetic publisher","published_at":null,"retrieved_at":"2020-01-01T00:00:00Z"}}]}}','{{}}',null)->>'id' as article_id \\gset
 select public.approve_article(:'article_id',1,'{review}');
 """
-    run('concurrency-setup', psql + ['-qAt'], sql=setup)
-    article_id = run('concurrency-id', psql + ['-qAt'], sql="select id from public.articles where slug='concurrency-probe';").strip()
+    if not social:
+        run('concurrency-setup', psql + ['-qAt'], sql=setup)
+    article_id = run(prefix + 'concurrency-id', psql + ['-qAt'], sql="select id from public.articles where slug='concurrency-probe';").strip()
     query = f"select public.publish_article('{article_id}',1);\nselect published_at::text from public.articles where id='{article_id}';\n"
+    if social:
+        query = f"select public.claim_social_delivery('{article_id}','telegram',1);\nselect attempted_at::text from public.social_deliveries where article_id='{article_id}' and platform='telegram';\n"
     first_sql = "begin;\nset session authorization service_role;\nset application_name='editorial-rpc-first';\n" + query + "\\echo LOCKED\n"
     second_sql = "set session authorization service_role;\nset application_name='editorial-rpc-second';\n" + query
-    first_err = (base / 'concurrency-first.stderr').open('w')
+    first_err = (base / (prefix + 'concurrency-first.stderr')).open('w')
     first = subprocess.Popen(psql + ['-qAt'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=first_err, text=True, bufsize=1)
     second = None
     first_output = ''
@@ -92,7 +98,7 @@ select public.approve_article(:'article_id',1,'{review}');
             assert result.returncode == 0, result.stderr
             if result.stdout.strip() == '1':
                 blocked = True
-                persist('concurrency-blocked', psql + ['-qAt', '-c', lock_query], result)
+                persist(prefix + 'concurrency-blocked', psql + ['-qAt', '-c', lock_query], result)
                 break
             time.sleep(0.05)
         assert blocked, 'second publish was not observed blocked on first row lock'
@@ -102,21 +108,25 @@ select public.approve_article(:'article_id',1,'{review}');
         first_output += first.stdout.read()
         first.wait(timeout=10)
         first_err.close()
-        persist('concurrency-first', psql + ['-qAt'], subprocess.CompletedProcess([], first.returncode, first_output, (base / 'concurrency-first.stderr').read_text()), sql=first_sql+'commit;\n\\q\n')
+        persist(prefix + 'concurrency-first', psql + ['-qAt'], subprocess.CompletedProcess([], first.returncode, first_output, (base / (prefix + 'concurrency-first.stderr')).read_text()), sql=first_sql+'commit;\n\\q\n')
         second_output, second_errors = second.stdout.read(), second.stderr.read()
         second.wait(timeout=10)
-        persist('concurrency-second', psql + ['-qAt'], subprocess.CompletedProcess([], second.returncode, second_output, second_errors), sql=second_sql)
+        persist(prefix + 'concurrency-second', psql + ['-qAt'], subprocess.CompletedProcess([], second.returncode, second_output, second_errors), sql=second_sql)
         first_result = json.loads(first_output.splitlines()[0])
         second_result = json.loads(second_output.splitlines()[0])
-        assert first_result['changed'] is True and second_result['changed'] is False, 'publish concurrency outcome'
-        assert first_result['id'] == second_result['id'] == article_id
+        result_key = 'claimed' if social else 'changed'
+        assert first_result[result_key] is True and second_result[result_key] is False, 'concurrency outcome'
+        if social:
+            assert first_result['delivery']['article_id'] == second_result['delivery']['article_id'] == article_id
+        else:
+            assert first_result['id'] == second_result['id'] == article_id
         assert first_output.splitlines()[1] == second_output.splitlines()[1], 'concurrent retry changed publication timestamp'
         check = f"""do $$ begin
 if (select count(*) from public.article_events where article_id='{article_id}' and action='published') <> 1 then raise exception 'duplicate publication event'; end if;
 if not exists(select from public.articles a join public.article_events e on e.article_id=a.id and e.action='published' where a.id='{article_id}' and a.published_at <= e.created_at and e.actor_id is null and e.actor_role='service_role') then raise exception 'timestamp or service actor changed'; end if;
 end $$;
 """
-        run('concurrency-check', psql, sql=check)
+        run(prefix + 'concurrency-check', psql, sql=check)
     finally:
         for process in [first, second]:
             if process is not None and process.poll() is None:
@@ -141,6 +151,15 @@ try:
         run('task3-migration', psql + ['-f', str(migrations[0])])
         run('green', psql + ['-f', 'supabase/tests/editorial_rpcs.sql'])
         concurrency_probe()
+        if args.social:
+            run('social-red', psql + ['-f', 'supabase/tests/social_delivery.sql'], expected=3)
+            assert 'social delivery RPCs absent' in (base / 'social-red.stderr').read_text(), 'wrong social RED failure'
+            if not args.social_red_only:
+                migrations = list((repo / 'supabase/migrations').glob('*_social_delivery.sql'))
+                assert len(migrations) == 1, 'exactly one social migration required'
+                run('social-migration', psql + ['-f', str(migrations[0])])
+                run('social-green', psql + ['-f', 'supabase/tests/social_delivery.sql'])
+                concurrency_probe(social=True)
 finally:
     if started:
         run('stop', [str(pg / 'pg_ctl'), '-D', str(base / 'cluster'), 'stop', '-m', 'fast'])

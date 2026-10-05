@@ -238,3 +238,64 @@ la consegna persistente/recuperabile sarà gestita dal Task 7, non è certificat
 
 Verifiche di questo incremento: suite Python isolata, build e 35 regressioni browser.
 Nessuna generazione/provider/invio reale, migrazione live, push o deploy effettuati.
+
+## Task 7 — social locali con stati persistenti
+
+Migrazione `20261005143854_social_delivery.sql`, da applicare dopo Task2/3 e prima
+del deploy coordinato della funzione/UI. Nessuna migrazione o funzione live è stata
+applicata. La funzione usa Web APIs native, senza nuovi pacchetti runtime. Input
+ammesso: `{article_id, platforms}`; campi contenuto/slug/cover client sono respinti.
+POST con platforms=[] restituisce stati e readiness senza invii. OPTIONS gestisce
+CORS, altri metodi restituiscono405. Auth verifica il bearer tramite `/auth/v1/user`;
+il ruolo viene soltanto da app_metadata verificata, mai user_metadata. Segreti del
+service-role restano nel server. Public/anon non leggono le delivery, editor legge,
+nessun utente frontend può claim/finish/scrivere; le RPC sono solo service_role.
+
+La chiave articolo/piattaforma conserva il primo post anche se l'articolo cambia.
+Claim blocca articolo e delivery, richiede published e approvazione corrente,
+verifica expected_version e genera attempt_id. Pending/failed possono essere
+claimed; sent/sending/unknown mai. Finish richiede lo stesso attempt ancora sending.
+Scadenza operativa di cinque minuti: sending passa a unknown quando si ricaricano
+stati o si tenta una claim. Non diventa failed automaticamente. Errori DB dopo
+l'invio restituiscono503 e lasciano lo stato conservativo da rileggere; la UI blocca
+nuovi tentativi finché gli stati non sono stati ricaricati.
+
+Readiness server: `SOCIAL_PUBLIC_HTML_READY=true` soltanto dopo U4 verificato.
+La funzione controlla inoltre l'HTML dell'URL canonico `https://www.phonepulse.it/articoli/{slug}`:
+meta `name="phonepulse:article-version" content="{version}"` e link canonical
+corrispondente, risposta200 senza redirect. Senza questa evidenza nessuna claim né
+richiesta social. U4 deve produrre questo marker dalla stessa riga pubblicata;
+non aggiungerlo a index.html statico. La verifica usa uno snapshot seguito dalla
+claim/version check DB: non è una transazione distribuita fra sito, DB e provider.
+I canali sono spenti di default finché readiness non è configurata.
+
+Telegram richiede TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID. Senza cover pubblica HTTPS
+usa sendMessage; con cover usa sendPhoto. Il link articolo resta intero entro il
+budget1024/4096. Successo richiede status/body valido e message_id persistito.
+Rifiuto esplicito4xx→failed, risposta ambigua/timeout→unknown; niente retry cieco.
+
+Instagram richiede INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_ACCOUNT_ID,
+INSTAGRAM_GRAPH_VERSION e `INSTAGRAM_READY=true`. Nessun default APIv19 viene
+riutilizzato. La versione supportata e i permessi dell'account vanno confermati
+sull'app Meta reale prima di abilitare il canale: accesso diretto alle pagine Meta
+non riuscito in questa verifica, perciò nessuna versione è dichiarata certificata.
+Container creato, status_code FINISHED verificato, poi media_publish. Preparazione
+fallita/not-ready→failed senza publish; timeout dopo media_publish→unknown.
+Tipo/formato idoneo dell'immagine resta validato dal provider e dalla review cover;
+un URL HTTPS da solo non certifica diritti o conformità JPEG/dimensioni.
+
+L'editor avvia separatamente i canali dalla lista Pubblicati in Articoli o Review.
+La UI conserva sent/failed/unknown, offre retry soltanto per failed e disabilita
+canali non pronti. Nessun social viene avviato da Job B. Le notifiche Telegram del
+publisher/generatore sono riepiloghi operativi separati, non delivery social.
+
+Riconciliazione unknown: controllare il canale reale e l'orario/article_version.
+Se il post esiste, un amministratore può registrare sent con provider_id verificato.
+Solo se l'assenza del post è accertata può impostare failed per consentire retry.
+Non azzerare sent per ripubblicare una correzione; non impostare failed sulla sola
+assenza di una risposta. Nessuna riconciliazione manuale eseguita in questa fase.
+
+Fonti tecniche consultate: [Supabase Auth getUser](https://supabase.com/docs/reference/javascript/auth-getuser),
+[Telegram Bot API](https://core.telegram.org/bots/api),
+[collezione ufficiale Meta Instagram](https://www.postman.com/meta/instagram/documentation/6yqw8pt/instagram-api).
+Queste fonti documentano i contratti, non provano readiness dei canali PhonePulse.

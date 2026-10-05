@@ -10,6 +10,23 @@
 
 **Spec:** [Redazione e rilancio](../specs/2026-10-05-redazione-rilancio-design.md). Piani complementari: [UI e distribuzione](2026-10-05-ui-distribuzione.md), [metriche e report automatici](2026-10-05-metriche-report-automatici.md). Audit storico: [analisi iniziale](../../audit-2026-10-05.md).
 
+## Avanzamento locale — 5 ottobre 2026
+
+Nel worktree `codex/editorial-state-20261005`: Task2/3/5 implementati e verificati
+localmente (`d084766`); Task4 (`3e8f456`) e Task6 (`a78f736`) aggiunti con test
+isolati. Task7 ora implementato localmente con review indipendente senza rilievi:
+claim/finish persistenti, Auth server, provider simulati e UI stato/retry. Verifiche:
+9 test Deno, 26 Python, 37 browser, build e test SQL con due sessioni su PG16
+sintetico. Nessun push, deploy, migrazione live, riattivazione o invio reale.
+
+Restano aperti PG17/Supabase Auth/PostgREST reali, ruolo editor identificato,
+conservazione durevole del backup e rollout coordinato. Task7 richiede anche U4
+(HTML/versione/canonical verificabile) e readiness del canale/Meta API confermata:
+flag readiness spenti di default, nessun invio senza prova dell'URL pubblico.
+Prossimo incremento locale: Task8 CI/continuità; Task9 richiede decisioni editoriali
+reali. I checkbox sotto rappresentano i contratti complessivi, non attestano staging.
+Runbook aggiornato: [operations.md](../../operations.md).
+
 ## Global Constraints
 
 - Mantenere React/Vite/Tailwind/Supabase; nessuna migrazione totale di stack.

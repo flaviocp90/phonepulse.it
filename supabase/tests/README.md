@@ -58,3 +58,28 @@ Sostituire `--pg-bin` con la directory dei binari della propria installazione. P
 La prova concorrente usa due sessioni: prima transazione aperta dopo publish, seconda osservata in attesa del lock tramite `pg_stat_activity` e `pg_blocking_pids`. Dopo commit deve restituire changed=false, stessa data e un solo evento. Nessun criterio basato soltanto su una pausa temporale. I test lifecycle terminano con rollback; la probe scrive soltanto fixture nel cluster temporaneo, arrestato in finally.
 
 Il runner stampa il percorso delle evidenze private `/private/tmp/phonepulse-editorial-rpcs-*`: manifest, comandi, input SQL, stdout/stderr/exit e SHA256, permessi0600. Conserva la directory per la revisione; non contiene dati reali. Non importare `local_auth_adapter.sql` su Supabase. Queste prove non sostituiscono staging con Auth/JWT/PostgREST reali. Migrazioni e frontend/job aggiornati devono essere distribuiti insieme dopo i gate del runbook.
+
+## Task 7: esiti social senza provider reali
+
+```sh
+python3 supabase/tests/run_editorial_rpcs.py --social
+```
+
+Aggiunge RED delle RPC social assenti, applicazione della migrazione social_delivery,
+GREEN di permessi/lifecycle e una seconda probe con due sessioni. La prima claim
+mantiene la transazione aperta, la seconda viene osservata in attesa del lock e
+restituisce claimed=false dopo commit. Verifica nessun repost dopo una correzione,
+ID conservato, retry solo failed, rifiuto del completamento di un vecchio attempt,
+sending scaduto→unknown e ruolo finto in user_metadata. `--social --social-red-only`
+si ferma dopo RED, prima della nuova migrazione. Il runner arresta sempre il cluster.
+
+I test Edge usano soltanto Web APIs native, fetch finto e dati sintetici. Nessun
+permesso Deno rete/env è necessario, nessuna dipendenza remota viene importata:
+
+```sh
+deno test supabase/functions/post-to-social/*_test.ts
+deno check supabase/functions/post-to-social/index.ts
+```
+
+La concorrenza del DB è provata dal runner PostgreSQL, non dal fake fetch Deno.
+Auth/JWT/PostgREST e invii di staging restano una verifica distinta.
