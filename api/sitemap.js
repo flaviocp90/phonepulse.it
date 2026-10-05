@@ -14,38 +14,38 @@ export default async function handler(request, response) {
     const base = process.env.VITE_SUPABASE_URL
     const key = process.env.VITE_SUPABASE_ANON_KEY
     if (!base || !key) throw new Error('Public API configuration missing')
-    async function read(table, parameters) {
-      const url = new URL(`/rest/v1/${table}`, base)
-      url.search = new URLSearchParams(parameters).toString()
-      const result = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) })
-      if (!result.ok) throw new Error('Public API unavailable')
-      const rows = await result.json()
-      if (!Array.isArray(rows)) throw new Error('Invalid public API response')
-      return rows
+    async function* read(table, parameters) {
+      let cursor
+      while (true) {
+        const url = new URL(`/rest/v1/${table}`, base)
+        url.search = new URLSearchParams({ ...parameters, order: 'id.asc', limit: '1000', ...(cursor ? { id: `gt.${cursor}` } : {}) }).toString()
+        const result = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) })
+        if (!result.ok) throw new Error('Public API unavailable')
+        const rows = await result.json()
+        if (!Array.isArray(rows)) throw new Error('Invalid public API response')
+        if (!rows.length) return
+        for (const row of rows) {
+          if (typeof row?.id !== 'string' || !row.id || (cursor && row.id <= cursor)) throw new Error('Invalid page cursor')
+          cursor = row.id
+          yield row
+        }
+      }
     }
     const entries = ['/', '/chi-siamo', '/contatti', '/sitemap'].map(path => `<url><loc>${SITE_URL}${path}</loc></url>`)
-    const categories = await read('categories', { select: 'slug', order: 'id.asc' })
-    for (const category of categories) {
-      if (typeof category.slug !== 'string' || !category.slug) throw new Error('Invalid category slug')
+    for await (const category of read('categories', { select: 'id,slug' })) {
+      if (typeof category.slug !== 'string' || !category.slug || ['.', '..'].includes(category.slug)) throw new Error('Invalid category slug')
       entries.push(`<url><loc>${escapeXml(`${SITE_URL}/categoria/${encodeURIComponent(category.slug)}`)}</loc></url>`)
+      if (entries.length > 50000) throw new Error('Sitemap index required')
     }
-    let cursor
-    while (true) {
-      const rows = await read('articles', {
-        select: 'id,slug,published_at,content_updated_at,origin,version,approved_version,last_verified_at',
-        is_published: 'eq.true', order: 'id.asc', limit: '1000', ...(cursor ? { id: `gt.${cursor}` } : {}),
-      })
-      for (const article of rows) {
-        if (typeof article.id !== 'string' || !article.id || (cursor && article.id <= cursor)
-          || typeof article.slug !== 'string' || !article.slug) throw new Error('Invalid article page')
-        cursor = article.id
-        const editorial = publicEditorial(article)
-        const lastmod = editorial.updatedAt || editorial.publishedAt
-        entries.push(`<url><loc>${escapeXml(`${SITE_URL}/articoli/${encodeURIComponent(article.slug)}`)}</loc>${lastmod ? `<lastmod>${escapeXml(lastmod)}</lastmod>` : ''}</url>`)
-      }
+    for await (const article of read('articles', {
+      select: 'id,slug,published_at,content_updated_at,origin,version,approved_version,last_verified_at', is_published: 'eq.true',
+    })) {
+      if (typeof article.slug !== 'string' || !article.slug || ['.', '..'].includes(article.slug)) throw new Error('Invalid article slug')
+      const editorial = publicEditorial(article)
+      const lastmod = editorial.updatedAt || editorial.publishedAt
+      entries.push(`<url><loc>${escapeXml(`${SITE_URL}/articoli/${encodeURIComponent(article.slug)}`)}</loc>${lastmod ? `<lastmod>${escapeXml(lastmod)}</lastmod>` : ''}</url>`)
       // ponytail: single sitemap up to 50,000 URLs; add a sitemap index when the archive approaches this ceiling.
       if (entries.length > 50000) throw new Error('Sitemap index required')
-      if (rows.length < 1000) break
     }
     const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join('')}</urlset>`
     if (Buffer.byteLength(xml) > 50 * 1024 * 1024) throw new Error('Sitemap index required')
