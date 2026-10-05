@@ -48,6 +48,7 @@ export default async function handler(request, response) {
       if (entries.length > 50000) throw new Error('Sitemap index required')
     }
     const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join('')}</urlset>`
+    // ponytail: byte limit checked after assembly; use an incremental budget if imported slugs become large.
     if (Buffer.byteLength(xml) > 50 * 1024 * 1024) throw new Error('Sitemap index required')
     response.setHeader('Content-Type', 'application/xml; charset=utf-8')
     return response.status(200).send(xml)

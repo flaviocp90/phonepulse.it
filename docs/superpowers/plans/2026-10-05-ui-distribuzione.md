@@ -72,6 +72,11 @@ Nessun contenuto live modificato. Il Done completo resta aperto.
 
 ## Task U4 — HTML pubblico e metadati coerenti
 
+**Preparazione 2026-10-05:** prova SSR con dati fittizi e CSS build disponibile
+in preview; Vercel READY, controlli locali passati. Lettura HTTP protetta bloccata
+da403 del connettore, riconnessione richiesta. Il refactor generale resta al gate
+della prima prova remota; nessun rewrite pubblico articolo attivato.
+
 **Files:** prova su branch: creare `src/components/PublicArticle.jsx`, `src/entry-server.jsx`, `api/article.js`; modificare `src/pages/ArticlePage.jsx`, `src/components/{SEO,SchemaMarkup}.jsx`, `vite.config.js`, `package.json`, `vercel.json`; creare `tests/article-render.test.mjs`.
 
 **Interfaces:** `PublicArticle({article})` componente pubblico condiviso; `renderArticle(article)` produce HTML dell'articolo e metadati. Handler GET `/articoli/:slug` legge soltanto published via anon/RLS. Rendering identico per utenti e crawler; nessuna selezione per user-agent.
@@ -87,6 +92,10 @@ Nessun contenuto live modificato. Il Done completo resta aperto.
 **Done:** prova browser + risposta HTTP grezza su preview verificata. Solo dopo questo risultato stimare/refinire l'estensione server agli altri percorsi pubblici; non migrare il progetto per anticipazione.
 
 ## Task U5 — Sitemap aggiornata dalla fonte pubblica
+
+**Preparazione 2026-10-05:** endpoint solo preview, controlli locali per1002record,
+limite API500, errori e slug dot-segment passati. Categorie e articoli paginati fino
+alla pagina vuota. `/sitemap.xml`, robots e job B invariati fino alla prova remota.
 
 **Files:** creare `api/sitemap.js`, `tests/sitemap.test.mjs`; modificare `vercel.json`, `public/robots.txt`, `scripts/news_automation.py`; sostituire il vecchio `public/sitemap.xml` dopo preview riuscita.
 

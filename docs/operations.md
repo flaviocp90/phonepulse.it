@@ -485,3 +485,11 @@ sono verificati. `/sitemap.xml`, robots, XML statico e generazione/git del job B
 restano invariati. Controlli locali: lint src+api, build client+server,
 node:test prova server e sitemap1002record/errore,41/41 browser su dati fittizi.
 U4/U5 non dichiarati completi né attivati in produzione.
+
+Review indipendente della preparazione: nessun Critical. Due Important corretti
+con RED→GREEN: paginare entrambe le tabelle fino alla pagina vuota anche quando
+il limite server è500, e rifiutare slug `.`/`..` che normalizzano alla home.
+Controllo server ampliato passa; lint passa. Preview codice76101da READY
+[ispezione](https://vercel.com/flaviocp90s-projects/phonepulse-it/2WDSFRTf4wdX96znBFDFwVoAF7Zs).
+Minor differito: il limite50MB dopo assemblaggio non limita la memoria durante
+l’accumulo di slug enormi; prevedere budget incrementale nel contratto input.
