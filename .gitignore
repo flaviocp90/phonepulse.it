@@ -22,6 +22,7 @@ npm-debug.log*
 
 # Python scripts
 scripts/__pycache__/
+scripts/tests/__pycache__/
 scripts/*.pyc
 scripts/.env
 

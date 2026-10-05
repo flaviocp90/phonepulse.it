@@ -160,3 +160,49 @@ Dopo il fix compatibilità, suite browser completa **35/35 passata** (20 editori
 Verifica SQL compatibilità eseguita separatamente dal coordinatore, migration invariate: nuovo manifest privato `/private/tmp/phonepulse-editorial-rpcs-x8c_1bnc/manifest.json`, SHA256 `94ce9bb98743e645ea921e07e285a267c93cc231efdc971d14d3df20264799aa`. La suite verifica save sparse unchanged approved che conserva `{}`, versione e approvazione, e sparse published correction che conserva un object popolato. Lifecycle, concorrenza reale a due sessioni e stop cluster exit0. L’evidenza e la precedente review approvata Task3 server restano conservate sopra; la review mirata ha approvato le assertion e il payload UI: nessun rilievo residuo sul gate locale. I gate staging e rollout restano aperti.
 
 Ulteriore verifica SQL: aggiunto il rifiuto esplicito di un nuovo payload `affiliate_links: {}` (SQLSTATE22023), oltre alla preservazione sparse dei vecchi oggetti. Nuovo run `/private/tmp/phonepulse-editorial-rpcs-z0itionu/manifest.json`, SHA256 `5aaa42055f0f98f231054a89a8d3c3c7244be01cea554ab33b39c2ca8716a090`:16 passi con exit attesi, lifecycle/concorrenza/stop0, migration invariate.
+
+
+## Task 4 — generazione RSS locale
+
+Implementazione nel ramo `codex/editorial-state-20261005`; nessun run remoto o invio effettuato.
+Il generatore richiede prima le migrazioni Task 2/3 e la variabile GitHub Actions
+`PHONEPULSE_EDITOR_AUTHOR` con il nome del responsabile reale, deciso dalla redazione.
+Se manca, termina con errore prima delle API. Non inventa autori o approvazioni.
+
+Coda attiva: `origin=rss`, `status=draft`, massimo venti bozze aperte e cinque nuovi
+inserimenti per esecuzione. L'arretrato legacy resta intatto. Fonte RSS con data
+ignota, futura o oltre 48 ore è esclusa dal flusso automatico e richiede scouting
+manuale. Pertinenza e promesse numeriche sono filtri conservativi, non fact-check.
+Il riepilogo RSS viene pulito e conservato in `sources[].facts`; title, publisher,
+date e URL originale vengono dal feed, mai dal modello. La chiave permanente
+`source_key` rimuove fragment e tracking, conservando parametri funzionali.
+Non vengono più cancellati gli hash storici; le nuove dedupliche usano l'indice
+unico degli articoli. Le bozze invalide non vengono inserite né cercano cover.
+Una cover assente lascia una bozza da revisionare; non autorizza la pubblicazione.
+
+Gemini e Google CSE conteggiano ciascun tentativo prima della richiesta, inclusi
+retry, errori ed esiti vuoti. OpenRouter registra ogni tentativo nei log (nessun
+nuovo contatore DB o limite giornaliero viene introdotto). Errori DB/contatore
+interrompono il job; tutti i feed indisponibili o tutte le generazioni fallite
+producono errore. Zero candidati pertinenti è un esito valido. Le eccezioni dei
+provider con token nell'URL non vengono riportate integralmente nei log.
+
+A e fix-cover condividono `phonepulse-provider-writes`, `cancel-in-progress=false`:
+i contatori read/write presuppongono questi workflow serializzati. Evitare script
+manuali contemporanei; se si aggiungono writer, usare incrementi atomici via RPC.
+GitHub concurrency conserva al massimo un'esecuzione pending, non è una coda
+illimitata. Fix-cover riutilizza il titolo come query senza LLM e aggiorna solo
+bozze ancora alla versione letta, incrementando versione/timestamp editoriale;
+nessun approved/published viene modificato. Un update senza righe non è successo.
+
+Verifica senza credenziali/API esterne, con le dipendenze già in requirements:
+
+```sh
+PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests -v
+```
+
+Riferimenti consultati: [Supabase Python insert](https://supabase.com/docs/reference/python/insert),
+[select/count](https://supabase.com/docs/reference/python/select),
+[changelog](https://supabase.com/changelog).
+I test isolano rete/DB; staging Supabase/PostgreSQL 17 e rollout restano da verificare.
+Workflow A/B restano disabilitati in remoto: questa modifica locale non li riattiva.
