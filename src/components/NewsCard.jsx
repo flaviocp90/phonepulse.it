@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import CoverImage from './CoverImage'
 
 function formatDate(dateString) {
   if (!dateString) return ''
@@ -19,16 +20,12 @@ export default function NewsCard({ article }) {
     >
       {/* Image — small, not central */}
       <div className="w-20 h-[72px] rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-        {cover_image_url ? (
-          <img
-            src={cover_image_url}
-            alt={title}
-            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200" />
-        )}
+        <CoverImage
+          src={cover_image_url}
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
+          loading="lazy"
+        />
       </div>
 
       {/* Text */}

@@ -5,6 +5,7 @@ import DOMPurify from "dompurify";
 import { supabase } from "../lib/supabase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import CoverImage from "../components/CoverImage";
 import SEO from "../components/SEO";
 import { publicEditorial } from "../lib/publicEditorial";
 import { ArticleSchema, BreadcrumbSchema } from "../components/SchemaMarkup";
@@ -215,11 +216,12 @@ export default function ArticlePage() {
 
             {/* Cover image */}
             {article.cover_image_url && (
-              <div className="mb-10 rounded-2xl overflow-hidden border border-border">
-                <img
+              <div className="relative aspect-[16/9] mb-10 rounded-2xl overflow-hidden border border-border">
+                <CoverImage
                   src={article.cover_image_url}
                   alt={article.title}
-                  className="w-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="eager"
                 />
               </div>
             )}
