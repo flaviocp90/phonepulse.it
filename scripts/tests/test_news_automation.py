@@ -157,10 +157,11 @@ class AutomationTests(unittest.TestCase):
         with patch.object(news, 'GEMINI_API_KEY', 'fake'), \
              patch.object(news, 'get_gemini_calls_oggi', return_value=0), \
              patch.object(news, 'incrementa_gemini_calls') as count, \
-             patch.object(news.requests, 'post', side_effect=[first, second]), \
+             patch.object(news.requests, 'post', side_effect=[first, second]) as request, \
              patch.object(news.time, 'sleep'):
-            news.chiama_gemini(database(), 'prompt')
+            self.assertEqual(news.chiama_gemini(database(), 'prompt'), ('{}', 'gemini-3.1-flash-lite'))
             self.assertEqual(count.call_count, 2)
+            self.assertIn('/gemini-3.1-flash-lite:generateContent?', request.call_args.args[0])
 
     def test_empty_cse_result_counts_and_counter_failure_blocks_request(self):
         response = Mock()
