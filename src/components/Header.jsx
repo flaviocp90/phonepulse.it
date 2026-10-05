@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 
 const navLinks = [
   { to: '/', label: 'Home', exact: true },
@@ -13,17 +13,41 @@ const navLinks = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const menuButton = useRef(null)
+  const { pathname } = useLocation()
+
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1280px)')
+    const closeOnResize = () => { if (desktop.matches) setMenuOpen(false) }
+    desktop.addEventListener('change', closeOnResize)
+    return () => desktop.removeEventListener('change', closeOnResize)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButton.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [menuOpen])
+
   return (
     <header className="bg-dark border-b border-white/5 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="PhonePulse home">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between gap-4 min-h-16 py-3">
+        <Link to="/" className="flex items-center gap-2 shrink-0 text-[min(1.5rem,5vw)]" aria-label="PhonePulse home">
           <img src="/logo.png" alt="PhonePulse logo" className="h-10 w-10 rounded-full object-cover ring-1 ring-primary/40" />
-          <span className="text-primary text-2xl font-heading font-bold tracking-tight leading-none">PHONE</span>
-          <span className="text-white text-2xl font-heading font-bold tracking-tight leading-none">PULSE</span>
+          <span className="text-primary font-heading font-bold tracking-tight leading-none">PHONE</span>
+          <span className="text-white font-heading font-bold tracking-tight leading-none">PULSE</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-7">
+        <nav className="hidden xl:flex flex-wrap justify-end items-center gap-x-3 gap-y-2">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
@@ -68,8 +92,11 @@ export default function Header() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden text-white/60 hover:text-white p-1.5 transition-colors"
+          className="xl:hidden text-white/60 hover:text-white p-1.5 transition-colors"
           onClick={() => setMenuOpen(!menuOpen)}
+          ref={menuButton}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
           aria-label={menuOpen ? 'Chiudi menu' : 'Apri menu'}
         >
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -88,7 +115,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav className="md:hidden border-t border-white/10 bg-dark px-4 py-4 flex flex-col gap-1">
+        <nav id="mobile-navigation" aria-label="Navigazione mobile" className="xl:hidden border-t border-white/10 bg-dark px-4 py-4 flex flex-col gap-1">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}

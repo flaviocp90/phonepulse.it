@@ -24,24 +24,28 @@ function CardSkeleton() {
 
 export default function CategoryPage() {
   const { slug } = useParams()
-  const [category, setCategory] = useState(null)
+  const [loadedCategory, setCategory] = useState(null)
   const [articles, setArticles] = useState([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(null)
+  const [pagination, setPagination] = useState({ slug, page: 0 })
+  const [fetchLoading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Reset page when slug changes
-  useEffect(() => {
-    setPage(0)
-    setArticles([])
-    setCategory(null)
-  }, [slug])
+  const page = pagination.slug === slug ? pagination.page : 0
+  const requestKey = `${slug}/${page}`
+  const [loadedKey, setLoadedKey] = useState(null)
+  const loading = fetchLoading || loadedKey !== requestKey
+  const category = loadedCategory?.slug === slug ? loadedCategory : null
+  const setPage = update => setPagination({ slug, page: update(page) })
 
   useEffect(() => {
+    setPagination({ slug, page })
+    let active = true
     async function fetchData() {
       setLoading(true)
       setError(null)
+      setArticles([])
+      setTotal(null)
       try {
         // Fetch category
         const { data: cat, error: catErr } = await supabase
@@ -50,6 +54,7 @@ export default function CategoryPage() {
           .eq('slug', slug)
           .single()
 
+        if (!active) return
         if (catErr) throw catErr
         setCategory(cat)
 
@@ -65,24 +70,31 @@ export default function CategoryPage() {
           .order('published_at', { ascending: false })
           .range(from, to)
 
+        if (!active) return
         if (artErr) throw artErr
         setArticles(data || [])
-        setTotal(count || 0)
+        setTotal(count)
       } catch (err) {
+        if (!active) return
         setError('Categoria non trovata o errore nel caricamento.')
         console.error(err)
       } finally {
-        setLoading(false)
+        if (active) {
+          setLoadedKey(requestKey)
+          setLoading(false)
+        }
       }
     }
 
     fetchData()
+    return () => { active = false }
   }, [slug, page])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <div className="min-h-screen flex flex-col">
+      {!category && <SEO title="Categoria" />}
       {category && (
         <SEO
           title={category.name}
@@ -121,13 +133,13 @@ export default function CategoryPage() {
 
         {/* Articles */}
         <section className="max-w-6xl mx-auto px-4 py-12">
-          {error && (
+          {!loading && error && (
             <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm font-body mb-8">
               {error}
             </div>
           )}
 
-          {!loading && !error && (
+          {!loading && !error && total !== null && (
             <p className="text-sm text-gray-400 font-body mb-8">
               {total} {total === 1 ? 'articolo' : 'articoli'} trovati
             </p>
@@ -139,21 +151,23 @@ export default function CategoryPage() {
             </div>
           ) : articles.length === 0 && !error ? (
             <div className="text-center py-20">
-              <p className="text-gray-400 font-body">Nessun articolo in questa categoria ancora.</p>
+              <p className="text-gray-400 font-body">
+                {slug === 'recensioni' ? 'Non sono ancora disponibili prove pubblicate.' : 'Nessun articolo in questa categoria ancora.'}
+              </p>
               <Link to="/" className="inline-block mt-6 text-sm text-primary font-body hover:underline">
-                ← Torna alla home
+                Leggi gli ultimi articoli
               </Link>
             </div>
-          ) : (
+          ) : !error ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {articles.map(article => (
                 <ArticleCard key={article.id} article={article} />
               ))}
             </div>
-          )}
+          ) : null}
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {!loading && !error && totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-12">
               <button
                 onClick={() => setPage(p => Math.max(0, p - 1))}

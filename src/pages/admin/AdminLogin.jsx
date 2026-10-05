@@ -47,16 +47,17 @@ export default function AdminLogin() {
           className="bg-white/5 border border-white/10 rounded-2xl p-8 space-y-5"
         >
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-body rounded-xl px-4 py-3">
+            <div role="alert" className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-body rounded-xl px-4 py-3">
               {error}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-body font-medium text-white/50 uppercase tracking-wide">
+            <label htmlFor="login-email" className="text-xs font-body font-medium text-white/70 uppercase tracking-wide">
               Email
             </label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -68,10 +69,11 @@ export default function AdminLogin() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-body font-medium text-white/50 uppercase tracking-wide">
+            <label htmlFor="login-password" className="text-xs font-body font-medium text-white/70 uppercase tracking-wide">
               Password
             </label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
