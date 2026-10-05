@@ -56,7 +56,7 @@ export default function AboutPage() {
             </div>
             <h2 className="text-2xl font-heading font-bold text-dark mt-10 mb-4">Correzioni</h2>
             <p className="text-gray-600 font-body leading-relaxed">
-              Per segnalare un errore, scrivi a <a href="mailto:phonepulse.it@gmail.com?subject=CORREZIONE" className="text-primary underline">phonepulse.it@gmail.com</a> indicando articolo e fonti. Gli aggiornamenti sostanziali mostrano una data distinta dalla prima pubblicazione.
+              Per segnalare un errore, scrivi a <a href="mailto:phonepulse.it@gmail.com?subject=CORREZIONE" className="text-dark underline">phonepulse.it@gmail.com</a> indicando articolo e fonti. Gli aggiornamenti sostanziali mostrano una data distinta dalla prima pubblicazione.
             </p>
           </div>
         </section>

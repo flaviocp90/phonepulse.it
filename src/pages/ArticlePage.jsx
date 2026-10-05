@@ -240,7 +240,7 @@ export default function ArticlePage() {
                 <ul className="space-y-4 text-sm break-words">
                   {editorial.sources.map((source, index) => (
                     <li key={index}>
-                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4">{source.title}</a>
+                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-dark underline underline-offset-4">{source.title}</a>
                       <p className="text-gray-600 mt-1">
                         {source.publisher}
                         {source.retrievedAt && <span>{source.publisher ? ' · ' : ''}Consultata: <time dateTime={source.retrievedAt}>{formatDate(source.retrievedAt)}</time></span>}
@@ -318,7 +318,7 @@ export default function ArticlePage() {
                 <section aria-labelledby="related-articles" className="mb-8">
                   <h2 id="related-articles" className="text-2xl font-heading text-dark mb-4">Altri articoli in questa categoria</h2>
                   <ul className="space-y-3 font-body text-sm">
-                    {related.map(item => <li key={item.id}><Link to={`/articoli/${item.slug}`} className="text-primary underline underline-offset-4">{item.title}</Link></li>)}
+                    {related.map(item => <li key={item.id}><Link to={`/articoli/${item.slug}`} className="text-dark underline underline-offset-4">{item.title}</Link></li>)}
                   </ul>
                 </section>
               )}

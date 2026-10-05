@@ -447,3 +447,9 @@ URL fonte pericoloso, firma PhonePulse Organization e disclosure AI; schermata
 mobile390px controllata. Nessuna riscrittura di testi live, nuovo evento analytics
 o attivazione monitor. Pilota reale, consenso, HTML server U4 e rollout coordinato
 restano aperti; questa verifica locale non autorizza l’attivazione dei job.
+
+Review indipendente: nessun Critical; contrasto dei nuovi link corretto con il
+colore scuro esistente e test sul rapporto effettivo (prima2.81:1, minimo4.5:1).
+Lint, build e41/41 prove browser passate. Nota minore differita: aggiungere casi
+browser legacy con data valida e versioni approvate coincidenti/diverse per
+rendere più specifica la regressione del guard, già verificato direttamente.
