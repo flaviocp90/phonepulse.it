@@ -442,6 +442,18 @@ vincolo data di fine, poi arresta il cluster. Non sostituisce staging PG17/Auth.
 CI e cache seguono la [documentazione GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax),
 lint la [configurazione ESLint](https://eslint.org/docs/latest/use/configure/configuration-files).
 
+### Copertine pubbliche — U3
+
+Home, categoria e articolo mostrano un segnaposto neutro e accessibile se la
+copertina non si carica; una nuova URL può recuperare l’immagine. Le card
+conservano link e dimensioni, il dettaglio riserva un riquadro16:9 prima del
+caricamento. Object-fit cover può ritagliare i bordi delle immagini con altre
+proporzioni; non sono disponibili dimensioni intrinseche nel record. Dettaglio
+eager, liste lazy. Nessuna modifica alle URL salvate o ai contenuti live.
+
+Verifica controllata a390px: errori404 nelle tre rotte, assenza di overflow,
+proporzioni e recupero dopo cambio URL. Test: cover-images.spec.js.
+
 ### Presentazione editoriale pubblica — U2, incremento locale
 
 Autore e formato vengono dal record; nessuna attribuzione automatica dell’archivio
