@@ -1,9 +1,12 @@
 name: Job B — Pubblicazione articolo del giorno
 
 on:
-  schedule:
-    - cron: "0 8-20 * * *"
+  # Schedule intentionally disabled until staging and rollout checks pass.
   workflow_dispatch:
+
+concurrency:
+  group: phonepulse-approved-publishing
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -11,6 +14,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,5 +28,5 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PUBLISH_COUNT: ${{ vars.PUBLISH_COUNT || '1' }}
+          PUBLISH_COUNT: '1'
         run: python scripts/publish_article.py

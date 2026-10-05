@@ -206,3 +206,35 @@ Riferimenti consultati: [Supabase Python insert](https://supabase.com/docs/refer
 [changelog](https://supabase.com/changelog).
 I test isolano rete/DB; staging Supabase/PostgreSQL 17 e rollout restano da verificare.
 Workflow A/B restano disabilitati in remoto: questa modifica locale non li riattiva.
+
+
+## Task 6 — Job B locale, solo approvati
+
+`publish_article.py` seleziona status approved con versione approvata corrente,
+esclude legacy e fonti news ignote/future/oltre 72 ore. Usa soltanto la RPC
+`publish_article(id, expected_version)`; il server ricontrolla stato, versione e
+freschezza con lock. Nessuna approvazione automatica e nessun UPDATE degli articoli.
+Le guide mantengono una semantica distinta dalle news. I risultati distinguono
+pubblicati, retry invariati, esclusi/scaduti, conflitti e fallimenti.
+
+```sh
+python3 scripts/publish_article.py --dry-run
+```
+
+Richiede credenziali server dell'ambiente voluto: legge candidati e ID senza RPC,
+notifiche, file sitemap, git o social. Non eseguito sul live in questa fase;
+comportamento verificato con fake Supabase e senza accesso rete.
+
+Workflow B: solo dispatch manuale, cron rimosso, concurrency dedicata senza
+cancellazione, timeout 15 minuti, PUBLISH_COUNT=1. Non dispatchare prima del rollout
+coordinato delle migrazioni, ruolo editor e verifica staging PG17/Auth.
+Il repository remoto non è modificato da questo incremento locale.
+
+Sitemap git mantenuta fino all'attivazione U5: ogni run non dry-run riprova la
+distribuzione anche senza nuovi candidati. Un push fallito produce errore separato:
+l'articolo resta published nel DB. Retry senza nuovi cambiamenti prova comunque il
+push di un commit locale già creato. Le notifiche sono inviate solo per changed=true;
+la consegna persistente/recuperabile sarà gestita dal Task 7, non è certificata qui.
+
+Verifiche di questo incremento: suite Python isolata, build e 35 regressioni browser.
+Nessuna generazione/provider/invio reale, migrazione live, push o deploy effettuati.
