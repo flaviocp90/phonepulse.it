@@ -1,0 +1,30 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - link "PhonePulse home" [ref=f2e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f2e7]
+        - generic [ref=f2e8]: PHONE
+        - generic [ref=f2e9]: PULSE
+      - button "Apri menu" [ref=f2e10] [cursor=pointer]
+  - main [ref=f2e12]
+  - contentinfo [ref=f2e62]:
+    - generic [ref=f2e63]:
+      - generic [ref=f2e64]:
+        - link "PhonePulse" [ref=f2e65] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f2e66]: PHONE
+          - generic [ref=f2e67]: PULSE
+        - paragraph [ref=f2e68]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f2e69]:
+        - paragraph [ref=f2e70]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f2e71]:
+          - link "Instagram" [ref=f2e72] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f2e77] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f2e80]:
+        - link "Sitemap" [ref=f2e81] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f2e82] [cursor=pointer]:
+          - /url: /privacy

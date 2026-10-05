@@ -1,0 +1,77 @@
+- generic [ref=f8e3]:
+  - banner [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - link "PhonePulse home" [ref=f8e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f8e7]
+        - generic [ref=f8e8]: PHONE
+        - generic [ref=f8e9]: PULSE
+      - navigation [ref=f8e10]:
+        - link "Home" [ref=f8e11] [cursor=pointer]:
+          - /url: /
+        - link "Recensioni" [ref=f8e12] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Comparativi" [ref=f8e13] [cursor=pointer]:
+          - /url: /categoria/comparativi
+        - link "Guide" [ref=f8e14] [cursor=pointer]:
+          - /url: /categoria/guide
+        - link "News" [ref=f8e15] [cursor=pointer]:
+          - /url: /categoria/news
+        - link "Offerte" [ref=f8e16] [cursor=pointer]:
+          - /url: /categoria/offerte
+        - generic [ref=f8e17]:
+          - link "Instagram" [ref=f8e18] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f8e23] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+  - main [ref=f8e26]:
+    - heading "Mappa del sito" [level=1] [ref=f8e27]
+    - paragraph [ref=f8e28]: Tutti i contenuti di PhonePulse, organizzati per categoria.
+    - generic [ref=f8e29]:
+      - heading "Pagine principali" [level=2] [ref=f8e30]
+      - list [ref=f8e31]:
+        - listitem [ref=f8e32]:
+          - link "Home" [ref=f8e33] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=f8e34]:
+          - link "Chi siamo" [ref=f8e35] [cursor=pointer]:
+            - /url: /chi-siamo
+        - listitem [ref=f8e36]:
+          - link "Contatti" [ref=f8e37] [cursor=pointer]:
+            - /url: /contatti
+        - listitem [ref=f8e38]:
+          - link "Recensioni" [ref=f8e39] [cursor=pointer]:
+            - /url: /categoria/recensioni
+        - listitem [ref=f8e40]:
+          - link "Comparativi" [ref=f8e41] [cursor=pointer]:
+            - /url: /categoria/comparativi
+        - listitem [ref=f8e42]:
+          - link "Guide" [ref=f8e43] [cursor=pointer]:
+            - /url: /categoria/guide
+        - listitem [ref=f8e44]:
+          - link "News" [ref=f8e45] [cursor=pointer]:
+            - /url: /categoria/news
+        - listitem [ref=f8e46]:
+          - link "Offerte" [ref=f8e47] [cursor=pointer]:
+            - /url: /categoria/offerte
+    - paragraph [ref=f8e48]: Caricamento articoli…
+  - contentinfo [ref=f8e49]:
+    - generic [ref=f8e50]:
+      - generic [ref=f8e51]:
+        - link "PhonePulse" [ref=f8e52] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f8e53]: PHONE
+          - generic [ref=f8e54]: PULSE
+        - paragraph [ref=f8e55]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f8e56]:
+        - paragraph [ref=f8e57]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f8e58]:
+          - link "Instagram" [ref=f8e59] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f8e64] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f8e67]:
+        - link "Sitemap" [ref=f8e68] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f8e69] [cursor=pointer]:
+          - /url: /privacy

@@ -1,0 +1,56 @@
+- generic [ref=f7e3]:
+  - banner [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - link "PhonePulse home" [ref=f7e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f7e7]
+        - generic [ref=f7e8]: PHONE
+        - generic [ref=f7e9]: PULSE
+      - navigation [ref=f7e10]:
+        - link "Home" [ref=f7e11] [cursor=pointer]:
+          - /url: /
+        - link "Recensioni" [ref=f7e12] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Comparativi" [ref=f7e13] [cursor=pointer]:
+          - /url: /categoria/comparativi
+        - link "Guide" [ref=f7e14] [cursor=pointer]:
+          - /url: /categoria/guide
+        - link "News" [ref=f7e15] [cursor=pointer]:
+          - /url: /categoria/news
+        - link "Offerte" [ref=f7e16] [cursor=pointer]:
+          - /url: /categoria/offerte
+        - generic [ref=f7e17]:
+          - link "Instagram" [ref=f7e18] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f7e23] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+  - main [ref=f7e26]:
+    - generic [ref=f7e29]:
+      - heading "Recensioni e guide smartphone per scegliere bene." [level=1] [ref=f7e30]: Recensioni e guide smartphoneper scegliere bene.
+      - paragraph [ref=f7e31]: Analisi approfondite, comparativi onesti e guide pratiche per trovare il telefono giusto.
+      - generic [ref=f7e32]:
+        - link "Esplora le recensioni" [ref=f7e33] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Guide all'acquisto" [ref=f7e36] [cursor=pointer]:
+          - /url: /categoria/guide
+    - heading "Ultimi articoli" [level=2] [ref=f7e39]
+  - contentinfo [ref=f7e167]:
+    - generic [ref=f7e168]:
+      - generic [ref=f7e169]:
+        - link "PhonePulse" [ref=f7e170] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f7e171]: PHONE
+          - generic [ref=f7e172]: PULSE
+        - paragraph [ref=f7e173]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f7e174]:
+        - paragraph [ref=f7e175]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f7e176]:
+          - link "Instagram" [ref=f7e177] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f7e182] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f7e185]:
+        - link "Sitemap" [ref=f7e186] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f7e187] [cursor=pointer]:
+          - /url: /privacy

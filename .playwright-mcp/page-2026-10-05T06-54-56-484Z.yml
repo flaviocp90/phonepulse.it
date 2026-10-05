@@ -1,0 +1,64 @@
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]:
+      - link "PhonePulse home" [ref=f6e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f6e7]
+        - generic [ref=f6e8]: PHONE
+        - generic [ref=f6e9]: PULSE
+      - navigation [ref=f6e10]:
+        - link "Home" [ref=f6e11] [cursor=pointer]:
+          - /url: /
+        - link "Recensioni" [ref=f6e12] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Comparativi" [ref=f6e13] [cursor=pointer]:
+          - /url: /categoria/comparativi
+        - link "Guide" [ref=f6e14] [cursor=pointer]:
+          - /url: /categoria/guide
+        - link "News" [ref=f6e15] [cursor=pointer]:
+          - /url: /categoria/news
+        - link "Offerte" [ref=f6e16] [cursor=pointer]:
+          - /url: /categoria/offerte
+        - generic [ref=f6e17]:
+          - link "Instagram" [ref=f6e18] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f6e23] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+  - main [ref=f6e26]:
+    - heading "Contatti" [level=1] [ref=f6e29]
+    - generic [ref=f6e30]:
+      - paragraph [ref=f6e31]: Hai una domanda, vuoi segnalare un errore o proporre una collaborazione? Scrivici.
+      - generic [ref=f6e32]:
+        - generic [ref=f6e33]:
+          - heading "Email" [level=3] [ref=f6e38]
+          - paragraph [ref=f6e39]: Per qualsiasi comunicazione.
+          - link "phonepulse.it@gmail.com" [ref=f6e40] [cursor=pointer]:
+            - /url: mailto:phonepulse.it@gmail.com
+        - generic [ref=f6e41]:
+          - heading "Collaborazioni" [level=3] [ref=f6e46]
+          - paragraph [ref=f6e47]: Sei un brand, un'agenzia o un creator? Raccontaci il tuo progetto.
+          - link "Scrivici" [ref=f6e48] [cursor=pointer]:
+            - /url: mailto:phonepulse.it@gmail.com?subject=Collaborazione
+      - paragraph [ref=f6e50]:
+        - strong [ref=f6e51]: "Tempo di risposta:"
+        - text: cerchiamo di rispondere a tutte le email entro 48 ore lavorative. Per segnalazioni urgenti relative a errori o contenuti inesatti, indica "CORREZIONE" nell'oggetto.
+  - contentinfo [ref=f6e52]:
+    - generic [ref=f6e53]:
+      - generic [ref=f6e54]:
+        - link "PhonePulse" [ref=f6e55] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f6e56]: PHONE
+          - generic [ref=f6e57]: PULSE
+        - paragraph [ref=f6e58]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f6e59]:
+        - paragraph [ref=f6e60]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f6e61]:
+          - link "Instagram" [ref=f6e62] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f6e67] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f6e70]:
+        - link "Sitemap" [ref=f6e71] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f6e72] [cursor=pointer]:
+          - /url: /privacy

@@ -1,0 +1,47 @@
+- generic [ref=f9e3]:
+  - banner [ref=f9e4]:
+    - generic [ref=f9e5]:
+      - link "PhonePulse home" [ref=f9e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f9e7]
+        - generic [ref=f9e8]: PHONE
+        - generic [ref=f9e9]: PULSE
+      - navigation [ref=f9e10]:
+        - link "Home" [ref=f9e11] [cursor=pointer]:
+          - /url: /
+        - link "Recensioni" [ref=f9e12] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Comparativi" [ref=f9e13] [cursor=pointer]:
+          - /url: /categoria/comparativi
+        - link "Guide" [ref=f9e14] [cursor=pointer]:
+          - /url: /categoria/guide
+        - link "News" [ref=f9e15] [cursor=pointer]:
+          - /url: /categoria/news
+        - link "Offerte" [ref=f9e16] [cursor=pointer]:
+          - /url: /categoria/offerte
+        - generic [ref=f9e17]:
+          - link "Instagram" [ref=f9e18] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f9e23] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+  - main [ref=f9e26]
+  - contentinfo [ref=f9e42]:
+    - generic [ref=f9e43]:
+      - generic [ref=f9e44]:
+        - link "PhonePulse" [ref=f9e45] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f9e46]: PHONE
+          - generic [ref=f9e47]: PULSE
+        - paragraph [ref=f9e48]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f9e49]:
+        - paragraph [ref=f9e50]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f9e51]:
+          - link "Instagram" [ref=f9e52] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f9e57] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f9e60]:
+        - link "Sitemap" [ref=f9e61] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f9e62] [cursor=pointer]:
+          - /url: /privacy

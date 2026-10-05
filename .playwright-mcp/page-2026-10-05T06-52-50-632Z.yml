@@ -1,0 +1,69 @@
+- generic [ref=f5e3]:
+  - banner [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - link "PhonePulse home" [ref=f5e6] [cursor=pointer]:
+        - /url: /
+        - img "PhonePulse logo" [ref=f5e7]
+        - generic [ref=f5e8]: PHONE
+        - generic [ref=f5e9]: PULSE
+      - navigation [ref=f5e10]:
+        - link "Home" [ref=f5e11] [cursor=pointer]:
+          - /url: /
+        - link "Recensioni" [ref=f5e12] [cursor=pointer]:
+          - /url: /categoria/recensioni
+        - link "Comparativi" [ref=f5e13] [cursor=pointer]:
+          - /url: /categoria/comparativi
+        - link "Guide" [ref=f5e14] [cursor=pointer]:
+          - /url: /categoria/guide
+        - link "News" [ref=f5e15] [cursor=pointer]:
+          - /url: /categoria/news
+        - link "Offerte" [ref=f5e16] [cursor=pointer]:
+          - /url: /categoria/offerte
+        - generic [ref=f5e17]:
+          - link "Instagram" [ref=f5e18] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f5e23] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+  - main [ref=f5e26]:
+    - heading "Chi siamo" [level=1] [ref=f5e29]
+    - generic [ref=f5e31]:
+      - paragraph [ref=f5e32]: "PhonePulse è un progetto editoriale italiano dedicato al mondo degli smartphone. Niente clickbait, niente pressioni pubblicitarie: solo analisi serie."
+      - heading "La nostra missione" [level=2] [ref=f5e33]
+      - paragraph [ref=f5e34]: Scegliere uno smartphone oggi è complicato. L'offerta è enorme, i prezzi cambiano in continuazione e le specifiche tecniche sono difficili da interpretare. PhonePulse nasce per semplificare questa scelta.
+      - paragraph [ref=f5e35]: Ogni recensione è il risultato di un utilizzo reale e prolungato del dispositivo. Ogni comparativo mette a confronto prodotti sullo stesso piano. Ogni guida è scritta per chi non vuole perdere tempo.
+      - heading "Indipendenza editoriale" [level=2] [ref=f5e36]
+      - paragraph [ref=f5e37]: "I giudizi espressi su PhonePulse sono indipendenti. I link di affiliazione presenti in alcuni articoli non influenzano mai le valutazioni: un prodotto ottiene il voto che si merita, indipendentemente da chi lo vende o quanto costa."
+      - heading "Il nostro metodo" [level=2] [ref=f5e38]
+      - generic [ref=f5e39]:
+        - generic [ref=f5e40]:
+          - text: "01"
+          - heading "Utilizzo reale" [level=3] [ref=f5e41]
+          - paragraph [ref=f5e42]: Usiamo i dispositivi per settimane, non per ore.
+        - generic [ref=f5e43]:
+          - text: "02"
+          - heading "Voto numerico" [level=3] [ref=f5e44]
+          - paragraph [ref=f5e45]: Ogni prodotto riceve un voto da 0 a 100, spiegato nel dettaglio.
+        - generic [ref=f5e46]:
+          - text: "03"
+          - heading "Aggiornamenti" [level=3] [ref=f5e47]
+          - paragraph [ref=f5e48]: Le recensioni vengono aggiornate dopo aggiornamenti software importanti.
+  - contentinfo [ref=f5e49]:
+    - generic [ref=f5e50]:
+      - generic [ref=f5e51]:
+        - link "PhonePulse" [ref=f5e52] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f5e53]: PHONE
+          - generic [ref=f5e54]: PULSE
+        - paragraph [ref=f5e55]: Recensioni smartphone per scegliere meglio.
+      - generic [ref=f5e56]:
+        - paragraph [ref=f5e57]: © PhonePulse 2026 — Tutti i diritti riservati
+        - generic [ref=f5e58]:
+          - link "Instagram" [ref=f5e59] [cursor=pointer]:
+            - /url: https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr
+          - link "Telegram" [ref=f5e64] [cursor=pointer]:
+            - /url: https://t.me/PhonePulseIT
+      - generic [ref=f5e67]:
+        - link "Sitemap" [ref=f5e68] [cursor=pointer]:
+          - /url: /sitemap
+        - link "Privacy Policy" [ref=f5e69] [cursor=pointer]:
+          - /url: /privacy
