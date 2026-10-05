@@ -342,8 +342,8 @@ major Tailwind4/router7, non forzati in questo incremento. Nessun risultato
 Proposta aggiornata: **Uptime Kuma**, open source e installabile con Docker su un
 server Linux sempre acceso, esterno a GitHub Actions e alle piattaforme monitorate.
 Un unico servizio copre HTTP/HTTPS del sito e monitor Push per la presenza delle
-esecuzioni del controllo. Il timer sotto esegue lo script read-only; un'integrazione
-successiva invierà a Kuma esito positivo o negativo, e l'assenza del segnale sarà
+esecuzioni del controllo. Il timer sotto esegue lo script read-only; l’opzione
+`--push` ora può inviare a Kuma esito positivo o negativo, e l'assenza del segnale sarà
 un guasto distinto. Alert verso il destinatario scelto e controllo esterno della
 disponibilità di Kuma vanno provati prima dell'attivazione. Software gratuito;
 hosting e gestione del server sono risorse da confermare. Nessuna istanza creata.
@@ -356,6 +356,23 @@ articoli/delivery e nessun retry/invio. Output JSON `alerts`, exit0 sano, exit1
 attenzione/errore/configurazione assente. Un API200 senza contenuto non è sano.
 `--now` accetta un timestamp ISO con timezone per verifiche controllate.
 Le eccezioni non stampano credenziali o risposte private.
+
+Integrazione locale verificata: `python scripts/check_operations.py --push` usa
+`KUMA_PUSH_URL` server-only, copiato dal monitor Push di Kuma. URL HTTPS senza
+credenziali HTTP o fragment; lo status precompilato nell’URL viene sostituito
+con `up` per controllo sano e `down` per qualsiasi anomalia. Messaggi generici,
+timeout10s, redirect disabilitati; consegna confermata solo con HTTP200 e
+`{"ok":true}`. Errore/configurazione assente aggiunge `monitor_delivery_failed`
+e restituisce exit1 senza stampare URL/token. Senza `--push` nessun invio,
+anche se la variabile esiste. Contratto: [API Push ufficiale](https://github.com/louislam/uptime-kuma/wiki/Internal-API#push-endpoint).
+
+Configurazione da applicare sul server scelto, non attivata qui: monitor Push
+con intervallo4500s (75min) per il timer orario; destinazione allerta autorizzata
+e controllo esterno della disponibilità di Kuma. Conservare URL/token nel file
+environment0600, mai in Git o nei comandi condivisi. Aggiungere `--push` a
+ExecStart soltanto dopo prova controllata di `up`, `down`, mancata esecuzione e
+consegna allerta. Test locali con richieste simulate:38/38 Python passati;
+nessun heartbeat o allarme reale inviato, nessuna istanza creata.
 
 Variabili server-only: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
 `SUPABASE_ANON_KEY`. La verifica pubblica usa il client anon, non il service-role.
