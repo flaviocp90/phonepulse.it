@@ -1,5 +1,9 @@
 {
+  "functions": {
+    "api/ssr-check.js": { "includeFiles": "{server-dist/**,dist/.vite/manifest.json}" }
+  },
   "rewrites": [
+    { "source": "/_ssr-check", "destination": "/api/ssr-check" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
