@@ -56,11 +56,11 @@ FEED_URLS = [
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
 GEMINI_MODELS = [
-    "gemini-3.1-flash-lite-preview",
-    "gemini-2.5-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
 ]
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-GEMINI_DAILY_LIMIT = 220
+GEMINI_DAILY_LIMIT = 50
 GOOGLE_CSE_DAILY_LIMIT = 99
 
 MAX_DRAFTS_PER_RUN = 5
@@ -192,7 +192,7 @@ def incrementa_google_cse_calls(supabase: Client):
 def chiama_gemini(supabase: Client, prompt: str) -> tuple[str | None, str | None]:
     """
     Chiama Gemini con fallback a cascata sui modelli in GEMINI_MODELS.
-    Prova prima gemini-3.1-flash-lite-preview, poi gemini-2.5-flash-lite.
+    Prova prima gemini-3.5-flash-lite, poi gemini-3.1-flash-lite.
     Retry su 429 (attende 15s). Restituisce (None, None) se tutti i modelli falliscono.
     """
     payload = {
