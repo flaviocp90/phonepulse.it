@@ -31,7 +31,7 @@ Lettura analytics e configurazione del report possono iniziare subito, senza att
 
 ## Risorse e limiti
 
-- Assunzione non ancora confermata: 30 minuti per giorno lavorativo. Partenza con tre news/settimana e una guida ogni due settimane; ridurre se il carico reale sfora.
+- Disponibilità confermata: 30 minuti al giorno; autore responsabile Flavio Coppola. Pianificazione iniziale prudente su cinque giorni (150 minuti/settimana): tre news/settimana e una guida ogni due settimane; ridurre se il carico reale sfora. Data di avvio subordinata alle verifiche operative del [pilot](editorial/pilot.md).
 - Stime: nucleo tecnico 8–14 giornate; UI/distribuzione 4–8; metriche 1–3. Sono ordini di grandezza, con verifiche condivise, non un preventivo o calendario garantito.
 - Bonifica archivio: 15–30 ore iniziali stimate, potenzialmente di più per riscritture e fact-check. Procedere per rischio, senza cancellazione collettiva.
 - Report proposti: settimanale martedì 09:00 e mensile giorno 5 alle 09:30, Europe/Rome, in ChatGPT. Il primo report può usare Vercel senza account Google; serve salvare e verificare una task cloud. GA4/GSC arricchiranno engagement e ricerca organica quando collegati.

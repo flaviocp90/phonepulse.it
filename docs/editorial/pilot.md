@@ -1,7 +1,10 @@
 # Pilot editoriale — preparazione
 
-Stato: non avviato. Data di partenza, responsabile e tempo disponibile devono
-essere confermati. Nessuna delle proposte nel registro archivio è una decisione
+Stato: non avviato. Autore responsabile: **Flavio Coppola**, confermato dall'utente.
+Disponibilità confermata: **30 minuti al giorno**. La data di partenza resta da
+definire dopo le verifiche operative. Il nome non assegna
+automaticamente il ruolo Supabase né approva le decisioni dell'archivio.
+Nessuna delle proposte nel registro archivio è una decisione
 approvata; nessun contenuto è stato corretto o ritirato da questa preparazione.
 
 ## Prima settimana, condizioni di avvio
@@ -19,11 +22,18 @@ approvata; nessun contenuto è stato corretto o ritirato da questa preparazione.
 - Monitor indipendente e consegna allerta provati, destinatario autorizzato;
   report cloud metriche verificato prima di considerarlo un servizio attivo.
 
-## Calendario da scegliere
+## Calendario iniziale
+
+Pianifichiamo prudentemente cinque sessioni da 30 minuti, cioè 150 minuti alla
+settimana, senza richiedere lavoro nel weekend. Obiettivo iniziale: tre news a
+settimana e una guida ogni due settimane, soltanto quando revisionate e approvate.
+Il budget medio previsto è 135 minuti: 45 per le news, 60 per la guida e 30 per
+la manutenzione. I 15 minuti restanti sono margine; i tempi effettivi del pilot
+decidono se ridurre le uscite.
 
 | Disponibilità confermata | Uscite iniziali | Limite operativo |
 | --- | --- | --- |
-| Circa135 min/settimana | Tre news/settimana, una guida ogni due settimane | Budget medio della spec; diminuire se le verifiche richiedono più tempo |
+| 30 min/giorno; cinque sessioni pianificate | Tre news/settimana, una guida ogni due settimane | 135 min medi su 150 disponibili; diminuire se le verifiche richiedono più tempo |
 | 1–2 ore/settimana | Una news/settimana, una guida al mese | Preferire fonti e argomenti che possono essere verificati nel tempo disponibile |
 | Occasionale | Pubblicazioni singole quando realmente revisionate | Nessuna news autonoma o calendario non sostenuto |
 

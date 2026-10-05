@@ -339,6 +339,16 @@ major Tailwind4/router7, non forzati in questo incremento. Nessun risultato
 
 ### Monitor indipendente, configurazione pronta ma non attivata
 
+Proposta aggiornata: **Uptime Kuma**, open source e installabile con Docker su un
+server Linux sempre acceso, esterno a GitHub Actions e alle piattaforme monitorate.
+Un unico servizio copre HTTP/HTTPS del sito e monitor Push per la presenza delle
+esecuzioni del controllo. Il timer sotto esegue lo script read-only; un'integrazione
+successiva invierà a Kuma esito positivo o negativo, e l'assenza del segnale sarà
+un guasto distinto. Alert verso il destinatario scelto e controllo esterno della
+disponibilità di Kuma vanno provati prima dell'attivazione. Software gratuito;
+hosting e gestione del server sono risorse da confermare. Nessuna istanza creata.
+Fonte: [repository ufficiale Uptime Kuma](https://github.com/louislam/uptime-kuma).
+
 `scripts/check_operations.py` legge soltanto: ultimi completamenti A entro36h,
 un articolo via API anon pubblica e conteggio delivery failed/unknown o sending
 oltre5min. B è manuale: la sua assenza non è un guasto. Nessuna modifica ad
