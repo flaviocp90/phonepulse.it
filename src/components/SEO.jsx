@@ -6,7 +6,7 @@ const SITE_URL = 'https://phonepulse.it'
 export default function SEO({ title, description, image, canonical, type = 'website' }) {
   const fullTitle = title
     ? `${title} — ${SITE_NAME}`
-    : `${SITE_NAME} — Recensioni e guide smartphone per scegliere bene`
+    : `${SITE_NAME} — Smartphone e app, news e guide pratiche`
 
   const canonicalUrl = canonical ? `${SITE_URL}${canonical}` : undefined
 

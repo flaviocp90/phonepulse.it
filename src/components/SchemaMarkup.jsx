@@ -1,28 +1,29 @@
 import { Helmet } from 'react-helmet-async'
+import { publicEditorial } from '../lib/publicEditorial'
 
 const SITE_URL = 'https://phonepulse.it'
 const SITE_NAME = 'PhonePulse'
 const LOGO_URL = `${SITE_URL}/logo.png`
 
-export function ArticleSchema({ title, description, publishedAt, updatedAt, slug, coverImage }) {
+export function ArticleSchema({ article }) {
+  const { author, format, publishedAt, updatedAt, sources } = publicEditorial(article)
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: title,
-    description: description,
-    image: coverImage || LOGO_URL,
+    headline: article.title,
+    description: article.excerpt,
+    image: article.cover_image_url || LOGO_URL,
     datePublished: publishedAt,
-    dateModified: updatedAt || publishedAt,
-    url: `${SITE_URL}/articoli/${slug}`,
+    dateModified: updatedAt,
+    genre: format,
+    citation: sources.length ? sources.map(source => source.url) : undefined,
+    url: `${SITE_URL}/articoli/${article.slug}`,
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
       logo: { '@type': 'ImageObject', url: LOGO_URL },
     },
-    author: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-    },
+    author: author ? { '@type': author === SITE_NAME ? 'Organization' : 'Person', name: author } : undefined,
   }
 
   return (

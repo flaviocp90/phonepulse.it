@@ -64,7 +64,7 @@ export default function CategoryPage() {
 
         const { data, error: artErr, count } = await supabase
           .from('articles')
-          .select('id, slug, title, excerpt, cover_image_url, published_at, score, categories(id, name, slug, color)', { count: 'exact' })
+          .select('id, slug, title, excerpt, cover_image_url, published_at, categories(id, name, slug, color)', { count: 'exact' })
           .eq('category_id', cat.id)
           .eq('is_published', true)
           .order('published_at', { ascending: false })

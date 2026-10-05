@@ -109,7 +109,7 @@ export default function Home() {
       const { data, error: artErr } = await supabase
         .from("articles")
         .select(
-          "id, slug, title, excerpt, cover_image_url, published_at, score, categories(id, name, slug, color)",
+          "id, slug, title, excerpt, cover_image_url, published_at, categories(id, name, slug, color)",
         )
         .eq("is_published", true)
         .order("published_at", { ascending: false })
@@ -169,20 +169,20 @@ export default function Home() {
           <div className="max-w-6xl mx-auto px-4 py-8 md:py-10">
             <div className="max-w-4xl">
               <h1 className="text-5xl md:text-[80px] font-heading text-white leading-none mb-3 uppercase">
-                Recensioni e guide smartphone
+                Smartphone e app
                 <br />
-                <span className="text-primary">per scegliere bene.</span>
+                <span className="text-primary">news e guide pratiche.</span>
               </h1>
               <p className="text-white/50 text-sm font-body leading-relaxed mb-6 max-w-md">
-                Analisi approfondite, comparativi onesti e guide pratiche per
-                trovare il telefono giusto.
+                Il nostro metodo: notizie verificate sulle fonti e guide per usare
+                meglio smartphone e app.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  to="/categoria/recensioni"
+                  to="/categoria/news"
                   className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-body font-semibold px-5 py-2.5 rounded-full transition-colors"
                 >
-                  Esplora le recensioni
+                  Leggi le news
                   <svg
                     width="14"
                     height="14"
@@ -200,7 +200,7 @@ export default function Home() {
                   to="/categoria/guide"
                   className="inline-flex items-center gap-2 border border-white/20 hover:border-white/40 text-white text-sm font-body font-semibold px-5 py-2.5 rounded-full transition-colors"
                 >
-                  Guide all'acquisto
+                  Esplora le guide
                 </Link>
               </div>
             </div>
