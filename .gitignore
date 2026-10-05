@@ -22,9 +22,12 @@ npm-debug.log*
 
 # Python scripts
 scripts/__pycache__/
+scripts/tests/__pycache__/
 scripts/*.pyc
 scripts/.env
 
 # Playwright artifacts
 test-results/
 playwright-report/
+supabase/.temp/
+supabase/tests/__pycache__/

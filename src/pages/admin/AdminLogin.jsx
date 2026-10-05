@@ -11,9 +11,13 @@ export default function AdminLogin() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/admin/dashboard', { replace: true })
-    })
+    let active = true
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return
+      if (error) setError('Impossibile verificare la sessione. Riprova.')
+      else if (data.session) navigate('/admin/dashboard', { replace: true })
+    }).catch(() => { if (active) setError('Impossibile verificare la sessione. Riprova.') })
+    return () => { active = false }
   }, [navigate])
 
   async function handleSubmit(e) {
@@ -21,14 +25,13 @@ export default function AdminLogin() {
     setLoading(true)
     setError(null)
 
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (authError) {
-      setError('Email o password non corretti.')
-      setLoading(false)
-    } else {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setError('Email o password non corretti.'); return }
       navigate('/admin/dashboard', { replace: true })
-    }
+    } catch {
+      setError('Accesso non riuscito. Controlla le credenziali e riprova.')
+    } finally { setLoading(false) }
   }
 
   return (

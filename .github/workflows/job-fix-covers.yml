@@ -3,6 +3,11 @@ name: Job — Fix Cover Images (manuale)
 on:
   workflow_dispatch:
 
+# Both writers share Gemini/CSE counters; do not cancel a run mid-write.
+concurrency:
+  group: phonepulse-provider-writes
+  cancel-in-progress: false
+
 jobs:
   fix-covers:
     runs-on: ubuntu-latest

@@ -10,6 +10,23 @@
 
 **Spec:** [Redazione e rilancio](../specs/2026-10-05-redazione-rilancio-design.md). Piani complementari: [UI e distribuzione](2026-10-05-ui-distribuzione.md), [metriche e report automatici](2026-10-05-metriche-report-automatici.md). Audit storico: [analisi iniziale](../../audit-2026-10-05.md).
 
+## Avanzamento locale — 5 ottobre 2026
+
+Nel worktree `codex/editorial-state-20261005`: Task2/3/5 implementati e verificati
+localmente (`d084766`); Task4 (`3e8f456`) e Task6 (`a78f736`) aggiunti con test
+isolati. Task7 ora implementato localmente con review indipendente senza rilievi:
+claim/finish persistenti, Auth server, provider simulati e UI stato/retry. Verifiche:
+9 test Deno, 26 Python, 37 browser, build e test SQL con due sessioni su PG16
+sintetico. Nessun push, deploy, migrazione live, riattivazione o invio reale.
+
+Restano aperti PG17/Supabase Auth/PostgREST reali, ruolo editor identificato,
+conservazione durevole del backup e rollout coordinato. Task7 richiede anche U4
+(HTML/versione/canonical verificabile) e readiness del canale/Meta API confermata:
+flag readiness spenti di default, nessun invio senza prova dell'URL pubblico.
+Prossimo incremento locale: Task8 CI/continuità; Task9 richiede decisioni editoriali
+reali. I checkbox sotto rappresentano i contratti complessivi, non attestano staging.
+Runbook aggiornato: [operations.md](../../operations.md).
+
 ## Global Constraints
 
 - Mantenere React/Vite/Tailwind/Supabase; nessuna migrazione totale di stack.
@@ -81,7 +98,7 @@ VITE_SUPABASE_ANON_KEY=
 
 ## Task 2 — Stato editoriale, versione e autorizzazioni
 
-**Files:** creare `supabase/migrations/202610050001_editorial_state.sql` e `supabase/tests/editorial_state.sql`; aggiornare `docs/operations.md`.
+**Files:** migrazione generata dalla CLI `supabase/migrations/20261005091140_editorial_state.sql`, test `supabase/tests/editorial_security.sql` e `editorial_state.sql`, adapter locale `local_auth_adapter.sql`, fixture sintetica `fixture_baseline.sql` e istruzioni in `supabase/tests/README.md`; aggiornare `docs/operations.md`. I nomi dei successivi file migration sono indicativi: generarli con `supabase migration new`, senza inventare timestamp.
 
 **Interfaces:** `articles.status`, `origin`, `version`, `approved_version`, `approved_at`, `approved_by`, `sources`, `source_key` e `last_verified_at`. Il ruolo attendibile è `app_metadata.phonepulse_role='editor'`, assegnato amministrativamente; user_metadata non attribuisce permessi.
 
@@ -138,7 +155,7 @@ end $$;
 
 ## Task 3 — Salvataggio e pubblicazione transazionali
 
-**Files:** creare `supabase/migrations/202610050002_editorial_rpcs.sql`, `supabase/tests/editorial_rpcs.sql`; modificare `src/pages/admin/AdminArticleEditor.jsx`, `src/pages/admin/AdminReview.jsx`; creare `src/lib/editorial.js` come sottile wrapper delle RPC usate da entrambi.
+**Files:** migrazione CLI generata `supabase/migrations/20261005095507_editorial_rpcs.sql`, `supabase/tests/editorial_rpcs.sql`, `supabase/tests/run_editorial_rpcs.py`; modificare `src/pages/admin/AdminArticleEditor.jsx`, `src/pages/admin/AdminReview.jsx`; creare `src/lib/editorial.js` come sottile wrapper delle RPC usate da entrambi nell'incremento frontend. SQL locale verificato separatamente; Task3 non completo né distribuibile senza integrazione UI e gate di rollout.
 
 **Interfaces:**
 

@@ -1,13 +1,14 @@
 """
-PhonePulse — Job B: pubblica automaticamente le bozze pronte.
+PhonePulse — Job B: pubblica soltanto versioni approvate dalla redazione.
 """
 import os
 import logging
 import subprocess
-import time
+import argparse
 import requests
 from datetime import datetime, timezone
 from supabase import create_client
+from editorial_rules import is_fresh
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,11 +17,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
-PUBLISH_COUNT = int(os.environ.get("PUBLISH_COUNT", "1"))
 SITE_URL = "https://phonepulse.it"
 
 
@@ -35,7 +35,7 @@ def invia_telegram(messaggio: str):
             timeout=10,
         )
     except Exception as e:
-        logger.warning(f"Errore notifica Telegram: {e}")
+        logger.warning("Telegram notification failed (%s)", type(e).__name__)
 
 
 def update_sitemap(supabase_client):
@@ -126,70 +126,104 @@ def update_sitemap(supabase_client):
         if commit.returncode != 0:
             if "nothing to commit" in commit.stdout + commit.stderr:
                 logger.info("Sitemap non modificata, nessun commit necessario.")
-                return
-            raise Exception(commit.stderr)
+            else:
+                raise RuntimeError("Sitemap commit failed")
         subprocess.run(["git", "push"], check=True)
 
         logger.info(f"Sitemap aggiornata con {len(articoli)} articoli e pushata.")
+        return True
     except Exception as e:
-        print(f"WARN: sitemap update fallita: {e}")
+        logger.warning("Sitemap distribution failed (%s)", type(e).__name__)
+        return False
+
+
+def candidate_reason(article: dict, now) -> str | None:
+    if article.get('status') != 'approved' or article.get('origin') == 'legacy':
+        return 'ineligible'
+    if article.get('approved_version') != article.get('version'):
+        return 'ineligible'
+    if article.get('content_format') not in ('news', 'guide', 'comparison', 'review'):
+        return 'ineligible'
+    sources = article.get('sources')
+    if not isinstance(sources, list) or not sources or not isinstance(sources[0], dict):
+        return 'ineligible'
+    if article['content_format'] == 'news' and not is_fresh(sources[0].get('published_at'), now, 72):
+        return 'expired'
+    return None
+
+
+def run_publication(supabase, dry_run=False, publish_count=1) -> dict:
+    if not isinstance(publish_count, int) or publish_count < 1:
+        raise ValueError('PUBLISH_COUNT must be a positive integer')
+    summary = {'candidates': [], 'published': 0, 'unchanged': 0,
+               'expired': 0, 'ineligible': 0, 'conflicts': 0, 'failed': 0}
+    candidates = []
+    offset = 0
+    while len(candidates) < publish_count:
+        rows = (supabase.table('articles')
+                .select('id,title,slug,status,origin,version,approved_version,content_format,sources')
+                .eq('status', 'approved').order('approved_at').order('id')
+                .range(offset, offset + 99).execute().data)
+        if rows is None:
+            raise RuntimeError('Approved queue unavailable')
+        for article in rows:
+            reason = candidate_reason(article, datetime.now(timezone.utc))
+            if reason:
+                summary[reason] += 1
+                continue
+            candidates.append(article)
+            if len(candidates) == publish_count:
+                break
+        if len(rows) < 100:
+            break
+        offset += 100
+    summary['candidates'] = [article['id'] for article in candidates]
+    if dry_run:
+        logger.info('Dry-run: %s', summary)
+        return summary
+    for article in candidates:
+        try:
+            outcome = supabase.rpc('publish_article', {
+                'p_id': article['id'], 'p_expected_version': article['version']}).execute().data
+            if (not isinstance(outcome, dict) or outcome.get('id') != article['id']
+                    or outcome.get('status') != 'published'
+                    or outcome.get('version') != article['version']
+                    or not isinstance(outcome.get('changed'), bool)):
+                raise RuntimeError('Invalid publish RPC response')
+        except Exception as error:
+            code = getattr(error, 'code', None)
+            if code in ('40001', '23514'):
+                summary['conflicts'] += 1
+            else:
+                summary['failed'] += 1
+            logger.warning('Publish id=%s code=%s failed (%s)', article['id'], code, type(error).__name__)
+            continue
+        if outcome['changed']:
+            summary['published'] += 1
+            invia_telegram('Articolo pubblicato: ' + article['title'] +
+                           '\n' + SITE_URL + '/articoli/' + article['slug'])
+        else:
+            summary['unchanged'] += 1
+    # Until U5 is deployed, retain git-based sitemap and recover failed distribution even with no new articles.
+    distributed = update_sitemap(supabase)
+    logger.info('Publication results: %s; distribution=%s', summary, distributed)
+    if summary['failed']:
+        raise RuntimeError('Publication RPC failures; check logged IDs before retry')
+    if not distributed:
+        raise RuntimeError('Sitemap distribution failed; DB publication remains committed')
+    return summary
 
 
 def main():
-    logger.info("=== PhonePulse Job B — Pubblicazione articoli avviata ===")
-    logger.info(f"PUBLISH_COUNT={PUBLISH_COUNT}")
-
+    parser = argparse.ArgumentParser(description='Publish approved current article versions')
+    parser.add_argument('--dry-run', action='store_true', help='Read candidates without any effects')
+    args = parser.parse_args()
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        raise RuntimeError('SUPABASE_URL and SUPABASE_SERVICE_KEY are required')
+    count = int(os.environ.get('PUBLISH_COUNT', '1'))
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
-    result = (
-        supabase.table("articles")
-        .select("id, title, slug")
-        .eq("is_published", False)
-        .eq("needs_review", True)
-        .eq("discarded", False)
-        .eq("llm_model", "gemini-3.1-flash-lite-preview")
-        .eq("image_source", "google_cse")
-        .order("created_at", desc=False)
-        .limit(PUBLISH_COUNT)
-        .execute()
-    )
-
-    if not result.data:
-        logger.info("Nessuna bozza disponibile, uscita.")
-        return
-
-    pubblicati = []
-    for i, articolo in enumerate(result.data):
-        if i > 0:
-            time.sleep(2)
-
-        articolo_id = articolo["id"]
-        title = articolo["title"]
-        slug = articolo["slug"]
-
-        now = datetime.now(timezone.utc).isoformat()
-        supabase.table("articles").update(
-            {"is_published": True, "published_at": now}
-        ).eq("id", articolo_id).execute()
-
-        logger.info(f"[PUBBLICATO] {title} → {SITE_URL}/articoli/{slug}")
-        pubblicati.append(articolo)
-
-    if not pubblicati:
-        logger.info("Nessun articolo pubblicato in questo run.")
-        return
-
-    update_sitemap(supabase)
-
-    for articolo in pubblicati:
-        invia_telegram(
-            f"✅ Articolo pubblicato su PhonePulse!\n\n"
-            f"📰 {articolo['title']}\n"
-            f"🔗 {SITE_URL}/articoli/{articolo['slug']}"
-        )
-
-    logger.info(f"=== Job B completato — {len(pubblicati)} articolo/i pubblicato/i ===")
+    run_publication(supabase, dry_run=args.dry_run, publish_count=count)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

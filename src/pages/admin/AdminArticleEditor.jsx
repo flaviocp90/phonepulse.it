@@ -1,500 +1,261 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { supabase } from '../../lib/supabase'
+import { checklist, editorialAction, statusLabels } from '../../lib/editorial'
 
 marked.setOptions({ breaks: true, gfm: true })
-
-function slugify(str) {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+const EMPTY_FORM = { title: '', slug: '', category_id: '', excerpt: '', content: '', cover_image_url: '', score: '', seo_title: '', seo_description: '', affiliate_links: '', author: '', image_source: '', content_format: '', sources: [] }
+const inputClass = 'w-full min-w-0 bg-gray-50 border border-border rounded-xl px-3.5 py-2.5 text-sm font-body text-dark focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20'
+const buttonClass = 'px-4 py-2.5 rounded-xl bg-gray-100 text-dark text-sm font-body disabled:opacity-40 hover:bg-gray-200'
+const panelClass = 'bg-white border border-border rounded-2xl p-5 space-y-4'
+const snapshot = (form, tags) => JSON.stringify([form, [...tags].sort()])
+function slugify(value) { return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-') }
+function localDate(iso) {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return ''
+  const date = new Date(iso)
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 }
-
-const EMPTY_FORM = {
-  title: '',
-  slug: '',
-  category_id: '',
-  excerpt: '',
-  content: '',
-  cover_image_url: '',
-  score: '',
-  seo_title: '',
-  seo_description: '',
-  affiliate_links: '',
-  is_published: false,
-  author: '',
-}
+function sourceText(value) { return typeof value === 'string' ? value : '' }
+function dateLabel(value) { return value ? new Date(value).toLocaleString('it-IT') : 'Non disponibile' }
+function Field({ label, children }) { return <label className="block space-y-1.5"><span className="block text-xs font-body font-medium text-gray-500">{label}</span>{children}</label> }
 
 export default function AdminArticleEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isNew = !id || id === 'nuovo'
-
   const [form, setForm] = useState(EMPTY_FORM)
+  const [record, setRecord] = useState(null)
   const [categories, setCategories] = useState([])
   const [tags, setTags] = useState([])
-  const [selectedTagIds, setSelectedTagIds] = useState([])
+  const [selectedTags, setSelectedTags] = useState([])
+  const [baseline, setBaseline] = useState(snapshot(EMPTY_FORM, []))
+  const [review, setReview] = useState({})
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [preview, setPreview] = useState(false)
-  const [slugManual, setSlugManual] = useState(false)
+  const [slugManual, setSlugManual] = useState(!isNew)
+  const [reload, setReload] = useState(0)
+  const [coverError, setCoverError] = useState(false)
+  const [metadataWarning, setMetadataWarning] = useState('')
+  const [optionsReady, setOptionsReady] = useState(false)
+  const dirty = snapshot(form, selectedTags) !== baseline
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const routeGeneration = useRef(0)
+  const routeRef = useRef(id)
+  routeRef.current = id
+  const status = record?.status || 'draft'
+  const completeReview = Object.keys(checklist).every(key => review[key] === true)
 
-  // Fetch categories and tags
   useEffect(() => {
-    Promise.all([
-      supabase.from('categories').select('id, name').order('name'),
-      supabase.from('tags').select('id, name').order('name'),
-    ]).then(([cats, tgs]) => {
+    let active = true
+    Promise.all([supabase.from('categories').select('id, name').order('name'), supabase.from('tags').select('id, name').order('name')]).then(([cats, tgs]) => {
+      if (!active) return
+      if (cats.error || tgs.error) { setError('Categorie o tag indisponibili. Ricarica prima di salvare.'); return }
       setCategories(cats.data || [])
-      setTags(tgs.data || [])
-    })
+      setTags(tgs.data || []); setOptionsReady(true)
+    }).catch(() => { if (active) setError('Categorie o tag indisponibili. Ricarica prima di salvare.') })
+    return () => { active = false }
   }, [])
 
-  // Fetch article for edit
   useEffect(() => {
-    if (isNew) return
+    let active = true
+    routeGeneration.current++
+    setSaving(false); setMetadataWarning('')
+    setError(''); setSuccess(''); setReview({}); setPreview(false)
+    if (isNew) {
+      setForm(EMPTY_FORM); setRecord(null); setSelectedTags([]); setBaseline(snapshot(EMPTY_FORM, [])); setSlugManual(false); setLoading(false)
+      return () => { active = false }
+    }
     setLoading(true)
-
-    async function fetchArticle() {
-      const { data, error: err } = await supabase
-        .from('articles')
-        .select('*, article_tags(tag_id)')
-        .eq('id', id)
-        .single()
-
-      if (err || !data) {
-        setError('Articolo non trovato.')
-        setLoading(false)
-        return
-      }
-
-      setForm({
-        title: data.title || '',
-        slug: data.slug || '',
-        category_id: data.category_id || '',
-        excerpt: data.excerpt || '',
-        content: data.content || '',
-        cover_image_url: data.cover_image_url || '',
-        score: data.score != null ? String(data.score) : '',
-        seo_title: data.seo_title || '',
-        seo_description: data.seo_description || '',
-        affiliate_links: data.affiliate_links ? JSON.stringify(data.affiliate_links, null, 2) : '',
-        is_published: data.is_published || false,
-        author: data.author || '',
-      })
-      setSelectedTagIds((data.article_tags || []).map(at => at.tag_id))
-      setSlugManual(true) // Don't auto-overwrite slug in edit mode
+    supabase.from('articles').select('*, article_tags(tag_id)').eq('id', id).single().then(({ data, error }) => {
+      if (!active) return
+      if (error || !data) throw error || new Error('Articolo non trovato')
+      const next = Object.fromEntries(Object.keys(EMPTY_FORM).map(key => [key, data[key] ?? EMPTY_FORM[key]]))
+      next.score = data.score == null ? '' : String(data.score)
+      next.affiliate_links = data.affiliate_links != null ? JSON.stringify(data.affiliate_links, null, 2) : ''
+      const ids = (data.article_tags || []).map(tag => tag.tag_id)
+      setForm(next); setRecord(data); setSelectedTags(ids); setBaseline(snapshot(next, ids)); setSlugManual(true); setCoverError(false)
       setLoading(false)
+    }).catch(() => { if (active) { setError('Articolo indisponibile. Riprova il caricamento.'); setRecord(null); setLoading(false) } })
+    return () => { active = false }
+  }, [id, isNew, reload])
+
+  useEffect(() => {
+    function beforeUnload(event) { if (dirtyRef.current) { event.preventDefault(); event.returnValue = '' } }
+    function internalNavigation(event) {
+      const link = event.target.closest('a[href]')
+      if (!link || link.target === '_blank' || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+      const url = new URL(link.href, location.href)
+      if (dirtyRef.current && url.origin === location.origin && url.pathname !== location.pathname && !window.confirm('Perdere le modifiche non salvate e uscire dall’editor?')) { event.preventDefault(); event.stopPropagation() }
     }
+    window.addEventListener('beforeunload', beforeUnload)
+    document.addEventListener('click', internalNavigation, true)
+    return () => { window.removeEventListener('beforeunload', beforeUnload); document.removeEventListener('click', internalNavigation, true) }
+  }, [])
 
-    fetchArticle()
-  }, [id, isNew])
-
-  // Auto-generate slug from title
-  const handleTitleChange = useCallback((value) => {
-    setForm(prev => ({
-      ...prev,
-      title: value,
-      ...(slugManual ? {} : { slug: slugify(value) }),
-    }))
-  }, [slugManual])
-
-  function handleChange(field, value) {
-    setForm(prev => ({ ...prev, [field]: value }))
+  function change(field, value) { setForm(previous => ({ ...previous, [field]: value })); setReview({}); setSuccess(''); if (field === 'cover_image_url') setCoverError(false) }
+  function changeSource(index, field, value) { change('sources', form.sources.map((source, i) => i === index ? { ...source, [field]: value } : source)) }
+  function reviewProblem() {
+    if (!form.author.trim() || !form.content.trim() || !form.content_format) return 'Completa autore, contenuto e formato prima della revisione.'
+    if (!form.sources.length) return 'Aggiungi almeno una fonte e la consultazione effettiva.'
+    for (const source of form.sources) {
+      if (!source || typeof source !== 'object' || Array.isArray(source) || ['url', 'title', 'publisher'].some(key => typeof source[key] !== 'string')) return 'Fonte incompleta o non valida: correggi i campi prima di approvare.'
+      const existingHttp = record?.sources?.some(old => old?.url === source.url)
+      if (!/^https:\/\//i.test(source.url) && !(existingHttp && /^http:\/\//i.test(source.url))) return 'Le nuove fonti richiedono un URL HTTPS.'
+      if (!source.title?.trim() || !source.publisher?.trim() || !source.retrieved_at) return 'Completa titolo, editore e data di consultazione di ogni fonte.'
+      for (const stamp of [source.published_at, source.retrieved_at].filter(Boolean)) if (typeof stamp !== 'string' || !Number.isFinite(Date.parse(stamp)) || Date.parse(stamp) > Date.now()) return 'Controlla le date: devono essere valide e non future.'
+    }
+    if (form.content_format === 'news') {
+      const published = form.sources[0].published_at
+      if (!published) return 'La news richiede la data nota della fonte principale.'
+      if (status !== 'published' && Date.now() - Date.parse(published) > 72 * 3600000) return 'Fonte principale oltre 72 ore: aggiorna i fatti e la fonte per una nuova approvazione. Non cambiare una data storica.'
+    }
+    return ''
   }
+  const problem = reviewProblem()
 
-  function toggleTag(tagId) {
-    setSelectedTagIds(prev =>
-      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
-    )
-  }
-
-  async function handleSave(publish) {
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-
-    // Validate affiliate_links JSON
-    let parsedAffLinks = null
-    if (form.affiliate_links.trim()) {
+  async function action(kind) {
+    setError(''); setSuccess(''); setSaving(true)
+    const currentId = id
+    const generation = routeGeneration.current
+    const current = () => routeRef.current === currentId && routeGeneration.current === generation
+    try {
+      let name, args, message
+      if (kind === 'save') {
+        if (!optionsReady) throw new Error('Categorie o tag indisponibili. Ricarica prima di salvare.')
+        const affiliateUnchanged = !isNew && form.affiliate_links === JSON.parse(baseline)[0].affiliate_links
+        let affiliate = []
+        if (!affiliateUnchanged) {
+          try { affiliate = form.affiliate_links.trim() ? JSON.parse(form.affiliate_links) : [] } catch { throw new Error('Affiliate links: JSON non valido.') }
+          if (!Array.isArray(affiliate)) throw new Error('Affiliate links deve essere un array JSON.')
+        }
+        if (form.score !== '' && (!Number.isInteger(Number(form.score)) || Number(form.score) < 0 || Number(form.score) > 100)) throw new Error('Il voto deve essere un intero da 0 a 100.')
+        if (status === 'published' && (problem || !completeReview)) throw new Error(problem || 'Completa la checklist per correggere il contenuto pubblicato.')
+        const payload = { ...form, affiliate_links: affiliate, score: form.score === '' ? null : Number(form.score), category_id: form.category_id || null, content_format: form.content_format || null }
+        if (!isNew) {
+          payload.id = id
+          // Preserve nullable stored values when their controls have not changed.
+          for (const key of ['excerpt', 'content', 'cover_image_url', 'author', 'seo_title', 'seo_description', 'image_source']) if (form[key] === (record[key] ?? '')) payload[key] = record[key] ?? null
+          if (affiliateUnchanged) delete payload.affiliate_links
+        }
+        name = 'save_article'
+        args = { p_article: payload, p_tag_ids: selectedTags, p_expected_version: isNew ? null : record.version, p_publish_correction: status === 'published', p_review: status === 'published' ? review : null }
+        message = status === 'published' ? 'Correzione pubblicata e verifica registrata.' : 'Bozza salvata.'
+      } else if (kind === 'approve') {
+        if (dirty || isNew || problem || !completeReview) throw new Error('Salva la bozza e completa la revisione prima di approvare.')
+        name = 'approve_article'; args = { p_id: id, p_expected_version: record.version, p_review: review }; message = 'Versione approvata.'
+      } else if (kind === 'publish') {
+        if (dirty || status !== 'approved' || problem) throw new Error('Pubblica soltanto una versione approvata, invariata e ancora valida.')
+        name = 'publish_article'; args = { p_id: id, p_expected_version: record.version }; message = 'Articolo pubblicato.'
+      } else {
+        if (dirty && !window.confirm('Questa azione perderà le modifiche locali non salvate. Continuare?')) return
+        if (kind === 'discard' && !window.confirm(status === 'published' ? 'Ritirare l’articolo pubblico? Sarà scartato; data e contenuto restano conservati. Il recupero richiederà una nuova approvazione.' : 'Scartare questa bozza senza cancellarla?')) return
+        name = 'set_article_status'; args = { p_id: id, p_expected_version: record.version, p_status: kind === 'restore' ? 'draft' : 'discarded' }; message = kind === 'restore' ? 'Articolo recuperato come bozza.' : 'Articolo scartato; dati conservati.'
+      }
+      const result = await editorialAction(name, args)
+      if (!current()) return
+      setRecord(previous => ({ ...previous, ...(kind === 'save' ? args.p_article : {}), ...result, ...(result.status === 'draft' || result.status === 'discarded' ? { approved_version: null, approved_at: null, approved_by: null, last_verified_at: null } : {}) }))
+      if (kind === 'save') { dirtyRef.current = false; setBaseline(snapshot(form, selectedTags)) }
+      setReview({}); setSuccess(kind === 'save' && result.status === 'approved' ? 'Versione approvata invariata.' : message)
+      if (isNew) { setSaving(false); navigate(`/admin/articoli/${result.id}`, { replace: true }); return }
+      if (kind === 'discard' || kind === 'restore') { dirtyRef.current = false; setReload(value => value + 1); return }
+      // Enrich server-owned metadata without overwriting local content.
       try {
-        parsedAffLinks = JSON.parse(form.affiliate_links)
-      } catch {
-        setError('Il campo "Affiliate links" non è un JSON valido.')
-        setSaving(false)
-        return
-      }
-    }
+        const { data, error } = await supabase.from('articles').select('id, version, status, origin, approved_version, approved_at, approved_by, last_verified_at, published_at').eq('id', id).single()
+        if (!current()) return
+        if (error || !data || data.version !== result.version || data.status !== result.status) setMetadataWarning('Operazione confermata. Metadata aggiornati indisponibili: ricarica la versione server per verificarli.')
+        else { setRecord(previous => ({ ...previous, ...data })); setMetadataWarning('') }
+      } catch { if (current()) setMetadataWarning('Operazione confermata. Metadata aggiornati indisponibili: ricarica la versione server per verificarli.') }
 
-    const payload = {
-      title: form.title,
-      slug: form.slug,
-      category_id: form.category_id || null,
-      excerpt: form.excerpt || null,
-      content: form.content || null,
-      cover_image_url: form.cover_image_url || null,
-      score: form.score !== '' ? parseInt(form.score, 10) : null,
-      seo_title: form.seo_title || null,
-      seo_description: form.seo_description || null,
-      affiliate_links: parsedAffLinks,
-      is_published: publish ?? form.is_published,
-      author: form.author || null,
-      updated_at: new Date().toISOString(),
-      ...(publish && !isNew && !form.is_published
-        ? { published_at: new Date().toISOString() }
-        : {}),
-      ...(isNew
-        ? {
-            created_at: new Date().toISOString(),
-            published_at: publish ? new Date().toISOString() : null,
-          }
-        : {}),
-    }
-
-    let articleId = id
-
-    if (isNew) {
-      const { data, error: err } = await supabase.from('articles').insert(payload).select('id').single()
-      if (err) {
-        setError(`Errore: ${err.message}`)
-        setSaving(false)
-        return
-      }
-      articleId = data.id
-    } else {
-      const { error: err } = await supabase.from('articles').update(payload).eq('id', id)
-      if (err) {
-        setError(`Errore: ${err.message}`)
-        setSaving(false)
-        return
-      }
-    }
-
-    // Sync tags
-    await supabase.from('article_tags').delete().eq('article_id', articleId)
-    if (selectedTagIds.length > 0) {
-      await supabase.from('article_tags').insert(
-        selectedTagIds.map(tag_id => ({ article_id: articleId, tag_id }))
-      )
-    }
-
-    setSaving(false)
-    setSuccess(publish ? 'Articolo pubblicato!' : 'Bozza salvata.')
-
-    if (isNew) {
-      navigate(`/admin/articoli/${articleId}`, { replace: true })
-    } else {
-      // Update is_published in form
-      setForm(prev => ({ ...prev, is_published: publish ?? prev.is_published }))
-    }
+    } catch (err) { if (current()) setError(err.message || 'Operazione non riuscita. Il testo locale è conservato.') }
+    finally { if (current()) setSaving(false) }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  function reloadServer() { if (!dirty || window.confirm('Ricaricare la versione server e perdere tutte le modifiche locali non salvate?')) setReload(value => value + 1) }
+  if (loading) return <p role="status" className="py-20 text-center">Caricamento articolo...</p>
+  if (!isNew && !record) return <div><p role="alert">{error}</p><button onClick={reloadServer} className={buttonClass}>Riprova</button></div>
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link to="/admin/articoli" className="text-xs text-gray-400 font-body hover:text-gray-600 transition-colors">
-              Articoli
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-xs text-gray-600 font-body">{isNew ? 'Nuovo' : 'Modifica'}</span>
-          </div>
-          <h1 className="text-2xl font-heading font-bold text-dark">
-            {isNew ? 'Nuovo articolo' : 'Modifica articolo'}
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Preview toggle */}
-          <button
-            onClick={() => setPreview(p => !p)}
-            className={`text-xs font-body font-medium px-3 py-2 rounded-lg border transition-colors ${
-              preview ? 'border-primary/40 bg-primary/5 text-primary' : 'border-border text-gray-500 hover:border-gray-300'
-            }`}
-          >
-            {preview ? 'Editor' : 'Preview'}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm font-body mb-6">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-5 py-4 text-sm font-body mb-6">
-          {success}
-        </div>
-      )}
-
-      {preview ? (
-        /* Markdown preview */
-        <div className="bg-white border border-border rounded-2xl p-8">
-          <h2 className="text-3xl font-heading font-bold text-dark mb-3">{form.title || 'Titolo'}</h2>
-          {form.excerpt && <p className="text-gray-500 text-base mb-6 border-l-4 border-primary/30 pl-4">{form.excerpt}</p>}
-          <div className="article-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(form.content || '_Nessun contenuto ancora._')) }} />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main column */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Title */}
-            <div className="bg-white border border-border rounded-2xl p-5 space-y-4">
-              <Field label="Titolo *">
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={e => handleTitleChange(e.target.value)}
-                  placeholder="Il titolo dell'articolo"
-                  className={inputClass}
-                />
-              </Field>
-
-              <Field label="Slug *">
-                <input
-                  type="text"
-                  value={form.slug}
-                  onChange={e => { setSlugManual(true); handleChange('slug', e.target.value) }}
-                  placeholder="url-dell-articolo"
-                  className={inputClass}
-                />
-              </Field>
-
-              <Field label="Autore">
-                <input
-                  type="text"
-                  value={form.author}
-                  onChange={e => handleChange('author', e.target.value)}
-                  placeholder="Nome autore"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-
-            {/* Excerpt */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label="Excerpt">
-                <textarea
-                  value={form.excerpt}
-                  onChange={e => handleChange('excerpt', e.target.value)}
-                  placeholder="Breve descrizione dell'articolo (max 200 caratteri)"
-                  rows={3}
-                  className={`${inputClass} resize-none`}
-                />
-              </Field>
-            </div>
-
-            {/* Content */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label="Contenuto (Markdown)">
-                <textarea
-                  value={form.content}
-                  onChange={e => handleChange('content', e.target.value)}
-                  placeholder="Scrivi qui il contenuto in Markdown..."
-                  rows={20}
-                  className={`${inputClass} resize-y font-mono text-xs leading-relaxed`}
-                />
-              </Field>
-            </div>
-
-            {/* SEO */}
-            <div className="bg-white border border-border rounded-2xl p-5 space-y-4">
-              <p className="text-xs font-body font-semibold text-gray-400 uppercase tracking-wide">SEO</p>
-              <Field label="SEO Title">
-                <input
-                  type="text"
-                  value={form.seo_title}
-                  onChange={e => handleChange('seo_title', e.target.value)}
-                  placeholder="Titolo per i motori di ricerca (lascia vuoto per usare il titolo)"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="SEO Description">
-                <textarea
-                  value={form.seo_description}
-                  onChange={e => handleChange('seo_description', e.target.value)}
-                  placeholder="Descrizione per i motori di ricerca (max 160 caratteri)"
-                  rows={3}
-                  className={`${inputClass} resize-none`}
-                />
-              </Field>
-            </div>
-
-            {/* Affiliate links */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label='Affiliate links (JSON — es: [{"label":"Amazon","url":"https://..."}])'>
-                <textarea
-                  value={form.affiliate_links}
-                  onChange={e => handleChange('affiliate_links', e.target.value)}
-                  placeholder='[{"label": "Amazon", "url": "https://amzn.to/..."}]'
-                  rows={5}
-                  className={`${inputClass} resize-none font-mono text-xs`}
-                />
-              </Field>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-5">
-            {/* Publish */}
-            <div className="bg-white border border-border rounded-2xl p-5 space-y-4">
-              <p className="text-xs font-body font-semibold text-gray-400 uppercase tracking-wide">Pubblicazione</p>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => handleChange('is_published', !form.is_published)}
-                  className={`w-10 h-5.5 rounded-full relative transition-colors cursor-pointer ${
-                    form.is_published ? 'bg-primary' : 'bg-gray-200'
-                  }`}
-                  style={{ height: '22px' }}
-                >
-                  <div
-                    className={`absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${
-                      form.is_published ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}
-                    style={{ width: '18px', height: '18px' }}
-                  />
-                </div>
-                <span className="text-sm font-body text-dark">
-                  {form.is_published ? 'Pubblicato' : 'Bozza'}
-                </span>
-              </label>
-
-              <div className="flex flex-col gap-2 pt-1">
-                <button
-                  onClick={() => handleSave(false)}
-                  disabled={saving || !form.title || !form.slug}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-dark font-body font-medium text-sm py-2.5 rounded-xl transition-colors disabled:opacity-40"
-                >
-                  {saving ? 'Salvataggio...' : 'Salva bozza'}
-                </button>
-                <button
-                  onClick={() => handleSave(true)}
-                  disabled={saving || !form.title || !form.slug}
-                  className="w-full bg-primary hover:bg-primary-dark text-white font-body font-medium text-sm py-2.5 rounded-xl transition-colors disabled:opacity-40"
-                >
-                  {saving ? 'Salvataggio...' : 'Pubblica'}
-                </button>
-              </div>
-            </div>
-
-            {/* Category */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label="Categoria">
-                <select
-                  value={form.category_id}
-                  onChange={e => handleChange('category_id', e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Seleziona categoria</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            {/* Score */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <Field label="Voto (0–100)">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={form.score}
-                  onChange={e => handleChange('score', e.target.value)}
-                  placeholder="Es: 87"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-
-            {/* Cover image */}
-            <div className="bg-white border border-border rounded-2xl p-5">
-              <label className="block text-sm font-medium mb-1">Cover Image URL</label>
-
-              {form.cover_image_url && (
-                <img
-                  src={form.cover_image_url}
-                  alt="Preview cover"
-                  className="w-full h-40 object-cover rounded mb-2 border border-[#E5E2DB]"
-                  onError={e => { e.target.style.display = 'none' }}
-                />
-              )}
-
-              <input
-                type="text"
-                placeholder="https://images.unsplash.com/..."
-                value={form.cover_image_url || ''}
-                onChange={e => handleChange('cover_image_url', e.target.value)}
-                className="w-full border border-[#E5E2DB] rounded px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Incolla l&apos;URL diretto da Unsplash o da qualsiasi fonte. La preview si aggiorna
-                automaticamente.
-              </p>
-            </div>
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="bg-white border border-border rounded-2xl p-5">
-                <p className="text-xs font-body font-semibold text-gray-400 uppercase tracking-wide mb-3">Tag</p>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map(tag => {
-                    const selected = selectedTagIds.includes(tag.id)
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTag(tag.id)}
-                        className={`text-xs font-body font-medium px-3 py-1.5 rounded-full border transition-colors ${
-                          selected
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-gray-500 border-border hover:border-gray-300'
-                        }`}
-                      >
-                        {tag.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+  return <div className="max-w-4xl mx-auto min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div><Link to="/admin/articoli" className="text-xs text-primary">Articoli</Link><h1 className="text-2xl font-heading font-bold text-dark">{isNew ? 'Nuovo articolo' : 'Revisione articolo'}</h1></div>
+      <button onClick={() => setPreview(value => !value)} className={buttonClass}>{preview ? 'Editor' : 'Preview'}</button>
     </div>
-  )
-}
-
-const inputClass =
-  'w-full bg-gray-50 border border-border rounded-xl px-3.5 py-2.5 text-sm font-body text-dark placeholder:text-gray-300 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-colors'
-
-function Field({ label, children }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-body font-medium text-gray-500">{label}</label>
-      {children}
+    {error && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 break-words">{error}</p>}
+    {metadataWarning && <p className="text-amber-700 text-sm mb-4">{metadataWarning}</p>}
+    {success && <p role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4">{success}</p>}
+    <div className={`${panelClass} mb-5 text-sm break-words`}>
+      <p>Stato: {statusLabels[status]}</p><p>Versione: {record?.version ?? 'Da salvare'} · Origine: {record?.origin ?? 'manual (alla creazione)'}</p>
+      <p>Approvazione: versione {record?.approved_version ?? '—'} · {dateLabel(record?.approved_at)} · Revisore: {record?.approved_by ?? '—'}</p>
+      <p>Ultima verifica: {dateLabel(record?.last_verified_at)} · Pubblicazione originaria: {dateLabel(record?.published_at)}</p>
+      {dirty && <p className="text-amber-700">Modifiche non salvate: salva prima di approvare o pubblicare. La checklist va ripetuta dopo il salvataggio.</p>}
+      {!isNew && <button onClick={reloadServer} disabled={saving} className={buttonClass}>Ricarica versione server</button>}
     </div>
-  )
+    <fieldset disabled={saving} className="min-w-0">
+    {preview ? <div className={`${panelClass} break-words`}>
+      <h2 className="text-3xl font-heading font-bold">{form.title}</h2><p>{form.excerpt}</p>
+      {form.cover_image_url && <img src={form.cover_image_url} alt="Cover da verificare" className="w-full max-h-80 object-cover rounded-xl" onError={() => setCoverError(true)} />}
+      {coverError && <p role="alert">Cover non caricabile: controlla URL e diritti prima di attestare la verifica.</p>}
+      <p>Autore: {form.author || 'Mancante'} · Formato: {form.content_format || 'Mancante'}</p>
+      <div className="article-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(form.content || '_Nessun contenuto._')) }} />
+      <h3 className="font-bold">Fonti</h3>
+      {form.sources.map((rawSource, index) => { const source = rawSource || {}; return <div key={index} className="break-words"><p>{index === 0 ? 'Principale: ' : ''}{/^https?:\/\//i.test(source.url) ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{sourceText(source.title) || sourceText(source.url)}</a> : sourceText(source.title)}</p><p>{sourceText(source.publisher)} · Pubblicazione: {dateLabel(source.published_at)} · Consultazione: {dateLabel(source.retrieved_at)}</p></div> })}
+    </div> : <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 min-w-0 space-y-5">
+        <div className={panelClass}>
+          <Field label="Titolo"><input className={inputClass} value={form.title} onChange={e => { change('title', e.target.value); if (!slugManual) setForm(previous => ({ ...previous, slug: slugify(e.target.value) })) }} required /></Field>
+          <Field label="Slug"><input className={inputClass} value={form.slug} onChange={e => { setSlugManual(true); change('slug', e.target.value) }} required /></Field>
+          <Field label="Autore"><input className={inputClass} value={form.author} onChange={e => change('author', e.target.value)} /></Field>
+          <Field label="Excerpt"><textarea className={inputClass} rows={3} value={form.excerpt} onChange={e => change('excerpt', e.target.value)} /></Field>
+        </div>
+        <div className={panelClass}><Field label="Contenuto (Markdown)"><textarea className={`${inputClass} font-mono resize-y`} rows={20} value={form.content} onChange={e => change('content', e.target.value)} /></Field></div>
+        <div className={panelClass}>
+          <h2 className="font-heading font-bold">Fonti</h2><p className="text-xs text-gray-500">La prima fonte è principale. Date e consultazione effettiva in fuso locale ({Intl.DateTimeFormat().resolvedOptions().timeZone}); salvate come ISO con timezone. Data ignota resta vuota. Nuovi URL HTTPS.</p>
+          {form.sources.map((rawSource, index) => { const source = rawSource || {}; return <div key={index} className="space-y-3 border border-border rounded-xl p-3">
+            <p className="text-sm font-semibold">Fonte {index + 1}{index === 0 ? ' (principale)' : ''}</p>
+            {['url', 'title', 'publisher'].map((field, i) => <Field key={field} label={`${['URL', 'Titolo fonte', 'Editore fonte'][i]} ${index + 1}`}><input type={field === 'url' ? 'url' : 'text'} className={inputClass} value={sourceText(source[field])} onChange={e => changeSource(index, field, e.target.value)} /></Field>)}
+            {['published_at', 'retrieved_at'].map((field, i) => <Field key={field} label={`${['Pubblicazione fonte (se nota)', 'Consultazione effettiva'][i]} ${index + 1}`}><input type="datetime-local" className={inputClass} value={localDate(source[field])} onChange={e => changeSource(index, field, e.target.value ? new Date(e.target.value).toISOString() : null)} /></Field>)}
+            <div className="flex flex-wrap gap-2">{index > 0 && <button onClick={() => change('sources', [source, ...form.sources.filter((_, i) => i !== index)])} className={buttonClass}>Rendi principale {index + 1}</button>}<button onClick={() => change('sources', form.sources.filter((_, i) => i !== index))} className={buttonClass}>Rimuovi fonte {index + 1}</button></div>
+          </div> })}
+          <button onClick={() => change('sources', [...form.sources, { url: '', title: '', publisher: '', published_at: null, retrieved_at: null }])} className={buttonClass}>Aggiungi fonte</button>
+        </div>
+        <div className={panelClass}>
+          <Field label="SEO Title"><input className={inputClass} value={form.seo_title} onChange={e => change('seo_title', e.target.value)} /></Field>
+          <Field label="SEO Description"><textarea className={inputClass} rows={3} value={form.seo_description} onChange={e => change('seo_description', e.target.value)} /></Field>
+          <Field label="Affiliate links (JSON)"><textarea className={`${inputClass} font-mono`} rows={4} value={form.affiliate_links} onChange={e => change('affiliate_links', e.target.value)} /></Field>
+        </div>
+      </div>
+      <div className="space-y-5 min-w-0">
+        <div className={panelClass}>
+          <Field label="Formato editoriale"><select className={inputClass} value={form.content_format} onChange={e => change('content_format', e.target.value)}><option value="">Seleziona formato</option><option value="news">News</option><option value="guide">Guida</option><option value="comparison">Comparativo</option><option value="review">Recensione</option></select></Field>
+          <Field label="Categoria"><select className={inputClass} value={form.category_id} onChange={e => change('category_id', e.target.value)}><option value="">Seleziona categoria</option>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select></Field>
+          <Field label="Voto (0–100)"><input className={inputClass} type="number" min="0" max="100" step="1" value={form.score} onChange={e => change('score', e.target.value)} /></Field>
+        </div>
+        <div className={panelClass}>
+          <Field label="Cover Image URL"><input className={inputClass} type="url" value={form.cover_image_url} onChange={e => change('cover_image_url', e.target.value)} /></Field>
+          {form.cover_image_url && <img src={form.cover_image_url} alt="Cover da verificare" className="w-full h-40 object-cover rounded-xl" onError={() => setCoverError(true)} />}
+          {coverError && <p role="alert" className="text-red-700 text-sm">Cover non caricabile: controlla URL e diritti prima di attestare la verifica.</p>}
+          <Field label="Provenienza cover"><input className={inputClass} value={form.image_source} onChange={e => change('image_source', e.target.value)} /></Field>
+        </div>
+        <div className={panelClass}><h2 className="font-semibold text-sm">Tag</h2><div className="flex flex-wrap gap-2">{tags.map(tag => <button key={tag.id} aria-pressed={selectedTags.includes(tag.id)} onClick={() => { setSelectedTags(previous => previous.includes(tag.id) ? previous.filter(id => id !== tag.id) : [...previous, tag.id]); setReview({}); setSuccess('') }} className={`text-xs px-3 py-1.5 rounded-full border ${selectedTags.includes(tag.id) ? 'bg-primary text-white border-primary' : 'border-border'}`}>{tag.name}</button>)}</div></div>
+      </div>
+    </div>}
+    <div className={`${panelClass} mt-6`}>
+      <h2 className="font-heading font-bold">Revisione umana della versione</h2><p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
+      {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
+      {problem && <p className="text-amber-700 text-sm">{problem}</p>}
+      {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
+      <div className="flex flex-wrap gap-3">
+        {status !== 'discarded' && <button disabled={saving || !optionsReady || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
+        {status === 'draft' && <button disabled={saving || dirty || isNew || !completeReview || !!problem} onClick={() => action('approve')} className={buttonClass}>Approva</button>}
+        {status === 'approved' && <button disabled={saving || dirty || !!problem} onClick={() => action('publish')} className="px-4 py-2.5 rounded-xl bg-primary text-white disabled:opacity-40">Pubblica</button>}
+        {!isNew && (status === 'discarded' ? <button onClick={() => action('restore')} className={buttonClass}>Recupera come bozza</button> : <button onClick={() => action('discard')} className={buttonClass}>{status === 'published' ? 'Ritira' : 'Scarta'}</button>)}
+      </div>
+    </div>
+    </fieldset>
+  </div>
 }

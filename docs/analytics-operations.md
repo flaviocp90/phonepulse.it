@@ -15,6 +15,8 @@ Baseline Vercel: produzione, **[2026-09-05 00:00, 2026-10-05 00:00) UTC**, cioè
 
 Non sommare visitatori per giorno o percorso. Vercel usa un identificatore con durata limitata: il totale non identifica persone distinte su 30 giorni. Blocchi e copertura possono ridurre i dati osservati. Nessuna pagina articolo nel risultato, nessun evento di lettura qualificata disponibile. `/privacy` è ancora una route mancante: una visualizzazione non prova il click di provenienza. [Definizioni e privacy Vercel](https://vercel.com/docs/analytics/privacy-policy).
 
+Verifica eventi personalizzati: `aggregate_events`, `by=["eventName"]`, stesso progetto e intervallo richiesto, scope predefinito, restituisce **402 Payment Required**: accesso riservato a Pro/Enterprise. Il risultato è **non disponibile**, non zero eventi. Non sono stati abilitati eventi, acquistati piani o modificati gli abbonamenti. Il primo report resta sulle pageview; per engagement e letture qualificate occorre prima verificare accesso GA4 e raccolta/consenso. [Requisiti degli eventi Vercel](https://vercel.com/docs/analytics/custom-events).
+
 ## Report automatico
 
 Prompt pronto in [analytics-report-prompt.md](analytics-report-prompt.md). Calendario proposto: martedì 09:00 e giorno 5 del mese 09:30, `Europe/Rome`; consegna nella conversazione ChatGPT del progetto. Nessun invio a terzi.
