@@ -1,9 +1,30 @@
-"""Read-only monitor: JSON on stdout, exit 1 for attention; no notifications."""
+"""Read-only checks; optional Kuma push with --push, JSON stdout and exit 1 for attention."""
 import argparse
 import json
 import os
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlsplit, urlunsplit
+import requests
 from supabase import create_client
+
+
+def push_heartbeat(url, alerts):
+    parts = urlsplit(url)
+    _, separator, token = parts.path.rpartition('/api/push/')
+    if (parts.scheme != 'https' or not parts.hostname or parts.username or parts.password
+            or parts.fragment or not separator or not token or '/' in token):
+        raise ValueError('Kuma URL must be an HTTPS push endpoint without credentials')
+    # Generated Kuma URLs include default status=up; replace it with the actual result.
+    endpoint = urlunsplit((parts.scheme, parts.netloc, parts.path, '', ''))
+    try:
+        result = requests.get(endpoint, params={'status': 'down' if alerts else 'up',
+                                              'msg': 'PhonePulse needs attention' if alerts else 'PhonePulse OK'},
+                              timeout=10, allow_redirects=False)
+        if result.status_code != 200 or result.json().get('ok') is not True:
+            raise RuntimeError('Push not acknowledged')
+    except Exception:
+        # Never propagate URLs/tokens or provider response details into logs.
+        raise RuntimeError('Monitor push failed') from None
 
 
 def check_operations(db, public_db, now):
@@ -40,6 +61,7 @@ def check_operations(db, public_db, now):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--now', help='ISO timestamp with timezone (controlled verification)')
+    parser.add_argument('--push', action='store_true', help='Send result to KUMA_PUSH_URL (may trigger configured alerts)')
     args = parser.parse_args()
     try:
         now = datetime.fromisoformat(args.now.replace('Z', '+00:00')) if args.now else datetime.now(timezone.utc)
@@ -51,6 +73,11 @@ def main():
                                   create_client(url, os.environ['SUPABASE_ANON_KEY']), now)
     except Exception:
         alerts = ['monitor_unavailable']
+    if args.push:
+        try:
+            push_heartbeat(os.environ.get('KUMA_PUSH_URL', ''), alerts)
+        except Exception:
+            alerts.append('monitor_delivery_failed')
     print(json.dumps({'alerts': alerts}))
     return int(bool(alerts))
 
