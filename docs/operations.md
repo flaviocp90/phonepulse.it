@@ -309,7 +309,8 @@ vengono ricostruiti. Tabella con RLS: anon senza accesso, editor solo SELECT via
 app_metadata, service-role INSERT/UPDATE/SELECT. Nessuna nuova scrittura pubblica.
 
 Ogni avvio registra `running`, poi `completed`, `failed`, `skipped_queue_full` o
-`no_candidates`, con data di fine e conteggi. Le ultime due condizioni attestano
+`no_candidates`, con data di fine e conteggi. Inizio e fine sono registrati dallo stesso clock
+del worker, così il disallineamento rispetto al DB non fa fallire run brevi. Le ultime due condizioni attestano
 un controllo riuscito, non articoli prodotti. Errori DB/feed o tutte le generazioni
 fallite terminano con errore. Se il processo viene ucciso, il run resta `running`;
 il monitor non lo considera un completamento. Un errore nel salvataggio del run

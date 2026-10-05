@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from automation_runs import run_tracked
@@ -7,6 +8,17 @@ from test_news_automation import database
 
 
 class RunTests(unittest.TestCase):
+    def test_run_start_and_finish_share_worker_clock_even_when_database_clock_differs(self):
+        db = database([{'id': 'run-1', 'started_at': '2026-10-05T12:00:00Z'}])
+        worker_time = datetime(2026, 10, 5, 11, 59, tzinfo=timezone.utc)
+        with patch('automation_runs.datetime') as clock, patch('builtins.print'):
+            clock.now.return_value = worker_time
+            run_tracked(db, 'generation', lambda client, counts: 'skipped_queue_full')
+        start = db.table.return_value.insert.call_args.args[0]
+        finish = db.table.return_value.update.call_args.args[0]
+        self.assertEqual(start.get('started_at'), '2026-10-05T11:59:00+00:00')
+        self.assertEqual(finish['finished_at'], start['started_at'])
+
     def test_outcome_and_counts_persist_and_exception_is_failed(self):
         for failed in (False, True):
             db = database([{'id': 'run-1'}])
