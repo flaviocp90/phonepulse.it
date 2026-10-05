@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && vite build --ssr src/entry-server.jsx --outDir server-dist",
-    "test:server": "node --test tests/ssr-probe.test.mjs",
+    "test:server": "node --test tests/ssr-probe.test.mjs tests/sitemap.test.mjs",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "lint": "eslint src --max-warnings=0"
+    "lint": "eslint src api --max-warnings=0"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.99.1",

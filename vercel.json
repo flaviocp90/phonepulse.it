@@ -4,6 +4,7 @@
   },
   "rewrites": [
     { "source": "/_ssr-check", "destination": "/api/ssr-check" },
+    { "source": "/_sitemap-check", "destination": "/api/sitemap" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

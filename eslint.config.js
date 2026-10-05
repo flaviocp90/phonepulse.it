@@ -17,4 +17,10 @@ export default [{
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'error',
   },
+}, {
+  files: ['api/**/*.js'],
+  languageOptions: {
+    globals: Object.fromEntries(['process', 'Buffer', 'AbortSignal', 'fetch', 'URL', 'URLSearchParams'].map(name => [name, 'readonly'])),
+  },
+  rules: { 'no-undef': 'error', 'no-unused-vars': ['error', { caughtErrors: 'none' }] },
 }]

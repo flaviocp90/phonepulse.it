@@ -453,3 +453,35 @@ colore scuro esistente e test sul rapporto effettivo (prima2.81:1, minimo4.5:1).
 Lint, build e41/41 prove browser passate. Nota minore differita: aggiungere casi
 browser legacy con data valida e versioni approvate coincidenti/diverse per
 rendere più specifica la regressione del guard, già verificato direttamente.
+
+### U4/U5 — preparazione server e gate preview
+
+Branch di implementazione: prima prova89f9cce, preview Vercel READY
+[ispezione deployment](https://vercel.com/flaviocp90s-projects/phonepulse-it/6Ry2fZZaQBcbCxB9QYkFJYZ282CM).
+`/_ssr-check` è una pagina fittizia resa da ViteSSR/React senza bootstrap client;
+CSS letto dal manifest build, artefatti generati inclusi nella funzione con
+[includeFiles](https://vercel.com/docs/project-configuration/vercel-json#functions).
+GET solo in preview,404 fuori preview,405 per altri metodi,503 se mancano artefatti.
+Nessuna dipendenza aggiunta, nessun database consultato da questa prova.
+
+Il connettore riesce a leggere progetto/deployment nello scope predefinito, ma
+la lettura della preview protetta fallisce403 al passo protection bypass
+(`/v2/deployments/.../aliases`). Nessun browser CUA disponibile. Richiesta
+riconnessione Vercel con progetto phonepulse-it e team flaviocp90s-projects.
+**READY del build non dimostra HTTP/render/CSS corretti:** il refactor generale
+PublicArticle e il rewrite pubblico articoli restano fermi al gate U4.
+
+Sitemap preparata indipendentemente, disponibile solo come `/_sitemap-check`
+in preview. Legge API anon con id.asc e cursorid>ultimo, mille righe per pagina;
+inserisce pagine statiche valide, categorie dal DB e articoli published. Mapping
+lastmod condiviso con UI: aggiornamento sostanziale verificato oppure prima
+pubblicazione valida, nessuna data del run. URL codificati/XML escape, errori503
+espliciti con no-store. Cache iniziale zero: ogni richiesta legge Supabase;
+misurare il traffico prima di aggiungere cache. Limite singolo50.000URL/50MB,
+oltre cui503 richiede un indice: archivio attuale molto inferiore.
+
+Il gate VERCEL_ENV=preview resta finché la prova remota e il rollout schema core
+sono verificati. `/sitemap.xml`, robots, XML statico e generazione/git del job B
+restano invariati. Controlli locali: lint src+api, build client+server,
+node:test prova server e sitemap1002record/errore,41/41 browser su dati fittizi.
+U4/U5 non dichiarati completi né attivati in produzione.
