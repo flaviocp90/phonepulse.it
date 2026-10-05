@@ -180,6 +180,19 @@ Non vengono più cancellati gli hash storici; le nuove dedupliche usano l'indice
 unico degli articoli. Le bozze invalide non vengono inserite né cercano cover.
 Una cover assente lascia una bozza da revisionare; non autorizza la pubblicazione.
 
+Modello primario `gemini-3.5-flash-lite`, fallback `gemini-3.1-flash-lite`, poi
+soltanto le varianti gratuite OpenRouter già configurate. Budget interno Gemini:
+50 tentativi complessivi al giorno UTC, inclusi retry e fallback, in base alla
+quota mostrata dal progetto. È un tetto conservativo degli script, non una
+misurazione delle quote Google: Google applica limiti per modello/progetto e
+azzera RPD a mezzanotte Pacific. Altre applicazioni possono consumare la quota;
+429 resta gestito dal retry/fallback esistente. Il tier Gemini deve essere Free
+per evitare addebiti: il limite locale non disattiva la fatturazione.
+Test controllati su modello/URL, retry e stop al budget; nessuna chiamata reale
+o valutazione comparativa della qualità italiana eseguita in questo incremento.
+Riferimenti: [modello](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite),
+[quote](https://ai.google.dev/gemini-api/docs/rate-limits).
+
 Gemini e Google CSE conteggiano ciascun tentativo prima della richiesta, inclusi
 retry, errori ed esiti vuoti. OpenRouter registra ogni tentativo nei log (nessun
 nuovo contatore DB o limite giornaliero viene introdotto). Errori DB/contatore
