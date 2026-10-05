@@ -1,13 +1,22 @@
 name: Job A — Scraping e generazione bozze
 
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
 
+# Both writers share Gemini/CSE counters; do not cancel a run mid-write.
+concurrency:
+  group: phonepulse-provider-writes
+  cancel-in-progress: false
+
 jobs:
   scraping:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,6 +26,7 @@ jobs:
         run: pip install -r scripts/requirements.txt
       - name: Esegui scraping e generazione bozze
         env:
+          PHONEPULSE_EDITOR_AUTHOR: ${{ vars.PHONEPULSE_EDITOR_AUTHOR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}

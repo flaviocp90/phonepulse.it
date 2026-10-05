@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { articleCount } from '../../lib/editorial'
 
 const navItems = [
   {
@@ -43,34 +44,31 @@ const navItems = [
 export default function AdminLayout() {
   const [userEmail, setUserEmail] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [pendingCount, setPendingCount] = useState(null)
+  const [logoutError, setLogoutError] = useState('')
   const navigate = useNavigate()
 
   const fetchPendingCount = useCallback(async () => {
-    const { count } = await supabase
-      .from('articles')
-      .select('id', { count: 'exact', head: true })
-      .eq('needs_review', true)
-      .eq('discarded', false)
-      .eq('is_published', false)
-    setPendingCount(count ?? 0)
+    try { setPendingCount(await articleCount('new')) }
+    catch { setPendingCount(null) }
   }, [])
 
   useEffect(() => {
-    fetchPendingCount()
-    const interval = setInterval(fetchPendingCount, 60000)
-    return () => clearInterval(interval)
+    let active = true
+    const refresh = () => { if (active) fetchPendingCount() }
+    refresh()
+    window.addEventListener('editorial-updated', refresh)
+    supabase.auth.getUser().then(({ data, error }) => { if (active && !error) setUserEmail(data.user?.email || '') }).catch(() => {})
+    return () => { active = false; window.removeEventListener('editorial-updated', refresh) }
   }, [fetchPendingCount])
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserEmail(user.email || '')
-    })
-  }, [])
-
   async function handleLogout() {
-    await supabase.auth.signOut()
-    navigate('/admin/login', { replace: true })
+    setLogoutError('')
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      navigate('/admin/login', { replace: true })
+    } catch { setLogoutError('Logout non riuscito. Riprova.') }
   }
 
   return (
@@ -136,9 +134,9 @@ export default function AdminLayout() {
               <path d="M6 9l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="flex-1">Review bozze</span>
-            {pendingCount > 0 && (
+            {(pendingCount === null || pendingCount > 0) && (
               <span className="bg-red-500 text-white text-xs font-body font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center leading-none">
-                {pendingCount}
+                {pendingCount ?? '—'}
               </span>
             )}
           </NavLink>
@@ -167,6 +165,7 @@ export default function AdminLayout() {
         {/* Mobile topbar */}
         <div className="md:hidden bg-dark border-b border-white/10 px-4 h-14 flex items-center justify-between">
           <button
+            aria-label="Apri menu admin"
             onClick={() => setSidebarOpen(true)}
             className="text-white/60 hover:text-white p-1.5 transition-colors"
           >
@@ -183,7 +182,8 @@ export default function AdminLayout() {
           <div className="w-9" />
         </div>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {logoutError && <p role="alert" className="bg-red-50 text-red-700 p-4 mb-4 rounded-xl">{logoutError}</p>}
           <Outlet />
         </main>
       </div>

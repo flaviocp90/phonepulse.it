@@ -52,3 +52,16 @@ PYTHON
 [Baseline e runbook](docs/operations.md) contiene workflow, accessi, inventario inferito dal codice e prerequisiti per backup e staging. [Registro archivio](docs/editorial/archive-review.csv) conserva sei decisioni proposte, ancora da assegnare e applicare.
 
 Gli script in `scripts/` possono scrivere nel database, pubblicare e inviare notifiche. Non eseguirli per una verifica di sintassi. Non riattivare Job B per smaltire l'arretrato: prima servono schema reale, backup ripristinato in isolamento e gate editoriali del [piano di rilancio](docs/piano-rilancio-2026-10-05.md).
+
+## Admin editoriale locale
+
+L’admin richiede un utente verificato con `app_metadata.phonepulse_role=editor`; la UI non sostituisce autorizzazione, ACL e RLS server. Prima di collegarlo a un ambiente reale servono entrambe le migration editoriali, staging Auth/JWT/PostgREST verificato e aggiornamento dei job. Non distribuire la sola UI o assegnare ruoli dal browser.
+
+[Checklist di revisione](docs/editorial/review-checklist.md): salva la bozza con tag via RPC, revisiona la versione, approva e pubblica separatamente. Correzione pubblicata e ritiro sono azioni distinte; nessuna eliminazione definitiva o invio social dall’admin. Le liste paginano tutti i risultati lato server.
+
+```bash
+npm run test:e2e -- --workers=1
+npm run build
+```
+
+La suite `tests/e2e/editorial.spec.js` usa SDK Auth reale con rete e sessioni sintetiche, whitelist RPC e blocco delle scritture REST. Non accede ad account, credenziali o database reali. Le schermate desktop/mobile vengono salvate in `test-results/`; sono artifact locali ignorati da Git. I test browser verificano UX e contratti, non la sicurezza del database: per quella usare [suite SQL isolata](supabase/tests/README.md).

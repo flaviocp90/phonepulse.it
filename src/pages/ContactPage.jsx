@@ -23,7 +23,7 @@ export default function ContactPage() {
         {/* Content */}
         <section className="max-w-3xl mx-auto px-4 py-16">
           <p className="text-lg text-gray-600 font-body leading-relaxed mb-10">
-            Hai una domanda, vuoi segnalare un errore o proporre una collaborazione? Scrivici.
+            Responsabile editoriale: Flavio Coppola. Hai una domanda, vuoi segnalare un errore o proporre una collaborazione? Scrivici.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -66,7 +66,7 @@ export default function ContactPage() {
 
           <div className="mt-10 bg-primary/5 border border-primary/20 rounded-2xl p-6">
             <p className="text-sm text-gray-600 font-body leading-relaxed">
-              <strong className="text-dark">Tempo di risposta:</strong> cerchiamo di rispondere a tutte le email entro 48 ore lavorative.
+              Per facilitare la verifica, indica il link dell’articolo e le fonti a sostegno della segnalazione.
               Per segnalazioni urgenti relative a errori o contenuti inesatti, indica "CORREZIONE" nell'oggetto.
             </p>
           </div>

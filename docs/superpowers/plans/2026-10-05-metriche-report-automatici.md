@@ -10,11 +10,12 @@
 
 ## 1. Situazione verificata e limiti
 
-- `index.html` carica GA4 con measurement ID `G-2RFECSW4XM`; carica lo stesso script Ahrefs due volte.
+- `index.html` carica GA4 con measurement ID `G-2RFECSW4XM`; il doppio script Ahrefs rilevato nell'audit è stato rimosso nell'incremento integrato in master.
 - `src/main.jsx` monta Vercel Analytics. Non sommare i tre fornitori: definizioni e copertura differiscono.
 - Non sono stati trovati eventi editoriali personalizzati nel codice. Le impostazioni GA4 di enhanced measurement non sono state ispezionate.
 - Non c'è ancora un accesso autorizzato alla proprietà GA4 o Search Console. Dal 5 ottobre il plugin Vercel funziona: produzione, 5 settembre–4 ottobre UTC, **3 visualizzazioni e 3 visitatori osservati dal provider**; home 2 visualizzazioni, `/privacy` 1, nessuna pagina articolo nel risultato. Questi visitatori non certificano tre persone distinte nell'intero mese e non misurano engagement. Dettagli riproducibili in [analytics-operations](../../analytics-operations.md).
 - Il measurement ID pubblico non è il property ID numerico necessario alle interrogazioni GA4.
+- Il connettore espone `aggregate_events`, ma la prova sul progetto attuale restituisce 402: gli eventi Vercel richiedono Pro/Enterprise. Non rappresentare il blocco come zero interazioni. Nessun upgrade acquistato; usare GA4 solo dopo accesso e raccolta verificati, altrimenti riportare le sole pageview disponibili.
 - È stato individuato GSC Wizard come candidato: dichiara supporto a Search Console e GA4 collegato. Connessione, disponibilità delle metriche ed esecuzione nelle task vanno provate; nessun collegamento o calendario è stato creato.
 
 La misurazione riguarda utenti osservabili dal sistema analytics, non persone identificate con certezza: consenso, blocchi, più dispositivi e cookie possono cambiare la copertura. Non ricostruire dati storici per eventi mai raccolti.
@@ -43,7 +44,7 @@ Per ogni tasso specificare numeratore e denominatore. Il tasso di lettura per ar
 - [x] Collegare Vercel e leggere una baseline reale di produzione tramite aggregati; usare questa fonte per il primo report, dichiarando engagement e ricerca organica non disponibili. L'accesso GA4/GSC resta un arricchimento, non un requisito per contare le pageview già raccolte.
 - [ ] Eseguire una lettura reale: ultimi 28 giorni completi e 28 precedenti, utenti, sessioni, engagement, top landing page, dispositivi, canali, click e impression organiche. Registrare proprietà, intervalli, unità, timezone, data/ora dell'estrazione e limitazioni.
 - [ ] Confrontare almeno utenti/sessioni/click con i report nativi nello stesso intervallo e con gli stessi filtri. Se differiscono, spiegare la causa prima di utilizzare i numeri come baseline.
-- [ ] Verificare quali metriche/eventi custom, dati giornalieri e indicatori di incompletezza espone l'integrazione; documentare il contratto realmente disponibile, senza presupporre supporto universale delle API.
+- [x] Verificare il contratto Vercel: breakdown pageview reali disponibili, eventi custom negati con402. GA4/GSC restano da verificare separatamente; il blocco eventi non soddisfa il requisito engagement.
 - [ ] Salvare la baseline nel contesto accessibile alla task cloud. Il repository contiene le istruzioni, non dati privati o token. Nessun export manuale settimanale.
 
 **Done:** una risposta reale alla domanda “quanti utenti interagiscono?”, con intervallo e limiti. Se l'accesso non è disponibile, il task resta aperto: non sostituire con stime dal sito pubblico.

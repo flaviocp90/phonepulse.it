@@ -36,6 +36,13 @@ Stima orientativa 4–8 giornate, esclusi riscrittura dell'archivio e tempi d'in
 
 ## Task U2 — Promessa editoriale e gerarchia delle informazioni
 
+**Incremento locale 2026-10-05:** layout verificato con articolo pilota sintetico;
+autore, formato, fonti e date condividono lo stesso mapping con JSON-LD. Home,
+Chi siamo e Contatti aggiornati; voti senza metodo documentato rimossi dalla
+presentazione pubblica. Restano pilota reale, decisioni sui testi dell’archivio,
+metodo delle prove e integrazione metriche dopo definizione del consenso.
+Nessun contenuto live modificato. Il Done completo resta aperto.
+
 **Files:** modificare `src/pages/{Home,ArticlePage,AboutPage,ContactPage}.jsx`, `src/components/{ArticleCard,NewsCard,SchemaMarkup,SEO}.jsx`; eventuali campi mancanti in migrazione additiva successiva al task editoriale 2.
 
 **Interfaces:** render pubblico di fonti, autore responsabile, formato reale, pubblicato/aggiornato; voto e dati di prova soltanto quando documentati. Riutilizzare `content_format` e autore del task editoriale 2; non dedurli dal titolo e non creare una seconda migrazione per gli stessi campi.
@@ -73,7 +80,7 @@ Stima orientativa 4–8 giornate, esclusi riscrittura dell'archivio e tempi d'in
 - [ ] Estrarre il corpo pubblico condiviso senza dipendenze da `window`, fetch client o strumenti admin. L'handler restituisce document HTML completo con titolo, descrizione, canonical www coerente, OG/Twitter, JSON-LD e testo reale. Se non serve idratazione per la prima versione, link nativi e piccoli script di misura bastano; non costruire un secondo router.
 - [ ] Sicurezza: escape di titolo/metadati e serializzazione JSON-LD; sanitizzazione coerente dell'HTML prima del rendering anche server-side, riutilizzando una soluzione server compatibile dopo verifica delle dipendenze. Testare payload con script/event handler; non affidarsi alla sola pulizia del client.
 - [ ] Mettere rewrite articolo prima del catch-all SPA, conservando admin e percorsi già funzionanti. Slug non pubblicato restituisce 404 reale; errore Supabase temporaneo 503, non 404 né HTTP 200 con articolo vuoto.
-- [ ] Cache iniziale breve con limite di staleness documentato; articoli ritirati/corretti invalidati o resi visibili entro il limite dichiarato. Non promettere consistenza istantanea con cache attiva. Niente post social finché l'URL pubblico non è verificato per la versione pubblicata.
+- [ ] Cache iniziale breve con limite di staleness documentato; articoli ritirati/corretti invalidati o resi visibili entro il limite dichiarato. Non promettere consistenza istantanea con cache attiva. Niente post social finché l'URL pubblico non è verificato per la versione pubblicata. Contratto Task7: meta `name="phonepulse:article-version" content="{version}"` prodotto dalla riga DB pubblicata e canonical www corrispondente; mai un marker statico nel guscio SPA.
 - [ ] Test senza JavaScript: HTML contiene testo, fonti e metadati articolo corretti; direct link/refresh/404; client navigation mostra la stessa versione e registra una sola pageview. Evitare due richieste analytics tra documento server e bootstrap client.
 - [ ] Gestire ritiri e merge con decisione editoriale esplicita: 301 solo verso sostituto pertinente; 404/410 per ritiro senza sostituto. Registrare redirect nella configurazione distribuita; nessun redirect indiscriminato alla home.
 

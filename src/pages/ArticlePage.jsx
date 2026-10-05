@@ -5,7 +5,9 @@ import DOMPurify from "dompurify";
 import { supabase } from "../lib/supabase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import CoverImage from "../components/CoverImage";
 import SEO from "../components/SEO";
+import { publicEditorial } from "../lib/publicEditorial";
 import { ArticleSchema, BreadcrumbSchema } from "../components/SchemaMarkup";
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -16,6 +18,7 @@ function formatDate(dateString) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Europe/Rome",
   });
 }
 
@@ -44,8 +47,23 @@ export default function ArticlePage() {
   const [loadedArticle, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [relatedResult, setRelated] = useState(null);
 
   const article = loadedArticle?.slug === slug ? loadedArticle : null;
+  const editorial = article ? publicEditorial(article) : null;
+  const related = relatedResult?.slug === slug ? relatedResult.items : [];
+
+  useEffect(() => {
+    if (!article?.category_id) return;
+    let active = true;
+    supabase.from("articles").select("id, slug, title")
+      .eq("is_published", true).eq("category_id", article.category_id).neq("id", article.id)
+      .order("published_at", { ascending: false }).limit(3)
+      .then(({ data, error }) => {
+        if (active && !error) setRelated({ slug: article.slug, items: Array.isArray(data) ? data : [] });
+      }).catch(() => {}); // Suggestions failing must not hide the article.
+    return () => { active = false; };
+  }, [article]);
 
   useEffect(() => {
     let active = true;
@@ -92,14 +110,7 @@ export default function ArticlePage() {
             canonical={`/articoli/${article.slug}`}
             type="article"
           />
-          <ArticleSchema
-            title={article.title}
-            description={article.excerpt}
-            publishedAt={article.published_at}
-            updatedAt={article.updated_at}
-            slug={article.slug}
-            coverImage={article.cover_image_url}
-          />
+          <ArticleSchema article={article} />
           <BreadcrumbSchema
             items={[
               { name: 'Home', url: 'https://phonepulse.it/' },
@@ -153,7 +164,7 @@ export default function ArticlePage() {
               </span>
             </nav>
 
-            {/* Category + Score row */}
+            {/* Category */}
             <div className="flex items-center gap-3 mb-4">
               {article.categories && (
                 <Link
@@ -169,11 +180,7 @@ export default function ArticlePage() {
                   {article.categories.name}
                 </Link>
               )}
-              {article.score != null && (
-                <span className="inline-flex items-center gap-1 bg-primary text-white text-xs font-body font-bold px-3 py-1 rounded-full">
-                  Voto: {article.score}/100
-                </span>
-              )}
+
             </div>
 
             {/* Title */}
@@ -189,53 +196,33 @@ export default function ArticlePage() {
             )}
 
             {/* Meta */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 font-body mb-8 pb-8 border-b border-border">
-              {/* {article.author && (
-                <span>Di <strong className="text-gray-600">{article.author}</strong></span>
-              )} */}
-              {article.published_at && (
-                <time>{formatDate(article.published_at)}</time>
-              )}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 font-body mb-8 pb-8 border-b border-border">
+              {editorial.format && <span>Formato: {editorial.format}</span>}
+              {editorial.author && <span>Di <strong className="text-gray-700">{editorial.author}</strong></span>}
+              {editorial.publishedAt && <span>Pubblicato: <time dateTime={editorial.publishedAt}>{formatDate(editorial.publishedAt)}</time></span>}
+              {editorial.updatedAt && <span>Aggiornato: <time dateTime={editorial.updatedAt}>{formatDate(editorial.updatedAt)}</time></span>}
             </div>
+
+            {article.origin === 'legacy' && (
+              <aside className="mb-8 border-l-4 border-border pl-4 text-sm text-gray-600 font-body">
+                <strong>Articolo d’archivio</strong>. Le informazioni di produzione non documentate non attestano prove dirette del dispositivo.
+              </aside>
+            )}
+            {article.origin === 'rss' && (
+              <aside className="mb-8 border-l-4 border-primary/30 pl-4 text-sm text-gray-600 font-body">
+                Bozza preparata con assistenza AI a partire dalle fonti. La verifica e le scelte di pubblicazione sono responsabilità dell’autore indicato.
+              </aside>
+            )}
 
             {/* Cover image */}
             {article.cover_image_url && (
-              <div className="mb-10 rounded-2xl overflow-hidden border border-border">
-                <img
+              <div className="relative aspect-[16/9] mb-10 rounded-2xl overflow-hidden border border-border">
+                <CoverImage
                   src={article.cover_image_url}
                   alt={article.title}
-                  className="w-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="eager"
                 />
-              </div>
-            )}
-
-            {/* Score card (se presente) */}
-            {article.score != null && (
-              <div className="mb-10 bg-dark rounded-2xl p-6 flex items-center gap-6">
-                <div className="shrink-0 flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-full bg-primary flex flex-col items-center justify-center shadow-lg">
-                    <span className="text-white text-3xl font-heading font-bold leading-none">
-                      {article.score}
-                    </span>
-                    <span className="text-white/60 text-xs font-body">
-                      /100
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-white font-heading font-bold text-xl mb-1">
-                    Il nostro voto
-                  </p>
-                  <p className="text-white/50 text-sm font-body leading-relaxed">
-                    {article.score >= 85
-                      ? "Eccellente. Uno dei migliori nel suo segmento."
-                      : article.score >= 70
-                        ? "Buono. Promosso con qualche riserva."
-                        : article.score >= 55
-                          ? "Sufficiente. Vale la pena ma con compromessi."
-                          : "Insufficiente. Ci sono alternative migliori."}
-                  </p>
-                </div>
               </div>
             )}
 
@@ -247,6 +234,23 @@ export default function ArticlePage() {
                   __html: DOMPurify.sanitize(marked.parse(article.content)),
                 }}
               />
+            )}
+
+            {editorial.sources.length > 0 && (
+              <section aria-labelledby="article-sources" className="mt-10 pt-8 border-t border-border font-body">
+                <h2 id="article-sources" className="text-2xl font-heading text-dark mb-4">Fonti</h2>
+                <ul className="space-y-4 text-sm break-words">
+                  {editorial.sources.map((source, index) => (
+                    <li key={index}>
+                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-dark underline underline-offset-4">{source.title}</a>
+                      <p className="text-gray-600 mt-1">
+                        {source.publisher}
+                        {source.retrievedAt && <span>{source.publisher ? ' · ' : ''}Consultata: <time dateTime={source.retrievedAt}>{formatDate(source.retrievedAt)}</time></span>}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
 
             {/* Tags */}
@@ -312,11 +316,19 @@ export default function ArticlePage() {
 
             {/* Back link */}
             <div className="mt-12 pt-8 border-t border-border">
+              {related.length > 0 && (
+                <section aria-labelledby="related-articles" className="mb-8">
+                  <h2 id="related-articles" className="text-2xl font-heading text-dark mb-4">Altri articoli in questa categoria</h2>
+                  <ul className="space-y-3 font-body text-sm">
+                    {related.map(item => <li key={item.id}><Link to={`/articoli/${item.slug}`} className="text-dark underline underline-offset-4">{item.title}</Link></li>)}
+                  </ul>
+                </section>
+              )}
               <Link
-                to="/"
+                to={article.categories ? `/categoria/${article.categories.slug}` : "/"}
                 className="inline-flex items-center gap-2 text-sm text-gray-500 font-body hover:text-primary transition-colors"
               >
-                ← Torna alla home
+                ← {article.categories ? `Torna a ${article.categories.name}` : "Torna alla home"}
               </Link>
             </div>
           </article>

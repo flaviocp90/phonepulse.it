@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import CoverImage from './CoverImage'
 
 function formatDate(dateString) {
   if (!dateString) return ''
@@ -10,7 +11,7 @@ function formatDate(dateString) {
 }
 
 export default function ArticleCard({ article, featured = false }) {
-  const { slug, title, cover_image_url, published_at, score, categories } = article
+  const { slug, title, cover_image_url, published_at, categories } = article
 
   return (
     <Link
@@ -18,16 +19,12 @@ export default function ArticleCard({ article, featured = false }) {
       className="group relative flex flex-col aspect-[3/4] rounded-xl overflow-hidden bg-dark"
     >
       {/* Image */}
-      {cover_image_url ? (
-        <img
-          src={cover_image_url}
-          alt={title}
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] group-hover:brightness-110 transition-all duration-500"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-dark" />
-      )}
+      <CoverImage
+        src={cover_image_url}
+        alt={title}
+        className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] group-hover:brightness-110 transition-all duration-500"
+        loading="lazy"
+      />
 
       {/* Gradient overlay */}
       <div
@@ -37,13 +34,7 @@ export default function ArticleCard({ article, featured = false }) {
         }}
       />
 
-      {/* Score badge */}
-      {score != null && (
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-body font-bold rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg leading-none z-10">
-          <span className="text-sm font-bold">{score}</span>
-          <span className="text-[9px] opacity-80 font-medium">/100</span>
-        </div>
-      )}
+
 
       {/* Text anchored to bottom */}
       <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-1.5 z-10">
