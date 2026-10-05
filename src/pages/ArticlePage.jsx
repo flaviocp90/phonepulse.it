@@ -41,12 +41,16 @@ function ArticleSkeleton() {
 
 export default function ArticlePage() {
   const { slug } = useParams();
-  const [article, setArticle] = useState(null);
+  const [loadedArticle, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const article = loadedArticle?.slug === slug ? loadedArticle : null;
+
   useEffect(() => {
+    let active = true;
     async function fetchArticle() {
+      setArticle(null);
       setLoading(true);
       setError(null);
       try {
@@ -57,23 +61,28 @@ export default function ArticlePage() {
           )
           .eq("slug", slug)
           .eq("is_published", true)
-          .single();
+          .maybeSingle();
 
+        if (!active) return;
         if (err) throw err;
         setArticle(data);
+        if (!data) setError("Articolo non trovato o non più disponibile.");
       } catch (err) {
-        setError("Articolo non trovato o non più disponibile.");
+        if (!active) return;
+        setError("Impossibile caricare l’articolo. Riprova più tardi.");
         console.error(err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     fetchArticle();
+    return () => { active = false; };
   }, [slug]);
 
   return (
     <div className="min-h-screen flex flex-col">
+      {!article && <SEO title="Articolo" />}
       {article && (
         <>
           <SEO
@@ -108,7 +117,7 @@ export default function ArticlePage() {
       <main className="flex-1">
         {loading && <ArticleSkeleton />}
 
-        {error && (
+        {!loading && error && (
           <div className="max-w-3xl mx-auto px-4 py-20 text-center">
             <p className="text-gray-500 font-body mb-6">{error}</p>
             <Link
@@ -120,7 +129,7 @@ export default function ArticlePage() {
           </div>
         )}
 
-        {!loading && article && (
+        {!loading && !error && article && (
           <article className="max-w-3xl mx-auto px-4 py-12">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-xs text-gray-400 font-body mb-6">
