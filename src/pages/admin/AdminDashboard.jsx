@@ -1,121 +1,28 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { articleCount } from '../../lib/editorial'
 
-function StatCard({ label, value, color, loading }) {
-  return (
-    <div className="bg-white border border-border rounded-2xl p-6">
-      {loading ? (
-        <div className="animate-pulse space-y-2">
-          <div className="h-3 bg-gray-100 rounded w-24" />
-          <div className="h-8 bg-gray-200 rounded w-12" />
-        </div>
-      ) : (
-        <>
-          <p className="text-xs font-body font-medium text-gray-400 uppercase tracking-wide mb-2">{label}</p>
-          <p className="text-3xl font-heading font-bold" style={{ color }}>
-            {value ?? '—'}
-          </p>
-        </>
-      )}
-    </div>
-  )
-}
-
+const labels = { all: 'Tot. articoli', published: 'Pubblicati', draft: 'Bozze', approved: 'Approvati', discarded: 'Scartati', new: 'Nuove bozze', legacy: 'Archivio legacy' }
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(null)
+  const [stats, setStats] = useState({})
   const [loading, setLoading] = useState(true)
-
+  const [error, setError] = useState(false)
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
-    async function fetchStats() {
-      const [total, published, categories, pending] = await Promise.all([
-        supabase.from('articles').select('id', { count: 'exact', head: true }),
-        supabase.from('articles').select('id', { count: 'exact', head: true }).eq('is_published', true),
-        supabase.from('categories').select('id', { count: 'exact', head: true }),
-        supabase.from('articles').select('id', { count: 'exact', head: true }).eq('needs_review', true).eq('discarded', false).eq('is_published', false),
-      ])
-
-      setStats({
-        total: total.count ?? 0,
-        published: published.count ?? 0,
-        drafts: (total.count ?? 0) - (published.count ?? 0),
-        categories: categories.count ?? 0,
-        pending: pending.count ?? 0,
-      })
-      setLoading(false)
-    }
-
-    fetchStats()
-  }, [])
-
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-heading font-bold text-dark">Dashboard</h1>
-        <p className="text-sm text-gray-400 font-body mt-1">Panoramica del sito</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Tot. articoli" value={stats?.total} color="#0D0D0D" loading={loading} />
-        <StatCard label="Pubblicati" value={stats?.published} color="#22c55e" loading={loading} />
-        <StatCard label="Bozze" value={stats?.drafts} color="#f59e0b" loading={loading} />
-        <StatCard label="Categorie" value={stats?.categories} color="#FF5C1A" loading={loading} />
-      </div>
-
-      {/* Pending review card */}
-      <div className="mb-10">
-        <Link
-          to="/admin/review"
-          className="flex items-center justify-between bg-white border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors group max-w-sm"
-        >
-          <div>
-            <p className="text-xs font-body font-medium text-gray-400 uppercase tracking-wide mb-1">
-              Bozze in attesa
-            </p>
-            {loading ? (
-              <div className="h-8 bg-gray-200 rounded w-10 animate-pulse" />
-            ) : (
-              <p className="text-3xl font-heading font-bold text-primary">{stats?.pending ?? '—'}</p>
-            )}
-          </div>
-          <span className="text-primary/40 group-hover:text-primary transition-colors">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path d="M9 5l6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </Link>
-      </div>
-
-      {/* Quick links */}
-      <h2 className="text-sm font-body font-semibold text-gray-400 uppercase tracking-wide mb-4">
-        Azioni rapide
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
-        <Link
-          to="/admin/articoli/nuovo"
-          className="flex items-center gap-3 bg-primary hover:bg-primary-dark text-white px-5 py-4 rounded-xl font-body font-medium text-sm transition-colors"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
-            <line x1="9" y1="5.5" x2="9" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="5.5" y1="9" x2="12.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Nuovo articolo
-        </Link>
-        <Link
-          to="/admin/articoli"
-          className="flex items-center gap-3 bg-white border border-border hover:border-gray-300 text-dark px-5 py-4 rounded-xl font-body font-medium text-sm transition-colors"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="2" y="2" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
-            <line x1="5" y1="6" x2="13" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="5" y1="9" x2="13" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="5" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Gestisci articoli
-        </Link>
-      </div>
-    </div>
-  )
+    let active = true
+    setLoading(true); setError(false)
+    const keys = Object.keys(labels)
+    Promise.allSettled(keys.map(key => articleCount(key))).then(results => {
+      if (!active) return
+      setStats(Object.fromEntries(keys.map((key, index) => [key, results[index].status === 'fulfilled' ? results[index].value : null])))
+      setError(results.some(result => result.status === 'rejected')); setLoading(false)
+    })
+    return () => { active = false }
+  }, [retry])
+  return <div>
+    <div className="mb-8"><h1 className="text-2xl font-heading font-bold text-dark">Dashboard</h1><p className="text-sm text-gray-500 mt-1">Stati editoriali e coda nuova separata dall’archivio</p></div>
+    {error && <div role="alert" className="bg-red-50 text-red-700 rounded-xl p-4 mb-5">Alcuni conteggi sono indisponibili (—).<button onClick={() => setRetry(value => value + 1)} className="ml-3 underline">Riprova</button></div>}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">{Object.entries(labels).map(([key, label]) => <div key={key} className="bg-white border border-border rounded-2xl p-5"><p className="text-xs text-gray-500 mb-2">{label}</p><p className="text-3xl font-heading font-bold text-dark">{loading ? '…' : stats[key] ?? '—'}</p></div>)}</div>
+    <div className="flex flex-wrap gap-4"><Link to="/admin/review" className="bg-white border border-border px-5 py-4 rounded-xl text-primary">Apri coda di revisione</Link><Link to="/admin/articoli/nuovo" className="bg-primary text-white px-5 py-4 rounded-xl">Nuovo articolo</Link><Link to="/admin/articoli" className="bg-white border border-border px-5 py-4 rounded-xl">Tutti gli articoli</Link></div>
+  </div>
 }

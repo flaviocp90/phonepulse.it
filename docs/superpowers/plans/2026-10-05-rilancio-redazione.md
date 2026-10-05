@@ -81,7 +81,7 @@ VITE_SUPABASE_ANON_KEY=
 
 ## Task 2 — Stato editoriale, versione e autorizzazioni
 
-**Files:** creare `supabase/migrations/202610050001_editorial_state.sql` e `supabase/tests/editorial_state.sql`; aggiornare `docs/operations.md`.
+**Files:** migrazione generata dalla CLI `supabase/migrations/20261005091140_editorial_state.sql`, test `supabase/tests/editorial_security.sql` e `editorial_state.sql`, adapter locale `local_auth_adapter.sql`, fixture sintetica `fixture_baseline.sql` e istruzioni in `supabase/tests/README.md`; aggiornare `docs/operations.md`. I nomi dei successivi file migration sono indicativi: generarli con `supabase migration new`, senza inventare timestamp.
 
 **Interfaces:** `articles.status`, `origin`, `version`, `approved_version`, `approved_at`, `approved_by`, `sources`, `source_key` e `last_verified_at`. Il ruolo attendibile è `app_metadata.phonepulse_role='editor'`, assegnato amministrativamente; user_metadata non attribuisce permessi.
 
@@ -138,7 +138,7 @@ end $$;
 
 ## Task 3 — Salvataggio e pubblicazione transazionali
 
-**Files:** creare `supabase/migrations/202610050002_editorial_rpcs.sql`, `supabase/tests/editorial_rpcs.sql`; modificare `src/pages/admin/AdminArticleEditor.jsx`, `src/pages/admin/AdminReview.jsx`; creare `src/lib/editorial.js` come sottile wrapper delle RPC usate da entrambi.
+**Files:** migrazione CLI generata `supabase/migrations/20261005095507_editorial_rpcs.sql`, `supabase/tests/editorial_rpcs.sql`, `supabase/tests/run_editorial_rpcs.py`; modificare `src/pages/admin/AdminArticleEditor.jsx`, `src/pages/admin/AdminReview.jsx`; creare `src/lib/editorial.js` come sottile wrapper delle RPC usate da entrambi nell'incremento frontend. SQL locale verificato separatamente; Task3 non completo né distribuibile senza integrazione UI e gate di rollout.
 
 **Interfaces:**
 

@@ -110,7 +110,7 @@ L'approvazione è un atto umano associato alla versione. Modificare contenuto, t
 - Pubblicazione news: entro 72 ore dalla fonte. Oltre tale limite occorre aggiornare i fatti e riapprovare; nessuna vecchia bozza diventa una news corrente.
 - Guide: controllo periodico indicativo ogni 90 giorni, prima se cambia il prodotto o software.
 - Offerte: dati di prezzo/disponibilità entro 24 ore e indicazione dell'orario; soglie editoriali proposte, non garanzie tecniche.
-- Generazione iniziale: massimo cinque bozze per run giornaliero; massimo venti bozze aperte. A coda piena, non generare altre bozze.
+- Generazione iniziale: massimo cinque bozze per run giornaliero; massimo venti bozze RSS aperte. I record esistenti hanno origine legacy e una coda separata: le 4.359 bozze storiche rilevate il 5 ottobre non saturano il limite del nuovo flusso. A coda RSS piena, non generare altre bozze.
 - Job B resta disabilitato fino a gate e transizione unificati; poi può pubblicare soltanto versioni approvate e ancora valide. Nessuno smaltimento automatico dell'arretrato.
 
 ## 6. Archivio e fiducia

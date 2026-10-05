@@ -28,3 +28,5 @@ scripts/.env
 # Playwright artifacts
 test-results/
 playwright-report/
+supabase/.temp/
+supabase/tests/__pycache__/
