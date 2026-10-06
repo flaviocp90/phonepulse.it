@@ -1,6 +1,6 @@
 # PhonePulse: piano di rilancio
 
-**Stato:** piano e primi incrementi locali, 5 ottobre 2026. Supabase torna a servire contenuti; navigazione e accessibilità corrette nel worktree isolato. Plugin Supabase/Vercel verificati, backup public ripristinato localmente. Nessuna migrazione live, riattivazione dei job, pubblicazione o task periodica eseguita.
+**Stato aggiornato:** 5 ottobre 2026. Le quattro migrazioni editoriali Supabase sono applicate al progetto live e il ruolo editor è assegnato a `phonepulse.it@gmail.com`. I 4.784 articoli risultano preservati (90 pubblicati, 4.360 bozze, 334 scartati); nessuna bozza è stata approvata retroattivamente. Non sono stati creati servizi a pagamento. Resta da verificare la UI dopo logout/login.
 
 ## Valutazione
 
@@ -37,9 +37,15 @@ Lettura analytics e configurazione del report possono iniziare subito, senza att
 - Report proposti: settimanale martedì 09:00 e mensile giorno 5 alle 09:30, Europe/Rome, in ChatGPT. Il primo report può usare Vercel senza account Google; serve salvare e verificare una task cloud. GA4/GSC arricchiranno engagement e ricerca organica quando collegati.
 - Vercel osserva tre pageview in produzione nei 30 giorni 5 settembre–4 ottobre UTC; non dimostra tre persone distinte o letture qualificate. Nessuna automazione periodica è attiva per effetto di questi documenti.
 
+## Stato Supabase aggiornato — 5 ottobre 2026
+
+Le migrazioni `editorial_state`, `editorial_rpcs`, `social_delivery` e `automation_runs` risultano applicate e registrate sul progetto live. RLS e policy di lettura pubblica/editor, RPC editoriali e revoca delle scritture dirette sono state verificate via SQL. Il ruolo attendibile è `app_metadata.phonepulse_role='editor'`; serve una nuova sessione Auth affinché il JWT recepisca il claim. La UI amministrativa non è stata verificata nel browser dopo il rollout: fare logout/login e riaprire `/admin/articoli`.
+
+Il vincolo di costo è **zero**: non è stato creato uno staging branch Supabase, che avrebbe un costo orario. Gli advisor Supabase mostrano avvisi su performance e protezione delle password compromesse disattivata; restano da valutare. Job A/B, invio social, pubblicazione di articoli e report periodici non sono stati attivati.
+
 ## Evidenze successive all'accesso amministrativo
 
-Supabase contiene 4.784 articoli: 90 pubblicati, 334 scartati e 4.360 non pubblicati/non scartati, di cui 4.359 richiedono revisione. La nuova coda RSS sarà distinta dall'arretrato tramite `origin`; nessuna cancellazione collettiva. La policy pubblica di scrittura `daily_counters` richiede correzione. Nessun utente ha ancora il ruolo editor attendibile proposto.
+Supabase contiene 4.784 articoli: 90 pubblicati, 334 scartati e 4.360 bozze; nessuna cancellazione collettiva. La nuova coda RSS è distinta dall'arretrato tramite `origin`. `daily_counters` non ha policy e resta inaccessibile ai client; verificare gli usi leciti prima di aggiungere una policy dedicata. L'account editor è stato assegnato come descritto sopra.
 
 Backup delle sette tabelle public verificato su PostgreSQL locale: copertura applicativa, non backup completo Supabase Auth/Storage o staging certificato. Conservazione temporanea privata da rendere durevole prima di migrazioni. [Runbook e limiti](operations.md). Le correzioni UI locali e il caricamento differito delle pagine admin hanno superato 15 test browser e build. JavaScript iniziale ridotto da 513,99 a 472,55 kB; script Ahrefs duplicato rimosso. Queste modifiche non sono ancora sul sito pubblico.
 

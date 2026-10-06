@@ -10,6 +10,12 @@
 
 **Spec:** [Redazione e rilancio](../specs/2026-10-05-redazione-rilancio-design.md). Piani complementari: [UI e distribuzione](2026-10-05-ui-distribuzione.md), [metriche e report automatici](2026-10-05-metriche-report-automatici.md). Audit storico: [analisi iniziale](../../audit-2026-10-05.md).
 
+## Stato aggiornato — 5 ottobre 2026
+
+Rollout Supabase live completato: le quattro migrazioni `editorial_state`, `editorial_rpcs`, `social_delivery` e `automation_runs` sono registrate sul progetto; ruolo `app_metadata.phonepulse_role='editor'` assegnato all'account autorizzato. Verifiche SQL: 4.784 articoli preservati (90 published, 4.360 draft, 334 discarded), nessuna approvazione retroattiva, RLS attivo, lettura pubblica limitata ai published e scritture dirette client revocate. UI da verificare dopo logout/login per aggiornare il JWT. Zero costo aggiuntivo: nessun branch staging o servizio pagato creato. Job, pubblicazione automatica e invii social restano spenti.
+
+Restano aperti: prova manuale UI con sessione rinnovata; verifica live dei flussi UI/RPC e generazione; revisione degli avvisi Supabase; gate e attivazione controllata dei workflow; Task 9 editoriale e pilot. I controlli SQL non attestano readiness end-to-end.
+
 ## Avanzamento locale — 5 ottobre 2026
 
 Nel worktree `codex/editorial-state-20261005`: Task2/3/5 implementati e verificati
@@ -19,8 +25,10 @@ claim/finish persistenti, Auth server, provider simulati e UI stato/retry. Verif
 9 test Deno, 26 Python, 37 browser, build e test SQL con due sessioni su PG16
 sintetico. Nessun push, deploy, migrazione live, riattivazione o invio reale.
 
-Restano aperti PG17/Supabase Auth/PostgREST reali, ruolo editor identificato,
-conservazione durevole del backup e rollout coordinato. Task7 richiede anche U4
+All'epoca restavano aperti PG17/Supabase Auth/PostgREST reali, ruolo editor,
+conservazione del backup e rollout; i prerequisiti di database e ruolo sono stati
+in seguito superati dal rollout descritto sopra. La prova UI resta da fare con
+una sessione rinnovata. Task7 richiede anche U4
 (HTML/versione/canonical verificabile) e readiness del canale/Meta API confermata:
 flag readiness spenti di default, nessun invio senza prova dell'URL pubblico.
 Gli incrementi Task2–7 sono stati integrati in develop (`b72543c`, anche remoto).

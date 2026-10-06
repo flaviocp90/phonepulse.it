@@ -1,6 +1,12 @@
 # Baseline operativa PhonePulse
 
-Rilevazione: 5 ottobre 2026. Baseline locale e ricognizione amministrativa del Task 1: schema public noto e backup ripristinato in isolamento. La readiness di staging Supabase e del ruolo editor resta da completare. Nessuna migrazione, pubblicazione, modifica live, riattivazione, invio social/notifica, commit o deploy eseguito.
+## Aggiornamento rollout live — 5 ottobre 2026
+
+Le migrazioni Supabase `editorial_state`, `editorial_rpcs`, `social_delivery` e `automation_runs` sono state applicate e verificate nel progetto live. Esito SQL: 4.784 articoli preservati (90 published, 4.360 draft, 334 discarded), zero approvazioni retroattive; RLS attivo, policy pubblica limitata ai published e scritture dirette client revocate. RPC editoriali presenti. `phonepulse.it@gmail.com` ha il claim attendibile `app_metadata.phonepulse_role='editor'`; effettuare logout/login per rinnovare il JWT.
+
+La UI non è stata verificata dopo il rollout. Verifica residua: accedere nuovamente e aprire `/admin/articoli`; se la lista è ancora indisponibile, raccogliere il nuovo errore prima di altre modifiche. I workflow A/B e gli invii social restano non attivati. Nessuna risorsa a pagamento è stata creata: vincolo di spesa zero rispettato. Gli advisor Supabase segnalano protezione delle password compromesse disattivata, `daily_counters` con RLS senza policy e rilievi performance; valutarli separatamente.
+
+Baseline storica del Task 1, precedente al rollout live descritto sopra: schema public noto e backup ripristinato in isolamento. Le note che seguono documentano la ricognizione iniziale; le informazioni sullo stato corrente sono nell'aggiornamento rollout e nelle verifiche successive.
 
 ## Evidenze e limiti
 
