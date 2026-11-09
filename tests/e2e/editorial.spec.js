@@ -364,3 +364,53 @@ for (const width of [375, 1280]) test(`editor sintetico senza overflow ${width}`
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath(`editor-${width}.png`), fullPage: true })
 })
+
+
+test('claim review guidata: approvazione registra dati nel RPC audit e non nelle fonti pubbliche', async ({ page }) => {
+  const state = await fixture(page)
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
+  await page.getByLabel('Fatto da verificare').fill('Health Connect è parte integrante di Android 14.')
+  await page.getByLabel('Fonte effettivamente consultata').selectOption(source().url)
+  await page.getByLabel('Passaggio di supporto (massimo 240 caratteri)').fill('Android 14 integrates Health Connect into the platform settings.')
+  await page.getByLabel('Motivazione della revisione').fill('Verificato nel documento ufficiale Android e confrontato con il contesto di versione.')
+  await page.getByLabel('Esito').selectOption('supported')
+  await completeReview(page)
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Approva', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('approvata')
+  const approval = state.calls.find(c => c.name === 'approve_article')
+  expect(approval.args.p_review.claim_evidence).toMatchObject({
+    mode: 'manual_editor_review',
+    claims: [{ decision: 'supported', statement: 'Health Connect è parte integrante di Android 14.' }],
+  })
+  expect(state.row.sources[0]).not.toHaveProperty('claim_evidence')
+  expect(state.violations).toEqual([])
+})
+
+test('claim review: affermazione contraddittoria blocca approvazione ma permette salvataggio bozza', async ({ page }) => {
+  const state = await fixture(page)
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
+  await page.getByLabel('Fatto da verificare').fill('Un dettaglio tecnico necessita di ulteriore verifica.')
+  await page.getByLabel('Fonte effettivamente consultata').selectOption(source().url)
+  await page.getByLabel('Passaggio di supporto (massimo 240 caratteri)').fill('This technical feature requires further verification before publishing.')
+  await page.getByLabel('Motivazione della revisione').fill('Il documento disponibile è incompleto e non sostiene il claim in modo certo.')
+  await page.getByLabel('Esito').selectOption('conflicted')
+  await completeReview(page)
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Bozza salvata')
+  expect(state.calls.map(c => c.name)).toEqual(['save_article'])
+  expect(state.calls[0].args.p_review).toBeNull()
+})
+
+test('claim review: cambiando il contenuto le evidenze temporanee vengono invalidate', async ({ page }) => {
+  await fixture(page)
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
+  await expect(page.getByLabel('Fatto da verificare')).toHaveCount(1)
+  await page.getByLabel('Contenuto (Markdown)').fill('Un testo aggiornato che richiede nuova verifica.')
+  await expect(page.getByLabel('Fatto da verificare')).toHaveCount(0)
+  await expect(page.getByText('Nessuna verifica dettagliata ancora compilata.')).toBeVisible()
+})

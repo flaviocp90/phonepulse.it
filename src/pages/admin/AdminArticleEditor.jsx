@@ -4,6 +4,8 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { supabase } from '../../lib/supabase'
 import { checklist, editorialAction, statusLabels } from '../../lib/editorial'
+import { claimReviewAudit, claimReviewSummary } from '../../lib/claimReview'
+import ClaimReviewPanel from './ClaimReviewPanel'
 
 marked.setOptions({ breaks: true, gfm: true })
 const EMPTY_FORM = { title: '', slug: '', category_id: '', excerpt: '', content: '', cover_image_url: '', score: '', seo_title: '', seo_description: '', affiliate_links: '', author: '', image_source: '', content_format: '', sources: [] }
@@ -32,6 +34,7 @@ export default function AdminArticleEditor() {
   const [selectedTags, setSelectedTags] = useState([])
   const [baseline, setBaseline] = useState(snapshot(EMPTY_FORM, []))
   const [review, setReview] = useState({})
+  const [claimReviews, setClaimReviews] = useState([])
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -49,7 +52,8 @@ export default function AdminArticleEditor() {
   const routeRef = useRef(id)
   routeRef.current = id
   const status = record?.status || 'draft'
-  const completeReview = Object.keys(checklist).every(key => review[key] === true)
+  const claimSummary = claimReviewSummary(claimReviews, form.sources)
+  const completeReview = Object.keys(checklist).every(key => review[key] === true) && (!claimReviews.length || claimSummary.complete)
 
   useEffect(() => {
     let active = true
@@ -66,7 +70,7 @@ export default function AdminArticleEditor() {
     let active = true
     routeGeneration.current++
     setSaving(false); setMetadataWarning('')
-    setError(''); setSuccess(''); setReview({}); setPreview(false)
+    setError(''); setSuccess(''); setReview({}); setClaimReviews([]); setPreview(false)
     if (isNew) {
       setForm(EMPTY_FORM); setRecord(null); setSelectedTags([]); setBaseline(snapshot(EMPTY_FORM, [])); setSlugManual(false); setLoading(false)
       return () => { active = false }
@@ -98,7 +102,7 @@ export default function AdminArticleEditor() {
     return () => { window.removeEventListener('beforeunload', beforeUnload); document.removeEventListener('click', internalNavigation, true) }
   }, [])
 
-  function change(field, value) { setForm(previous => ({ ...previous, [field]: value })); setReview({}); setSuccess(''); if (field === 'cover_image_url') setCoverError(false) }
+  function change(field, value) { setForm(previous => ({ ...previous, [field]: value })); setReview({}); if (field === 'content' || field === 'sources') setClaimReviews([]); setSuccess(''); if (field === 'cover_image_url') setCoverError(false) }
   function changeSource(index, field, value) { change('sources', form.sources.map((source, i) => i === index ? { ...source, [field]: value } : source)) }
   function reviewProblem() {
     if (!form.author.trim() || !form.content.trim() || !form.content_format) return 'Completa autore, contenuto e formato prima della revisione.'
@@ -126,6 +130,8 @@ export default function AdminArticleEditor() {
     const current = () => routeRef.current === currentId && routeGeneration.current === generation
     try {
       let name, args, message
+      const claimEvidence = claimReviews.length && (kind === 'approve' || (kind === 'save' && status === 'published')) ? claimReviewAudit(claimReviews, form.sources) : null
+      const reviewPayload = claimEvidence ? { ...review, claim_evidence: claimEvidence } : review
       if (kind === 'save') {
         if (!optionsReady) throw new Error('Categorie o tag indisponibili. Ricarica prima di salvare.')
         const affiliateUnchanged = !isNew && form.affiliate_links === JSON.parse(baseline)[0].affiliate_links
@@ -144,11 +150,11 @@ export default function AdminArticleEditor() {
           if (affiliateUnchanged) delete payload.affiliate_links
         }
         name = 'save_article'
-        args = { p_article: payload, p_tag_ids: selectedTags, p_expected_version: isNew ? null : record.version, p_publish_correction: status === 'published', p_review: status === 'published' ? review : null }
+        args = { p_article: payload, p_tag_ids: selectedTags, p_expected_version: isNew ? null : record.version, p_publish_correction: status === 'published', p_review: status === 'published' ? reviewPayload : null }
         message = status === 'published' ? 'Correzione pubblicata e verifica registrata.' : 'Bozza salvata.'
       } else if (kind === 'approve') {
         if (dirty || isNew || problem || !completeReview) throw new Error('Salva la bozza e completa la revisione prima di approvare.')
-        name = 'approve_article'; args = { p_id: id, p_expected_version: record.version, p_review: review }; message = 'Versione approvata.'
+        name = 'approve_article'; args = { p_id: id, p_expected_version: record.version, p_review: reviewPayload }; message = 'Versione approvata.'
       } else if (kind === 'publish') {
         if (dirty || status !== 'approved' || problem) throw new Error('Pubblica soltanto una versione approvata, invariata e ancora valida.')
         name = 'publish_article'; args = { p_id: id, p_expected_version: record.version }; message = 'Articolo pubblicato.'
@@ -161,6 +167,7 @@ export default function AdminArticleEditor() {
       if (!current()) return
       setRecord(previous => ({ ...previous, ...(kind === 'save' ? args.p_article : {}), ...result, ...(result.status === 'draft' || result.status === 'discarded' ? { approved_version: null, approved_at: null, approved_by: null, last_verified_at: null } : {}) }))
       if (kind === 'save') { dirtyRef.current = false; setBaseline(snapshot(form, selectedTags)) }
+      setClaimReviews([])
       setReview({}); setSuccess(kind === 'save' && result.status === 'approved' ? 'Versione approvata invariata.' : message)
       if (isNew) { setSaving(false); navigate(`/admin/articoli/${result.id}`, { replace: true }); return }
       if (kind === 'discard' || kind === 'restore') { dirtyRef.current = false; setReload(value => value + 1); return }
@@ -244,10 +251,12 @@ export default function AdminArticleEditor() {
         <div className={panelClass}><h2 className="font-semibold text-sm">Tag</h2><div className="flex flex-wrap gap-2">{tags.map(tag => <button key={tag.id} aria-pressed={selectedTags.includes(tag.id)} onClick={() => { setSelectedTags(previous => previous.includes(tag.id) ? previous.filter(id => id !== tag.id) : [...previous, tag.id]); setReview({}); setSuccess('') }} className={`text-xs px-3 py-1.5 rounded-full border ${selectedTags.includes(tag.id) ? 'bg-primary text-white border-primary' : 'border-border'}`}>{tag.name}</button>)}</div></div>
       </div>
     </div>}
+    <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setReview(previous => ({ ...previous, claims_sourced: false })); setSuccess('') }} /></div>
     <div className={`${panelClass} mt-6`}>
       <h2 className="font-heading font-bold">Revisione umana della versione</h2><p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
       {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
       {problem && <p className="text-amber-700 text-sm">{problem}</p>}
+      {!!claimReviews.length && !claimSummary.complete && <p className="text-amber-700 text-sm">Completa o rimuovi le verifiche dettagliate prima dell'approvazione.</p>}
       {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
       <div className="flex flex-wrap gap-3">
         {status !== 'discarded' && <button disabled={saving || !optionsReady || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
