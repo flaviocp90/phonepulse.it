@@ -1,43 +1,43 @@
-"""One-shot live probe of public *official documentation*.
+"""Read-only source manifest probe using a fixed primary-source fixture.
 
-No arbitrary URL input, no stored page content, no LLM, no Supabase and no writes.
-A retrieval failure is reported as an outcome, not treated as verification.
+No arbitrary URL input, LLM, database writes, or publication.
+Results are status-only: never print or persist third-party page text.
 """
 from __future__ import annotations
 
 import json
-from editorial_retrieval import RetrievalError, fetch_document
+from pathlib import Path
 
-TARGETS = (
-    "https://developer.android.com/health-and-fitness/health-connect/features/steps",
-    "https://developer.samsung.com/health/health-connect-faq.html",
-)
+from editorial_dry_run import build_manifest
+
+FIXTURE = Path(__file__).resolve().parents[1] / "docs/editorial/pilots/health-connect-sources.json"
 
 
 def main():
-    outcomes = []
-    for url in TARGETS:
-        try:
-            doc = fetch_document(url)
-            outcomes.append({
-                "url": url,
-                "status": "retrieved",
-                "final_url": doc.final_url,
-                "title_present": bool(doc.title),
-                "extracted_characters": len(doc.text),
-                "redirect_count": len(doc.redirects),
-            })
-        except (RetrievalError, ValueError, OSError) as error:
-            outcomes.append({
-                "url": url,
-                "status": "unavailable",
-                "reason": type(error).__name__,
-                # No full response body, stack trace or secrets in CI output.
-            })
-    print(json.dumps({"probe": "official_documentation_read_only",
-                      "claims_verified": False,
-                      "outcomes": outcomes}, ensure_ascii=False))
-    # Failure is a documented conservative outcome, not a reason to bypass robots.
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    manifest = build_manifest(payload, live_fetch=True)
+    summary = {
+        "probe": "official_documentation_read_only",
+        "claims_verified": False,
+        "decision": manifest["assessment"]["decision"],
+        "publication_allowed": manifest["publication_allowed"],
+        "outcomes": [
+            {
+                "source_id": source["source_id"],
+                "url": source["url"],
+                "status": source["retrieval"],
+                "extracted_characters": source.get("extracted_characters", 0),
+                "reason": source.get("error"),
+            }
+            for source in manifest["sources"]
+        ],
+        "claim_statuses": [
+            {"claim_id": claim["claim_id"], "status": claim["status"]}
+            for claim in manifest["assessment"]["claims"]
+        ],
+    }
+    print(json.dumps(summary, ensure_ascii=False))
+    # Unavailable sources are not a reason to bypass robots, paywalls or ToS.
     return 0
 
 
