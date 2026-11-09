@@ -87,7 +87,7 @@ class AutomationTests(unittest.TestCase):
             llm.assert_not_called()
             cover.assert_not_called()
 
-    def test_gate_precedes_cover_and_short_draft_is_whitelisted(self):
+    def test_gate_precedes_cover_and_substantive_draft_is_accepted(self):
         db = database()
         db.table.return_value.execute.side_effect = [SimpleNamespace(data=[]), SimpleNamespace(data=[]),
                                                      SimpleNamespace(data=[{'id': 'new'}])]
@@ -109,6 +109,25 @@ class AutomationTests(unittest.TestCase):
              patch.object(news, 'cerca_cover_image') as cover:
             self.assertEqual(news.processa_articolo(item(), database(), 'news', 'Editor'), 'failed')
             cover.assert_not_called()
+
+    def test_insufficient_rss_evidence_does_not_create_draft_or_fetch_cover(self):
+        with patch.object(news, 'genera_bozza', return_value=({
+                'decision': 'skip', 'reason': 'Not enough verified facts'}, 'model')) as llm, \
+             patch.object(news, 'cerca_cover_image') as cover:
+            db = database()
+            self.assertEqual(news.processa_articolo(item(), db, 'news', 'Editor'), 'skipped')
+            llm.assert_called_once()
+            cover.assert_not_called()
+            db.table.return_value.insert.assert_not_called()
+
+    def test_short_generated_draft_fails_without_writing_to_database(self):
+        with patch.object(news, 'genera_bozza', return_value=(brief(
+                content='Fonte: [notizia](' + URL + ')'), 'model')), \
+             patch.object(news, 'cerca_cover_image') as cover:
+            db = database()
+            self.assertEqual(news.processa_articolo(item(), db, 'news', 'Editor'), 'failed')
+            cover.assert_not_called()
+            db.table.return_value.insert.assert_not_called()
 
     def test_duplicate_is_skipped_before_llm(self):
         with patch.object(news, 'genera_bozza') as llm:
