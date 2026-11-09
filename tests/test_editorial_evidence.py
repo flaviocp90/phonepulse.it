@@ -40,7 +40,7 @@ class EditorialDecisionTests(unittest.TestCase):
         claims = [
             Claim("c1", "La versione di sistema introduce una funzione.", ("s1",), editorially_verified=True),
             Claim("c2", "La distribuzione comincia nel mese indicato.", ("s1",), editorially_verified=True),
-            Claim("c3", "L'opzione è riservata a modelli specifici.", ("s2",)),
+            Claim("c3", "L'opzione è riservata a modelli specifici.", ("s2",), editorially_verified=True),
         ]
         result = assess_pack(sources, claims)
         self.assertEqual(result["decision"], "draft")
