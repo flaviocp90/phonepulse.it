@@ -37,7 +37,9 @@ class ThreePilots(unittest.TestCase):
         self.assertTrue(all(c["status"] == "unknown" for c in result["assessment"]["claims"]))
         self.assertFalse(result["publication_allowed"])
         self.assertEqual(result["sources"][0]["retrieval"], "ok")
-        self.assertNotIn("Readable official source text", str(result))
+        self.assertNotIn("Readable official source text " * 8, str(result))
+        self.assertTrue(all(item["verification"] == "unverified"
+                            for item in result["candidate_evidence"]))
 
     def test_conflict_scenario_requires_research(self):
         sources = [
