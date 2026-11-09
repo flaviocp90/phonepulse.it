@@ -7,15 +7,41 @@ URL = 'https://example.com/official'
 
 
 def brief(**changes):
-    return {'title': 'Aggiornamento Android', 'slug': 'aggiornamento-android',
-            'excerpt': 'Una funzione documentata.',
-            'content': f'La fonte descrive una funzione. I dettagli restano limitati. [Fonte]({URL})',
+    content = (
+        "## Cosa sappiamo\n\n"
+        "Il progetto dimostrativo riguarda una funzione Android descritta dal suo produttore. "
+        "Il comunicato elenca tre cambiamenti precisi: un nuovo comando visibile nelle impostazioni, "
+        "una procedura di attivazione separata e un messaggio che conferma lo stato della funzione. "
+        "Il testo della fonte distingue esplicitamente le impostazioni iniziali da quelle disponibili "
+        "dopo il completamento della procedura. Questi dettagli sono riportati qui come esempio "
+        "sintetico per verificare un controllo automatico, non come notizia reale da pubblicare.\n\n"
+        "## Cosa cambia e quali sono i limiti\n\n"
+        "Per un lettore che deve comprendere il funzionamento, la differenza principale sta "
+        "nell'ordine dei passaggi indicati nel materiale di partenza. Prima viene mostrato il comando, "
+        "poi si completa la procedura e soltanto alla fine appare la conferma. "
+        "Questo esempio non afferma che la funzione sia gia disponibile su ogni dispositivo "
+        "e non inventa date, compatibilita o prestazioni. La disponibilita deve essere "
+        "ricontrollata prima della pubblicazione, cosi come ogni dettaglio tecnico "
+        "che non e presente nel documento originale. L'articolo resta una bozza "
+        "e richiede una verifica redazionale effettiva.\n\n"
+        "## Fonte\n\n"
+        f"[Documento di esempio]({URL})"
+    )
+    return {'decision': 'draft', 'title': 'Aggiornamento Android', 'slug': 'aggiornamento-android',
+            'excerpt': 'Una funzione documentata.', 'content': content,
             'source_urls': [URL], **changes}
 
 
 class EditorialRulesTests(unittest.TestCase):
-    def test_short_sourced_brief_is_valid(self):
+    def test_substantive_structured_draft_is_valid(self):
         self.assertEqual(validate_generated_article(brief(), {URL}), [])
+
+    def test_rejects_thin_source_attribution_and_missing_structure(self):
+        thin = 'La redazione della fonte riferisce una funzione in arrivo. [Fonte](' + URL + ')'
+        self.assertTrue(validate_generated_article(brief(content=thin), {URL}))
+        no_sections = ' '.join(['Una funzione documentata in modo verificabile.'] * 45) + ' [Fonte](' + URL + ')'
+        self.assertTrue(validate_generated_article(brief(content=no_sections), {URL}))
+        self.assertTrue(validate_generated_article(brief(decision='skip'), {URL}))
 
     def test_rejects_bad_json_fields_slug_and_excerpt(self):
         for article in (None, [], brief(title=''), brief(content=2),
