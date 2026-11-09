@@ -27,7 +27,8 @@ def main():
                 "url": source["url"],
                 "status": source["retrieval"],
                 "extracted_characters": source.get("extracted_characters", 0),
-                "reason": source.get("error"),
+                "error_type": source.get("error"),
+                "reason": source.get("reason"),
             }
             for source in manifest["sources"]
         ],
