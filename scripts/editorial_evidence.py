@@ -77,6 +77,7 @@ class Claim:
     statement: str
     supporting_source_ids: tuple[str, ...]
     conflicting_source_ids: tuple[str, ...] = ()
+    editorially_verified: bool = False  # explicit editorial judgement, never retrieval alone
 
     def __post_init__(self):
         if not re.fullmatch(r"c[1-9][0-9]*", self.claim_id):
@@ -90,8 +91,9 @@ class Claim:
 def assess_pack(sources: list[Source], claims: list[Claim]) -> dict:
     """Fail closed: only a pack of sourced, non-conflicted facts is draftable.
 
-    Automated structural checks do not establish factual correctness or
-    independent corroboration: human review always remains mandatory.
+    Fetching a source NEVER proves that a given claim is supported. A claim
+    must also carry explicit editorial verification, which this function cannot
+    create. Human approval of any final draft always remains mandatory.
     """
     source_map = {source.source_id: source for source in sources}
     if len(source_map) != len(sources):
@@ -112,9 +114,10 @@ def assess_pack(sources: list[Source], claims: list[Claim]) -> dict:
         read_support = sorted(s for s in supporting if source_map[s].fetched)
         read_conflict = sorted(s for s in conflicting if source_map[s].fetched)
         status = ("conflicted" if read_conflict else
-                  "supported" if read_support else "unknown")
+                  "supported" if read_support and claim.editorially_verified else "unknown")
         reviewed.append({"claim_id": claim.claim_id, "statement": claim.statement,
-                         "status": status, "supporting_sources": read_support,
+                         "status": status, "editorially_verified": claim.editorially_verified,
+                         "supporting_sources": read_support,
                          "conflicting_sources": read_conflict})
 
     if not reviewed:
