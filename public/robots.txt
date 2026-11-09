@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin/
 
-Sitemap: https://phonepulse.it/sitemap.xml
+Sitemap: https://www.phonepulse.it/sitemap.xml
