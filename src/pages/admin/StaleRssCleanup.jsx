@@ -41,6 +41,13 @@ export default function StaleRssCleanup({ onDone }) {
     try {
       for (const row of snapshot) {
         if (!eligibleStaleRssDraft(row, cutoff)) throw new Error('Selezione modificata: interrompo la pulizia.')
+        // Re-read before each action: do not discard rows changed after inspection.
+        const { data: current, error: recheckError } = await supabase.from('articles')
+          .select('id,version,status,origin,content_format,created_at')
+          .eq('id', row.id).single()
+        if (recheckError || !current || !eligibleStaleRssDraft(current, cutoff) ||
+          current.version !== row.version)
+          throw new Error('Una bozza è cambiata dopo la selezione: pulizia interrotta.')
         // Server RPC checks editor identity, expected version and records the event.
         await editorialAction('set_article_status', {
           p_id: row.id, p_expected_version: row.version, p_status: 'discarded',
