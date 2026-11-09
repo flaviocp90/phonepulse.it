@@ -27,6 +27,7 @@ def main():
                 "url": source["url"],
                 "status": source["retrieval"],
                 "extracted_characters": source.get("extracted_characters", 0),
+                "candidate_count": source.get("candidate_count", 0),
                 "error_type": source.get("error"),
                 "reason": source.get("reason"),
             }
