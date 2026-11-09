@@ -6,9 +6,11 @@ on:
       - 'scripts/editorial_evidence.py'
       - 'scripts/editorial_retrieval.py'
       - 'scripts/editorial_dry_run.py'
+      - 'scripts/editorial_candidates.py'
       - 'tests/test_editorial_evidence.py'
       - 'tests/test_editorial_retrieval.py'
       - 'tests/test_editorial_dry_run.py'
+      - 'tests/test_editorial_candidates.py'
       - 'docs/editorial/pilots/**'
       - '.github/workflows/editorial-evidence.yml'
   workflow_dispatch:
