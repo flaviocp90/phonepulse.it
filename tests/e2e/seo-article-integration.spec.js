@@ -31,7 +31,7 @@ async function mockedInitialHtml(request) {
 
 test('article HTML remains readable without JavaScript', async ({ browser, request }) => {
   const html = await mockedInitialHtml(request)
-  const context = await browser.newContext({ javaScriptEnabled: false })
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL: 'http://127.0.0.1:4173' })
   try {
     const page = await context.newPage()
     await page.route('**/articoli/seo-integration-test', route =>
