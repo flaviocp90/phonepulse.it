@@ -163,7 +163,7 @@ test('articolo lento non sostituisce URL veloce né metadati', async ({ page }) 
   release()
   await page.waitForLoadState('networkidle')
   await expect(page.getByRole('heading', { name: 'Articolo lento', exact: true })).toHaveCount(0)
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://phonepulse.it/articoli/veloce')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://www.phonepulse.it/articoli/veloce')
 })
 
 
