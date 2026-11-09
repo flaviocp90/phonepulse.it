@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { composeArticleDocument } from '../api/article.js';
+import { composeArticleDocument, handleArticleRequest } from '../api/article.js';
 import { renderPreview } from '../api/seo-preview.js';
 
 const shell = '<!doctype html><html lang="it"><head><meta charset="UTF-8"><title>PhonePulse</title>' +
@@ -35,4 +35,62 @@ test('raw article HTML is escaped before insertion into client shell', () => {
   }));
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
   assert.doesNotMatch(html, /<img src=x/);
+});
+
+
+function mockResponse() {
+  return {
+    code: 200, headers: {}, body: null,
+    setHeader(key, value) { this.headers[key.toLowerCase()] = value; return this; },
+    status(value) { this.code = value; return this; },
+    send(value) { this.body = value; return this; },
+  };
+}
+function deps(fetchArticle, environment = { VERCEL_ENV: 'preview' }) {
+  return { fetchArticle, environment, readShell: () => shell, render: renderPreview };
+}
+
+test('returns real HTTP 404 for missing or unpublished article', async () => {
+  const res = mockResponse();
+  await handleArticleRequest({ method: 'GET', query: { slug: 'withdrawn' } }, res, deps(async () => null));
+  assert.equal(res.code, 404);
+  assert.equal(res.headers['x-robots-tag'], 'noindex, nofollow');
+  assert.doesNotMatch(res.body, /<article>/);
+});
+
+test('returns 503 rather than missing article on transient Supabase failure', async () => {
+  const res = mockResponse();
+  await handleArticleRequest({ method: 'GET', query: { slug: 'valid-article' } }, res,
+    deps(async () => { throw new Error('Supabase unreachable'); }));
+  assert.equal(res.code, 503);
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.doesNotMatch(res.body, /Article not found/);
+});
+
+test('serves HTTP 200 with published article metadata in preview only', async () => {
+  const res = mockResponse();
+  await handleArticleRequest({ method: 'GET', query: { slug: 'guide-test' } }, res,
+    deps(async () => article));
+  assert.equal(res.code, 200);
+  assert.equal(res.headers['content-type'], 'text/html; charset=utf-8');
+  assert.equal(res.headers['x-robots-tag'], 'noindex, nofollow');
+  assert.match(res.body, /<h1>Titolo specifico<\/h1>/);
+  assert.match(res.body, /rel="canonical"/);
+});
+
+test('production response does not accidentally include preview noindex header', async () => {
+  const res = mockResponse();
+  await handleArticleRequest({ method: 'GET', query: { slug: 'guide-test' } }, res,
+    deps(async () => article, { VERCEL_ENV: 'production' }));
+  assert.equal(res.code, 200);
+  assert.equal(res.headers['x-robots-tag'], undefined);
+  assert.doesNotMatch(res.body, /meta name="robots" content="noindex,nofollow"/);
+});
+
+test('rejects invalid slugs and non-GET without contacting Supabase', async () => {
+  for (const req of [{ method: 'GET', query: { slug: '<bad>' } }, { method: 'POST', query: { slug: 'ok' } }]) {
+    const res = mockResponse();
+    await handleArticleRequest(req, res, deps(() => { throw new Error('Must not query'); }));
+    assert.equal(res.code, req.method === 'POST' ? 405 : 404);
+  }
 });
