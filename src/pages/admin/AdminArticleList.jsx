@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { editorialAction, filterArticles, statusLabels } from '../../lib/editorial'
+import StaleRssCleanup from './StaleRssCleanup'
 
 const PAGE_SIZE = 10
 const buttonClass = 'px-3 py-2 rounded-lg bg-gray-100 text-sm disabled:opacity-40'
@@ -81,6 +82,7 @@ export default function AdminArticleList({ review = false }) {
   return <div className="min-w-0">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6"><div><h1 className="text-2xl font-heading font-bold text-dark">{review ? 'Review bozze' : 'Articoli'}</h1><p className="text-sm text-gray-500 mt-1">{loading ? 'Caricamento...' : count === null ? 'Conteggio —' : `${count} articoli`}</p></div><Link to="/admin/articoli/nuovo" className="bg-primary text-white px-4 py-2.5 rounded-xl">Nuovo</Link></div>
     {review && <p className="text-sm text-gray-500 mb-4">Nuove bozze RSS/manuali e archivio storico sono separati. Apri la revisione completa per approvare o pubblicare. Dopo la pubblicazione puoi verificare e avviare separatamente i canali social.</p>}
+    {review && <StaleRssCleanup onDone={() => setReload(value => value + 1)} />}
     <div className="flex flex-wrap gap-2 mb-5">{filters.map(([value, label]) => <button key={value} aria-pressed={filter === value} disabled={busy} onClick={() => { setFilter(value); setPage(0); setSuccess('') }} className={`${buttonClass} ${filter === value ? 'bg-dark text-white' : 'text-gray-500'}`}>{label}</button>)}</div>
     <label className="block text-sm mb-5 max-w-md">Cerca titolo<input type="search" value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} className="block w-full border border-border rounded-xl px-3 py-2 mt-2" /></label>
     {error && <div role="alert" className="bg-red-50 text-red-700 rounded-xl p-4 mb-5">{error}<button onClick={() => setReload(value => value + 1)} className={`${buttonClass} ml-3`}>Riprova</button></div>}
