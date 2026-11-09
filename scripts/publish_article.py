@@ -21,7 +21,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
-SITE_URL = "https://phonepulse.it"
+SITE_URL = "https://www.phonepulse.it"
 
 
 def invia_telegram(messaggio: str):
@@ -53,7 +53,7 @@ def update_sitemap(supabase_client):
 
         urls.append(
             "  <url>\n"
-            "    <loc>https://phonepulse.it/</loc>\n"
+            "    <loc>https://www.phonepulse.it/</loc>\n"
             "    <changefreq>daily</changefreq>\n"
             "    <priority>1.0</priority>\n"
             "  </url>"
@@ -65,7 +65,7 @@ def update_sitemap(supabase_client):
                 lastmod = f"\n    <lastmod>{a['published_at'][:10]}</lastmod>"
             urls.append(
                 f"  <url>\n"
-                f"    <loc>https://phonepulse.it/articoli/{a['slug']}</loc>{lastmod}\n"
+                f"    <loc>https://www.phonepulse.it/articoli/{a['slug']}</loc>{lastmod}\n"
                 f"    <changefreq>weekly</changefreq>\n"
                 f"    <priority>0.8</priority>\n"
                 f"  </url>"
@@ -81,7 +81,7 @@ def update_sitemap(supabase_client):
         for slug, freq, priority in categories:
             urls.append(
                 f"  <url>\n"
-                f"    <loc>https://phonepulse.it/categoria/{slug}</loc>\n"
+                f"    <loc>https://www.phonepulse.it/categoria/{slug}</loc>\n"
                 f"    <changefreq>{freq}</changefreq>\n"
                 f"    <priority>{priority}</priority>\n"
                 f"  </url>"
@@ -89,14 +89,14 @@ def update_sitemap(supabase_client):
 
         urls.append(
             "  <url>\n"
-            "    <loc>https://phonepulse.it/chi-siamo</loc>\n"
+            "    <loc>https://www.phonepulse.it/chi-siamo</loc>\n"
             "    <changefreq>monthly</changefreq>\n"
             "    <priority>0.3</priority>\n"
             "  </url>"
         )
         urls.append(
             "  <url>\n"
-            "    <loc>https://phonepulse.it/contatti</loc>\n"
+            "    <loc>https://www.phonepulse.it/contatti</loc>\n"
             "    <changefreq>monthly</changefreq>\n"
             "    <priority>0.3</priority>\n"
             "  </url>"

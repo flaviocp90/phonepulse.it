@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'PhonePulse'
-const SITE_URL = 'https://phonepulse.it'
+const SITE_URL = 'https://www.phonepulse.it'
 
 export default function SEO({ title, description, image, canonical, type = 'website' }) {
   const fullTitle = title

@@ -113,12 +113,12 @@ export default function ArticlePage() {
           <ArticleSchema article={article} />
           <BreadcrumbSchema
             items={[
-              { name: 'Home', url: 'https://phonepulse.it/' },
+              { name: 'Home', url: 'https://www.phonepulse.it/' },
               {
                 name: article.categories?.name || 'Articoli',
-                url: `https://phonepulse.it/categoria/${article.categories?.slug || 'news'}`,
+                url: `https://www.phonepulse.it/categoria/${article.categories?.slug || 'news'}`,
               },
-              { name: article.title, url: `https://phonepulse.it/articoli/${article.slug}` },
+              { name: article.title, url: `https://www.phonepulse.it/articoli/${article.slug}` },
             ]}
           />
         </>

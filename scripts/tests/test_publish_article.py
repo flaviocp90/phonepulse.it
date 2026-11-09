@@ -79,6 +79,18 @@ class PublishArticleTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'distribution'):
                 publishing.run_publication(db)
 
+    def test_generated_sitemap_keeps_www_canonical(self):
+        db = database([{'slug': 'articolo-esempio', 'published_at': '2026-11-09T08:00:00Z'}])
+        with patch('builtins.open', mock_open()) as handle, \
+             patch.object(publishing.subprocess, 'run') as run:
+            run.return_value = SimpleNamespace(returncode=0, stdout='', stderr='')
+            self.assertTrue(publishing.update_sitemap(db))
+            generated = ''.join(call.args[0] for call in handle().write.call_args_list)
+            self.assertIn('<loc>https://www.phonepulse.it/</loc>', generated)
+            self.assertIn('<loc>https://www.phonepulse.it/articoli/articolo-esempio</loc>', generated)
+            self.assertNotIn('<loc>https://phonepulse.it/', generated)
+            run.assert_called()
+
     def test_retry_pushes_existing_sitemap_commit(self):
         db = database([])
         def failed_push(command, **kwargs):
