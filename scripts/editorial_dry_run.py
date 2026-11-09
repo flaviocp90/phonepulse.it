@@ -13,6 +13,7 @@ from pathlib import Path
 import sys
 
 from editorial_evidence import Claim, Source, assess_pack, canonical_public_url
+from editorial_candidates import extract_candidates
 from editorial_retrieval import RetrievalError, fetch_document
 
 
@@ -26,6 +27,7 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
 
     source_objects = []
     source_records = []
+    candidate_evidence = []
     for item in payload["sources"]:
         if not isinstance(item, dict):
             raise ValueError("Invalid source")
@@ -46,6 +48,11 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
                     "text_sha256": hashlib.sha256(document.text.encode("utf-8")).hexdigest(),
                     "extracted_characters": len(document.text),
                 })
+                candidate_evidence.extend(extract_candidates(
+                    source_id=record["source_id"], url=document.final_url,
+                    text=document.text))
+                record["candidate_count"] = len([x for x in candidate_evidence
+                                                 if x["source_id"] == record["source_id"]])
                 retrieved = True
             except (RetrievalError, OSError, ValueError) as exc:
                 record.update({"retrieval": "unavailable",
@@ -76,9 +83,10 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
         "topic": str(payload.get("topic", ""))[:240],
         "mode": "live_readonly" if live_fetch else "offline",
         "sources": source_records,
+        "candidate_evidence": candidate_evidence,
         "assessment": assessment,
         "publication_allowed": False,
-        "note": "Source retrieval is not claim verification; editorial review required.",
+        "note": "Excerpts are unverified review candidates, not validated claims; editorial review required.",
     }
 
 
