@@ -8,11 +8,13 @@ on:
       - 'scripts/editorial_dry_run.py'
       - 'scripts/editorial_candidates.py'
       - 'scripts/editorial_review_brief.py'
+      - 'scripts/editorial_review_gate.py'
       - 'tests/test_editorial_evidence.py'
       - 'tests/test_editorial_retrieval.py'
       - 'tests/test_editorial_dry_run.py'
       - 'tests/test_editorial_candidates.py'
       - 'tests/test_editorial_review_brief.py'
+      - 'tests/test_editorial_review_gate.py'
       - 'docs/editorial/pilots/**'
       - '.github/workflows/editorial-evidence.yml'
   workflow_dispatch:
