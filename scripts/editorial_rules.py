@@ -73,6 +73,80 @@ def validate_generated_article(article: object, source_urls: set[str]) -> list[s
         errors.append('Invalid slug')
     if len(article['excerpt']) > 155:
         errors.append('Excerpt exceeds 155 characters')
+    # This is a conservative guard against one-sentence RSS rewrites, not a
+    # certificate of originality or factual correctness.
+    text_without_links = re.sub(r'https?://[^\\s)]+', '', article['content'])
+    word_count = len(re.findall(r"\\b[\\wÀ-ÿ]+(?:['’][\\wÀ-ÿ]+)?\\b", text_without_links))
+    if word_count < 120:
+        errors.append('Insufficient article substance (<120 words): manual research needed')
+    sections = re.findall(r'^##\\s+(.+?)\\s*
+    urls = article.get('source_urls')
+    if not isinstance(urls, list) or not urls:
+        errors.append('Sources are required')
+        urls = []
+    # Check citations in the body as well as the declared sources.
+    content = article['content']
+    # Accept the simple inline Markdown produced by the prompt. Complex links go to manual review.
+    if re.search(r'<[^>]+>|\]\s*\[|^\s*\[[^\]]+\]:', content, re.M):
+        errors.append('HTML and reference links require manual review')
+    destinations = re.findall(r'\]\(\s*<?([^\s)>]+)', content)
+    if not any(url in source_urls for url in destinations):
+        errors.append('A known source must be linked in the body')
+    body_urls = re.findall(r'https?://[^\s<>"\)]+', content, re.I)
+    for url in urls + body_urls + destinations:
+        if not isinstance(url, str) or url not in source_urls:
+            errors.append('Unknown source URL')
+            continue
+        try:
+            normalize_source_url(url)
+        except ValueError:
+            errors.append('Invalid source URL')
+    text = ' '.join(article[field] for field in ('title', 'excerpt', 'content'))
+    if re.search(r'\b(?:ho|abbiamo)\s+(?:testato|provato|misurato)|'
+                 r'\b(?:nostr[aeoi]|mia|mio)\s+(?:prova|test|esperienza)|'
+                 r'\b(?:nei|durante i)\s+nostri\s+test', text, re.I):
+        errors.append('Personal testing claims require manual review')
+    size = promised_list_size(article['title'])
+    if size and not has_list_items(article['content'], size):
+        errors.append('List promise is incomplete')
+    return errors
+, article['content'], re.M)
+    source_sections = [heading for heading in sections if re.fullmatch(r'font[ei]', heading.strip(), re.I)]
+    if len(sections) < 3 or len(source_sections) != 1:
+        errors.append('Require two informative sections plus a Sources section')
+    elif not re.search(r'^##\\s+Font[ei]\\s*
+    urls = article.get('source_urls')
+    if not isinstance(urls, list) or not urls:
+        errors.append('Sources are required')
+        urls = []
+    # Check citations in the body as well as the declared sources.
+    content = article['content']
+    # Accept the simple inline Markdown produced by the prompt. Complex links go to manual review.
+    if re.search(r'<[^>]+>|\]\s*\[|^\s*\[[^\]]+\]:', content, re.M):
+        errors.append('HTML and reference links require manual review')
+    destinations = re.findall(r'\]\(\s*<?([^\s)>]+)', content)
+    if not any(url in source_urls for url in destinations):
+        errors.append('A known source must be linked in the body')
+    body_urls = re.findall(r'https?://[^\s<>"\)]+', content, re.I)
+    for url in urls + body_urls + destinations:
+        if not isinstance(url, str) or url not in source_urls:
+            errors.append('Unknown source URL')
+            continue
+        try:
+            normalize_source_url(url)
+        except ValueError:
+            errors.append('Invalid source URL')
+    text = ' '.join(article[field] for field in ('title', 'excerpt', 'content'))
+    if re.search(r'\b(?:ho|abbiamo)\s+(?:testato|provato|misurato)|'
+                 r'\b(?:nostr[aeoi]|mia|mio)\s+(?:prova|test|esperienza)|'
+                 r'\b(?:nei|durante i)\s+nostri\s+test', text, re.I):
+        errors.append('Personal testing claims require manual review')
+    size = promised_list_size(article['title'])
+    if size and not has_list_items(article['content'], size):
+        errors.append('List promise is incomplete')
+    return errors
+, article['content'], re.M | re.I):
+        errors.append('Sources section is required')
     urls = article.get('source_urls')
     if not isinstance(urls, list) or not urls:
         errors.append('Sources are required')
