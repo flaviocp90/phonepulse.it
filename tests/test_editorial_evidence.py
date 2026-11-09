@@ -38,8 +38,8 @@ class EditorialDecisionTests(unittest.TestCase):
     def test_supported_three_facts_allow_draft_candidate(self):
         sources = [source(1), source(2, kind="secondary")]
         claims = [
-            Claim("c1", "La versione di sistema introduce una funzione.", ("s1",)),
-            Claim("c2", "La distribuzione comincia nel mese indicato.", ("s1",)),
+            Claim("c1", "La versione di sistema introduce una funzione.", ("s1",), editorially_verified=True),
+            Claim("c2", "La distribuzione comincia nel mese indicato.", ("s1",), editorially_verified=True),
             Claim("c3", "L'opzione è riservata a modelli specifici.", ("s2",)),
         ]
         result = assess_pack(sources, claims)
@@ -58,6 +58,13 @@ class EditorialDecisionTests(unittest.TestCase):
         self.assertEqual(result["decision"], "needs_research")
         self.assertEqual(result["claims"][0]["status"], "conflicted")
 
+    def test_retrieval_alone_never_certifies_a_claim(self):
+        result = assess_pack([source(1)], [
+            Claim("c1", "Il documento parla di una nuova funzione.", ("s1",))
+        ])
+        self.assertEqual(result["decision"], "needs_research")
+        self.assertEqual(result["claims"][0]["status"], "unknown")
+
     def test_unread_source_is_not_evidence(self):
         result = assess_pack([source(1, fetched=False)], [
             Claim("c1", "Il comunicato contiene un annuncio.", ("s1",))
@@ -67,7 +74,7 @@ class EditorialDecisionTests(unittest.TestCase):
 
     def test_insufficient_evidence_skips(self):
         result = assess_pack([source(1)], [
-            Claim("c1", "Il prodotto aggiunge una nuova funzione.", ("s1",))
+            Claim("c1", "Il prodotto aggiunge una nuova funzione.", ("s1",), editorially_verified=True)
         ])
         self.assertEqual(result["decision"], "skip")
 
