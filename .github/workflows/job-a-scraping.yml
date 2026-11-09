@@ -4,8 +4,7 @@ permissions:
   contents: read
 
 on:
-  schedule:
-    - cron: "17 2 * * *"
+  # Avvio esclusivamente manuale; nessuna schedulazione fino a validazione editoriale.
   workflow_dispatch:
 
 # Both writers share Gemini/CSE counters; do not cancel a run mid-write.
