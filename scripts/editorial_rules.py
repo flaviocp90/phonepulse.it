@@ -64,6 +64,8 @@ def validate_generated_article(article: object, source_urls: set[str]) -> list[s
     if not isinstance(article, dict):
         return ['Expected a JSON object']
     errors = []
+    if article.get('decision') != 'draft':
+        errors.append('Explicit draft decision required')
     for field in ('title', 'slug', 'excerpt', 'content'):
         if not isinstance(article.get(field), str) or not article[field].strip():
             errors.append(f'{field} must be a non-empty string')
