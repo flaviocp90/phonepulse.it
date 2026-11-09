@@ -5,6 +5,10 @@ on:
     paths:
       - 'api/seo-preview.js'
       - 'tests/seo-preview.test.mjs'
+      - 'tests/article-document.test.mjs'
+      - 'api/article.js'
+      - 'vercel.json'
+      - 'src/main.jsx'
       - 'src/lib/publicEditorial.js'
       - 'package.json'
       - 'package-lock.json'
@@ -31,6 +35,6 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
       - name: Test server HTML
-        run: node --test tests/seo-preview.test.mjs
+        run: node --test tests/seo-preview.test.mjs tests/article-document.test.mjs
       - name: Build frontend
         run: npm run build
