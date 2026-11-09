@@ -130,7 +130,7 @@ export default function AdminArticleEditor() {
     const current = () => routeRef.current === currentId && routeGeneration.current === generation
     try {
       let name, args, message
-      const claimEvidence = claimReviews.length ? claimReviewAudit(claimReviews, form.sources) : null
+      const claimEvidence = claimReviews.length && (kind === 'approve' || (kind === 'save' && status === 'published')) ? claimReviewAudit(claimReviews, form.sources) : null
       const reviewPayload = claimEvidence ? { ...review, claim_evidence: claimEvidence } : review
       if (kind === 'save') {
         if (!optionsReady) throw new Error('Categorie o tag indisponibili. Ricarica prima di salvare.')
