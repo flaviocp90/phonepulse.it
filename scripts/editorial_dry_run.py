@@ -49,7 +49,9 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
                 retrieved = True
             except (RetrievalError, OSError, ValueError) as exc:
                 record.update({"retrieval": "unavailable",
-                               "error": type(exc).__name__})
+                               "error": type(exc).__name__,
+                               "reason": str(exc)[:120] if isinstance(exc, RetrievalError)
+                                         else "Input or connection unavailable"})
         source_records.append(record)
         source_objects.append(Source(record["source_id"], url,
                                      record["publisher"], record["kind"], retrieved))
