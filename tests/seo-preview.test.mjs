@@ -38,5 +38,5 @@ test('never treats API failure as missing article', async () => {
 });
 
 test('escapes reserved characters', () => {
-  assert.equal(escapeHtml('<&"''), '&lt;&amp;&quot;&#39;');
+  assert.equal(escapeHtml("<&\"'"), '&lt;&amp;&quot;&#39;');
 });
