@@ -496,6 +496,9 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
     if duplicate.data:
         return 'skipped'
     article, llm_model = genera_bozza(supabase, item)
+    if isinstance(article, dict) and article.get('decision') == 'skip':
+        logger.info('Insufficient RSS evidence; no draft created')
+        return 'skipped'
     ok, reason = supera_quality_gate(article, supabase, {item['link']})
     if not ok:
         logger.warning('Draft rejected: %s', reason)
