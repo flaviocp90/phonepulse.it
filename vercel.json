@@ -1,5 +1,11 @@
 {
+  "functions": {
+    "api/article.js": {
+      "includeFiles": "dist/index.html"
+    }
+  },
   "rewrites": [
+    { "source": "/articoli/:slug", "destination": "/api/article?slug=:slug" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
