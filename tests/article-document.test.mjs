@@ -7,7 +7,7 @@ const shell = '<!doctype html><html lang="it"><head><meta charset="UTF-8"><title
   '<script type="module" src="/assets/index-test.js"></script><link href="/assets/index-test.css" rel="stylesheet">' +
   '</head><body><div id="root"></div></body></html>';
 
-const article = { slug: 'guide-test', title: 'Titolo specifico', content: '## Guida\\n\\nContenuto **utile**.',
+const article = { slug: 'guide-test', title: 'Titolo specifico', content: '## Guida\n\nContenuto **utile**.',
   published_at: '2026-11-09T12:00:00Z', author: 'Autore', sources: [{ url: 'https://example.org/fonte', title: 'Fonte' }] };
 
 test('HTML initial document exposes editorial content and Vite client assets', () => {
