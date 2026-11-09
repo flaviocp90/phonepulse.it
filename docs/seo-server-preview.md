@@ -25,3 +25,18 @@ Nella preview Vercel del 9 novembre 2026 `/api/seo-preview?slug=samsung-conferma
 6. Nessun merge, cambiamento di `vercel.json`, migrazione, job editoriale o invio social autorizzato da questa preview.
 
 **Decisione:** mantenere la PR Draft; validare test e parità prima di eventuali rewrite pubblici.
+
+## Prova di routing diretto su preview — 9 novembre 2026
+
+La PR ora include `api/article.js` e una rewrite in `vercel.json`: `/articoli/:slug` viene servita da una funzione che legge soltanto articoli pubblicati e compone l'HTML server con il file `dist/index.html` di Vite. Il server restituisce titolo, metadati e testo articolo senza JavaScript; la stessa risposta mantiene CSS e JS del bundle React, che prende il controllo dopo il caricamento. La configurazione `functions.api/article.js.includeFiles` include il documento compilato nell'artefatto Vercel.
+
+Prova HTTP nel deployment preview del commit `9148d69fad8689c8110855a84f4b69b793286829`: URL diretto dell'articolo SmartTag 3: **HTTP 200**, H1 specifico, marker `data-phonepulse-ssr`, script e CSS Vite presenti nel documento, `X-Robots-Tag: noindex,nofollow`. URL inesistente: **HTTP 404**, senza guscio SPA. Home preview: **HTTP 200** con SPA invariata. Produzione **non modificata**, ancora SPA con titolo generico nell'HTML iniziale.
+
+Eseguita CI dopo correzione di una fixture Markdown: workflow `SEO preview safety checks` run 42654350260, **success**: test HTML e build frontend. Workflow generale `Critical checks` ancora in corso al momento del controllo.
+
+**Limiti da risolvere prima di rendere la PR pronta:**
+- **Canonical non coerente**: SSR usa `https://www.phonepulse.it`, ma il componente client `SEO.jsx`, i JSON-LD client e la sitemap esistente usano `https://phonepulse.it`; decidere e aggiornare tutti i riferimenti in maniera coordinata.
+- Il DOM server è un corpo articolo semplificato, poi sostituito da React: la continuità visiva e la navigazione reale richiedono test browser con JS attivo/disattivato e screenshot; un test HTTP non dimostra equivalenza visuale.
+- Conservare versioni/fonti e evitare doppioni nei metadati dopo l'avvio React; controllare i possibili effetti di due fetch pubblici, uno server e uno client, su tempi e UX.
+- Serve gestione robusta di contenuti ritirati, errori upstream, cache e metadati dei social crawler.
+- **Nessun merge** finché tutte le verifiche non passano. 
