@@ -33,23 +33,33 @@ export function composeArticleDocument(viteShell, articleMarkup) {
     .replace('<div id="root"></div>', '<div id="root">' + content + '</div>');
 }
 
-export default async function handler(req, res) {
+// Dependencies can be substituted in tests without touching real Supabase.
+export async function handleArticleRequest(req, res, {
+  fetchArticle = loadPublishedArticle,
+  readShell = () => readFileSync(indexPath, 'utf8'),
+  render = renderPreview,
+  environment = process.env,
+} = {}) {
   res.setHeader('Cache-Control', 'no-store');
-  if (process.env.VERCEL_ENV !== 'production')
+  if (environment.VERCEL_ENV !== 'production')
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   if (req.method !== 'GET') return res.status(405).send('Method not allowed');
   const slug = req.query?.slug;
   if (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{0,180}$/.test(slug))
     return res.status(404).send('Article not found');
   try {
-    const article = await loadPublishedArticle(slug);
+    const article = await fetchArticle(slug);
     if (!article) return res.status(404).send('Article not found');
-    const shell = readFileSync(indexPath, 'utf8');
-    const html = composeArticleDocument(shell, renderPreview(article));
+    const shell = readShell();
+    const html = composeArticleDocument(shell, render(article));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(html);
   } catch (error) {
     console.error('Article HTML rendering failed:', error?.message || 'Unknown error');
     return res.status(503).send('Article temporarily unavailable');
   }
+}
+
+export default async function handler(req, res) {
+  return handleArticleRequest(req, res);
 }
