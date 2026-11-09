@@ -75,13 +75,15 @@ def validate_generated_article(article: object, source_urls: set[str]) -> list[s
         errors.append('Invalid slug')
     if len(article['excerpt']) > 155:
         errors.append('Excerpt exceeds 155 characters')
-    # This is a conservative guard against one-sentence RSS rewrites, not a
-    # certificate of originality or factual correctness.
-    text_without_links = re.sub(r'https?://[^\\s)]+', '', article['content'])
-    word_count = len(re.findall(r"\\b[\\wÀ-ÿ]+(?:['’][\\wÀ-ÿ]+)?\\b", text_without_links))
+    # Conservative guard against one-sentence RSS rewrites, not a fact-check.
+    text_without_links = re.sub(r'https?://[^\s)]+', '', article['content'])
+    word_count = len(re.findall(r"\b[\wÀ-ÿ]+(?:['’][\wÀ-ÿ]+)?\b", text_without_links))
     if word_count < 120:
         errors.append('Insufficient article substance (<120 words): manual research needed')
-    sections = re.findall(r'^##\\s+(.+?)\\s*
+    sections = re.findall(r'^##\s+(.+?)\s*$', article['content'], re.M)
+    source_sections = [name for name in sections if re.fullmatch(r'font[ei]', name.strip(), re.I)]
+    if len(sections) < 3 or len(source_sections) != 1:
+        errors.append('Require two informative sections plus one Sources section')
     urls = article.get('source_urls')
     if not isinstance(urls, list) or not urls:
         errors.append('Sources are required')
