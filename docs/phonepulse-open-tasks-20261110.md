@@ -76,3 +76,18 @@ La richiesta è consentire `/admin` solo a determinati IP, non sostituire il log
 - `python3 supabase/tests/run_editorial_rpcs.py --guided`: migrazione, RLS, upload policy, audit della provenienza, conflitti, regressioni e concorrenza superati su dati sintetici PostgreSQL 16.11. Manifest locale: `/private/tmp/phonepulse-editorial-rpcs-0fq7nmvz/manifest.json`, SHA256 `a6b77456d575a348ac9f10b91aadf5455171699fd73e118b2a9021e17385efef`.
 - Screenshot desktop sintetico verificato visivamente; test esistenti includono larghezze 375 e 1280 e navigazione responsive.
 - Test Deno non eseguiti localmente: eseguibile assente, nessuna modifica al codice Edge/social. Rimangono nei controlli CI del repository.
+
+
+## Replica sul runner GitHub
+
+Il [probe live #42831331448](https://github.com/flaviocp90/phonepulse.it/actions/runs/42831331448), eseguito sul commit `bbaf46a`, è SUCCESS. La differenza di esito conferma che la prova su questo runner funziona, mentre la connessione HTTPS diretta dal Mac resta indisponibile; non identifica da sola il motivo di rete locale.
+
+| Fonte del nuovo caso | Esito retrieval CI | Caratteri estratti |
+| --- | --- | --- |
+| Health Connect Get started | ok | 15.578 |
+| Photo picker | ok | 15.130 |
+| Verify App Links | ok | 13.074 |
+
+Anche il probe multi-fonte preesistente ha recuperato Samsung Health FAQ (5.025 caratteri), Android Track steps (14.478) e Android Get started (15.578). Tutti i claim restano `unknown` e le decisioni `needs_research`, con pubblicazione disabilitata: retrieval riuscito non equivale a verifica editoriale. La motivazione automatica “Unretrieved or missing supporting sources” non distingue il caso di claim recuperati ma non ancora revisionati; in questi run la mancanza è la revisione, non il download.
+
+Nessuna chiamata Gemini, bozza finale approvata o prova hardware. Rimangono i gate reali già descritti. Le prove CI offline e SEO sul medesimo commit sono SUCCESS; i link ai run sono nella PR #51.
