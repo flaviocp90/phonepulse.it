@@ -6,6 +6,7 @@ on:
       - 'scripts/editorial_retrieval.py'
       - 'scripts/editorial_live_probe.py'
       - '.github/workflows/editorial-live-probe.yml'
+      - 'docs/editorial/pilots/*-probe-input.json'
 
 permissions:
   contents: read
@@ -29,3 +30,8 @@ jobs:
           python-version: '3.11'
       - name: Read-only official documentation probe
         run: python scripts/editorial_live_probe.py
+      - name: Three fixed read-only documentation cases
+        run: |
+          for input in docs/editorial/pilots/{health-connect,photo-picker,app-links}-probe-input.json; do
+            python scripts/editorial_dry_run.py --input "$input" --fetch
+          done
