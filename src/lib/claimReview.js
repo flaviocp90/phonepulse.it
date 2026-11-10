@@ -35,3 +35,11 @@ export function claimReviewAudit(claims, sources) {
     }))
   }
 }
+
+export function readClaimDraft(value) {
+  if (!Array.isArray(value) || value.length > MAX_CLAIMS) throw new Error('Verifiche salvate non valide.')
+  return value.map(item => {
+    if (!item || typeof item !== 'object' || ['statement', 'source_url', 'evidence', 'rationale', 'decision'].some(key => typeof item[key] !== 'string') || item.statement.length > 700 || item.source_url.length > 2048 || item.evidence.length > 240 || item.rationale.length > 500 || !['supported', 'conflicted', 'unknown'].includes(item.decision)) throw new Error('Verifiche salvate non valide.')
+    return Object.fromEntries(['statement', 'source_url', 'evidence', 'rationale', 'decision'].map(key => [key, item[key]]))
+  })
+}

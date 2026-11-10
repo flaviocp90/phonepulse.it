@@ -13,6 +13,9 @@ function validUrl(v) {
 function href(v) {
   return typeof v === 'string' && /^\/(?!\/)[a-zA-Z0-9/?#=&._~%-]*$/.test(v) ? v : validUrl(v);
 }
+function inlineText(tokens = []) {
+  return tokens.map(token => token.tokens ? inlineText(token.tokens) : token.text || '').join('');
+}
 // Allowlist renderer. Raw HTML, embedded scripts and unknown tokens are escaped.
 function inline(tokens = []) {
   return tokens.map(t => {
@@ -29,7 +32,7 @@ function inline(tokens = []) {
     }
     if (t.type === 'image') {
       const url = validUrl(t.href);
-      return url ? '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(t.text) + '" loading="lazy">' : escapeHtml(t.text);
+      return url ? '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(t.tokens ? inlineText(t.tokens) : t.text) + '" loading="lazy">' : escapeHtml(t.text);
     }
     return escapeHtml(t.raw || t.text || '');
   }).join('');

@@ -20,7 +20,7 @@ export default function ClaimReviewPanel({ claims, sources, onChange }) {
           I controlli qui sono manuali, non un fact-check automatico.
         </p>
         <p className="text-xs text-amber-700 mt-1">
-          Le verifiche non salvate si perdono lasciando la pagina. Sono registrate soltanto con l'azione Approva o Salva correzione pubblicata.
+          Salva bozza per conservare anche le verifiche incomplete. Approvazione e correzione pubblicata registrano la revisione nel registro; cambiare contenuto o fonti richiede nuove verifiche.
         </p>
       </div>
       {claims.map((claim, index) => (

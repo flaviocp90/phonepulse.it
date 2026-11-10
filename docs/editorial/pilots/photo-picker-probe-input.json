@@ -1,0 +1,34 @@
+{
+  "topic": "Photo picker: accesso alle sole foto selezionate",
+  "sources": [
+    {
+      "source_id": "s1",
+      "url": "https://developer.android.com/training/data-storage/shared/photo-picker",
+      "publisher": "Android Developers",
+      "kind": "primary"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "c1",
+      "statement": "Il photo picker permette di selezionare solo immagini e video da condividere.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c2",
+      "statement": "Le app possono richiedere la selezione di un singolo file o di più file.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c3",
+      "statement": "Se il photo picker non è disponibile la libreria usa ACTION_OPEN_DOCUMENT.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    }
+  ]
+}
