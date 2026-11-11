@@ -22,8 +22,9 @@ jobs:
       - run: npm run lint
       - run: node --test tests/*.test.mjs
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --workers=1
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
