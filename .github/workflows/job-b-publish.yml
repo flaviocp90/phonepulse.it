@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   preview:
-    if: github.ref == 'refs/heads/master' && ((github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'schedule' && vars.PHONEPULSE_PUBLISH_MODE == 'dry-run'))
+    if: github.ref == 'refs/heads/master' && ((github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'schedule' && vars.PHONEPULSE_PUBLICATION_MODE == 'dry-run'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -37,7 +37,7 @@ jobs:
         run: python scripts/publish_article.py --require-evidence --dry-run
 
   publish:
-    if: github.ref == 'refs/heads/master' && vars.PHONEPULSE_PUBLISH_MODE == 'live' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+    if: github.ref == 'refs/heads/master' && vars.PHONEPULSE_PUBLICATION_MODE == 'live' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
     permissions:
       contents: write
     runs-on: ubuntu-latest
