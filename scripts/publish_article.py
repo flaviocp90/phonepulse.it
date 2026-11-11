@@ -152,21 +152,27 @@ def candidate_reason(article: dict, now) -> str | None:
     return None
 
 
-def run_publication(supabase, dry_run=False, publish_count=1) -> dict:
+def run_publication(supabase, dry_run=False, publish_count=1, *, require_evidence=False) -> dict:
     if not isinstance(publish_count, int) or publish_count < 1:
         raise ValueError('PUBLISH_COUNT must be a positive integer')
     summary = {'candidates': [], 'published': 0, 'unchanged': 0,
                'expired': 0, 'ineligible': 0, 'conflicts': 0, 'failed': 0}
+    columns = 'id,title,slug,status,origin,version,approved_version,content_format,sources'
+    if require_evidence:
+        columns += ',claims_required'
     candidates = []
     offset = 0
     while len(candidates) < publish_count:
-        rows = (supabase.table('articles')
-                .select('id,title,slug,status,origin,version,approved_version,content_format,sources')
-                .eq('status', 'approved').order('approved_at').order('id')
-                .range(offset, offset + 99).execute().data)
+        queue = supabase.table('articles').select(columns).eq('status', 'approved')
+        if require_evidence:
+            queue = queue.eq('claims_required', True)
+        rows = queue.order('approved_at').order('id').range(offset, offset + 99).execute().data
         if rows is None:
             raise RuntimeError('Approved queue unavailable')
         for article in rows:
+            if require_evidence and article.get('claims_required') is not True:
+                summary['ineligible'] += 1
+                continue
             reason = candidate_reason(article, datetime.now(timezone.utc))
             if reason:
                 summary[reason] += 1
@@ -217,12 +223,15 @@ def run_publication(supabase, dry_run=False, publish_count=1) -> dict:
 def main():
     parser = argparse.ArgumentParser(description='Publish approved current article versions')
     parser.add_argument('--dry-run', action='store_true', help='Read candidates without any effects')
+    parser.add_argument('--require-evidence', action='store_true',
+                        help='Select only articles whose approval requires claim evidence')
     args = parser.parse_args()
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         raise RuntimeError('SUPABASE_URL and SUPABASE_SERVICE_KEY are required')
     count = int(os.environ.get('PUBLISH_COUNT', '1'))
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    run_publication(supabase, dry_run=args.dry_run, publish_count=count)
+    run_publication(supabase, dry_run=args.dry_run, publish_count=count,
+                    require_evidence=args.require_evidence)
 
 
 if __name__ == '__main__':

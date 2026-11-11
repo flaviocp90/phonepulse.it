@@ -1,32 +1,56 @@
 name: Job B — Pubblicazione articolo del giorno
 
 on:
-  # Avvio esclusivamente manuale; nessuna schedulazione fino a validazione editoriale.
+  schedule:
+    - cron: '17 8 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Verifica la coda senza pubblicare'
+        type: boolean
+        default: true
 
 concurrency:
   group: phonepulse-approved-publishing
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
+  preview:
+    if: github.ref == 'refs/heads/master' && ((github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'schedule' && vars.PHONEPULSE_PUBLISH_MODE == 'dry-run'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          python-version: "3.11"
-      - name: Installa dipendenze
-        run: pip install -r scripts/requirements.txt
-      - name: Pubblica articolo del giorno
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+      - run: pip install -r scripts/requirements.txt
+      - name: Controlla la coda delle versioni approvate
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/publish_article.py --require-evidence --dry-run
+
+  publish:
+    if: github.ref == 'refs/heads/master' && vars.PHONEPULSE_PUBLISH_MODE == 'live' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+      - run: pip install -r scripts/requirements.txt
+      - name: Pubblica al massimo una versione approvata
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           PUBLISH_COUNT: '1'
-        run: python scripts/publish_article.py
+        run: python scripts/publish_article.py --require-evidence

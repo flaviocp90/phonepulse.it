@@ -39,6 +39,25 @@ class PublishArticleTests(unittest.TestCase):
             sitemap.assert_not_called()
             telegram.assert_not_called()
 
+    def test_evidence_required_mode_excludes_older_approvals(self):
+        db = database([article(id='older', claims_required=False),
+                       article(id='missing'), article(claims_required=True)])
+        result = publishing.run_publication(db, dry_run=True, require_evidence=True)
+        self.assertEqual(result['candidates'], ['fresh'])
+        self.assertEqual(result['ineligible'], 2)
+        query = db.table.return_value
+        query.eq.assert_any_call('claims_required', True)
+        db.rpc.assert_not_called()
+
+    def test_evidence_required_mode_fails_before_writes_if_migration_missing(self):
+        db = database([])
+        db.table.return_value.execute.side_effect = RuntimeError('claims_required unavailable')
+        with patch.object(publishing, 'update_sitemap') as sitemap:
+            with self.assertRaisesRegex(RuntimeError, 'claims_required'):
+                publishing.run_publication(db, require_evidence=True)
+            db.rpc.assert_not_called()
+            sitemap.assert_not_called()
+
     def test_publishes_via_rpc_with_expected_version(self):
         db = database([article()])
         with patch.object(publishing, 'update_sitemap', return_value=True), \
