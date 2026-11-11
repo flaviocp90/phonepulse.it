@@ -37,7 +37,7 @@ jobs:
         run: python scripts/publish_article.py --require-evidence --dry-run
 
   publish:
-    if: github.ref == 'refs/heads/master' && vars.PHONEPULSE_PUBLICATION_MODE == 'live' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+    if: github.ref == 'refs/heads/master' && ((github.event_name == 'schedule' && (vars.PHONEPULSE_PUBLICATION_MODE == '' || vars.PHONEPULSE_PUBLICATION_MODE == 'live')) || (github.event_name == 'workflow_dispatch' && vars.PHONEPULSE_PUBLICATION_MODE == 'live' && !inputs.dry_run))
     permissions:
       contents: write
     runs-on: ubuntu-latest
