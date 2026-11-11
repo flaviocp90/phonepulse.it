@@ -99,7 +99,7 @@ Nessuna chiamata Gemini, bozza finale approvata o prova hardware. Rimangono i ga
 
 ## Chiusura operativa — 11 novembre 2026
 
-Inventario completo della fonte dati Notion `954ad1b9-045f-4554-bcee-f1ada5f34358`: cinque task PhonePulse non completati (editor, pipeline multi-fonte, verifica admin, audit analytics, allowlist IP). Gli altri otto task risultano già completati.
+Inventario della fonte dati Notion `954ad1b9-045f-4554-bcee-f1ada5f34358`: cinque task PhonePulse non completati (editor, pipeline multi-fonte, verifica admin, audit analytics, allowlist IP). La query finale completa restituisce anche nove task già completati, per un totale di quattordici; la ricerca per parola chiave ne mostrava tredici.
 
 Verifiche rieseguite sulla tranche finale: lint/build, 35 Node, 57 Python pipeline, 43 Python automazione e 58 Playwright superati. Il test SEO aveva un timeout di navigazione locale riproducibile; adesso usa il contesto gestito dalla fixture Playwright per il caso senza JavaScript e blocca risorse esterne nel caso React. Due casi mirati e suite completa verdi; la latenza locale della navigazione rimane variabile, senza prova di regressione del sito pubblico.
 
