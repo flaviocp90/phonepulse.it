@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -22,8 +22,9 @@ jobs:
       - run: npm run lint
       - run: node --test tests/*.test.mjs
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --workers=1
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
