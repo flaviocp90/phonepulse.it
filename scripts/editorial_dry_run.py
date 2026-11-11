@@ -77,6 +77,20 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
             editorially_verified=False,
         ))
     assessment = assess_pack(source_objects, claims)
+    duplicate_content = {}
+    same_host = {}
+    from urllib.parse import urlsplit
+    for row in source_records:
+        host = urlsplit(row.get('final_url', row['url'])).hostname
+        same_host.setdefault(host, []).append(row['source_id'])
+        if row.get('text_sha256'):
+            duplicate_content.setdefault(row['text_sha256'], []).append(row['source_id'])
+    source_checks = {
+        'duplicate_content': [ids for ids in duplicate_content.values() if len(ids) > 1],
+        'same_host': [ids for ids in same_host.values() if len(ids) > 1],
+        'independence': 'not_assessed',
+        'note': 'Different websites do not prove independent reporting; compare provenance manually.',
+    }
     return {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -84,6 +98,7 @@ def build_manifest(payload: dict, *, live_fetch: bool = False,
         "mode": "live_readonly" if live_fetch else "offline",
         "sources": source_records,
         "candidate_evidence": candidate_evidence,
+        "source_checks": source_checks,
         "assessment": assessment,
         "publication_allowed": False,
         "note": "Excerpts are unverified review candidates, not validated claims; editorial review required.",

@@ -7,6 +7,8 @@ on:
       - 'scripts/editorial_live_probe.py'
       - '.github/workflows/editorial-live-probe.yml'
       - 'docs/editorial/pilots/*-probe-input.json'
+      - 'scripts/editorial_export.py'
+      - 'scripts/editorial_dry_run.py'
 
 permissions:
   contents: read
@@ -32,6 +34,14 @@ jobs:
         run: python scripts/editorial_live_probe.py
       - name: Three fixed read-only documentation cases
         run: |
-          for input in docs/editorial/pilots/{health-connect,photo-picker,app-links}-probe-input.json; do
-            python scripts/editorial_dry_run.py --input "$input" --fetch
+          mkdir -p "$RUNNER_TEMP/editorial-research"
+          for topic in health-connect photo-picker app-links; do
+            python scripts/editorial_dry_run.py --input "docs/editorial/pilots/$topic-probe-input.json" --fetch --output "$RUNNER_TEMP/editorial-research/$topic-manifest.json"
+            python scripts/editorial_export.py --research-only --manifest "$RUNNER_TEMP/editorial-research/$topic-manifest.json" --output "$RUNNER_TEMP/editorial-research/$topic-admin-import.json"
           done
+      - name: Research files for manual review (no model or publication)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: editorial-research-review-only
+          path: ${{ runner.temp }}/editorial-research/*.json
+          retention-days: 7

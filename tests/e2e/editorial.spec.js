@@ -22,6 +22,7 @@ async function fixture(page, options = {}) {
     if (url.pathname === '/auth/v1/user') return state.authError ? route.fulfill({ status: 503, json: { message: 'Auth unavailable' } }) : route.fulfill({ json: user })
     if (url.pathname === '/auth/v1/token') return route.fulfill({ json: session })
     if (url.pathname === '/auth/v1/logout') return state.logoutError ? fail('Logout unavailable') : route.fulfill({ json: {} })
+    if (url.pathname === '/storage/v1/object/sign/editorial-media') return route.fulfill({ json: request.postDataJSON().paths.map(path => ({ path, signedURL: `/object/sign/editorial-media/${path}?token=synthetic` })) })
     if (url.pathname.startsWith('/storage/v1/object/editorial-media/')) {
       state.uploads = (state.uploads || 0) + 1
       if (state.storageGate) await state.storageGate
@@ -43,10 +44,10 @@ async function fixture(page, options = {}) {
         if (args.p_publish_correction && reviewKeys.some(key => args.p_review?.[key] !== true)) return fail('Checklist missing')
         const changed = Object.entries(args.p_article).some(([key, value]) => key !== 'id' && JSON.stringify(value) !== JSON.stringify(state.row[key])) || JSON.stringify([...args.p_tag_ids].sort()) !== JSON.stringify(state.row.article_tags.map(tag => tag.tag_id).sort())
         state.claimDraft = { version: state.row.version + (changed ? 1 : 0), claims: args.p_review?.claim_draft || [] }
-        state.row = { ...state.row, ...args.p_article, id, version: state.row.version + (changed ? 1 : 0), status: changed && state.row.status === 'approved' ? 'draft' : state.row.status, article_tags: args.p_tag_ids.map(tag_id => ({ tag_id })) }
+        state.row = { ...state.row, ...args.p_article, ...(args.p_article.id ? {} : { claims_required: true }), id, version: state.row.version + (changed ? 1 : 0), status: changed && state.row.status === 'approved' ? 'draft' : state.row.status, article_tags: args.p_tag_ids.map(tag_id => ({ tag_id })) }
       }
       if (name === 'approve_article') {
-        if (reviewKeys.some(key => args.p_review[key] !== true) || !state.row.sources.length) return fail('Checklist or sources missing')
+        if (reviewKeys.some(key => args.p_review[key] !== true) || !state.row.sources.length || (state.row.claims_required && !args.p_review.claim_evidence?.claims?.length)) return fail('Checklist or sources missing')
         state.row.status = 'approved'; state.row.approved_version = state.row.version; state.row.approved_at = new Date().toISOString(); state.row.last_verified_at = state.row.approved_at; state.row.approved_by = id
       }
       if (name === 'publish_article') { if (state.row.status !== 'approved') return fail('Approval required'); state.row.status = 'published' }
@@ -369,7 +370,7 @@ for (const width of [375, 1280]) test(`editor sintetico senza overflow ${width}`
   await page.goto(`/admin/articoli/${id}`)
   await expect(page.getByLabel('Titolo', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.screenshot({ path: testInfo.outputPath(`editor-${width}.png`), fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath(`editor-${width}.png`), fullPage: true, animations: 'disabled' })
 })
 
 
@@ -412,14 +413,17 @@ test('claim review: affermazione contraddittoria blocca approvazione ma permette
   expect(state.calls[0].args.p_review.claim_draft).toHaveLength(1)
 })
 
-test('claim review: cambiando il contenuto le evidenze temporanee vengono invalidate', async ({ page }) => {
+test('claim review: cambiando contenuto le note restano e gli esiti tornano da verificare', async ({ page }) => {
   await fixture(page)
   await page.goto(`/admin/articoli/${id}`)
   await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
   await expect(page.getByLabel('Fatto da verificare')).toHaveCount(1)
+  await page.getByLabel('Fatto da verificare').fill('Un fatto documentato da conservare nelle note.')
+  await page.getByRole('combobox', { name: 'Esito', exact: true }).selectOption('supported')
   await page.getByLabel('Contenuto (Markdown)').fill('Un testo aggiornato che richiede nuova verifica.')
-  await expect(page.getByLabel('Fatto da verificare')).toHaveCount(0)
-  await expect(page.getByText('Nessuna verifica dettagliata ancora compilata.')).toBeVisible()
+  await expect(page.getByLabel('Fatto da verificare')).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveValue('unknown')
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
 })
 
 
@@ -428,7 +432,7 @@ test('template, ricerca tag e anteprima mobile non richiedono scrittura del mark
   await page.goto('/admin/articoli/nuovo')
   await page.getByLabel('Formato editoriale').selectOption('guide')
   await page.getByRole('button', { name: 'Carica template del formato' }).click()
-  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/Limiti della guida documentale/)
+  await expect(page.getByRole('textbox', { name: 'Contenuto visuale' })).toContainText('Limiti della guida documentale')
   await page.getByLabel('Cerca tag').fill('non-esiste')
   await expect(page.getByRole('button', { name: 'Android', exact: true })).toHaveCount(0)
   await page.getByLabel('Cerca tag').fill('andro')
@@ -469,7 +473,7 @@ test('foto con credito e licenza conserva il testo scritto durante un upload len
   release()
   await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/Testo scritto mentre la foto viene caricata/)
   await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/Redazione PhonePulse/)
-  await page.screenshot({ path: 'test-results/guided-editor-desktop.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/guided-editor-desktop.png', fullPage: true, animations: 'disabled' })
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Bozza salvata' })).toBeVisible()
   expect(state.calls[0].args.p_article.content).toContain('Foto propria, utilizzo autorizzato')
@@ -484,6 +488,8 @@ test('import ricerca prepara solo una bozza, conserva provenienza e richiede nuo
     provenance: { manifest_sha256: 'a'.repeat(64), model: 'synthetic-model', authentication_verified: true } }
   await page.getByLabel('Importa ricerca multi-fonte').setInputFiles({ name: 'research.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) })
   await expect(page.getByLabel('Titolo', { exact: true })).toHaveValue(payload.article.title)
+  await page.getByRole('textbox', { name: 'Contenuto visuale' }).click()
+  await page.getByLabel('Titolo', { exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveValue('unknown')
   await expect(page.getByLabel('Motivazione della revisione')).toHaveValue('')
   expect(state.calls).toEqual([])
@@ -504,4 +510,104 @@ test('claim salvati malformati non vengono cancellati silenziosamente da un nuov
   await expect(page.getByRole('button', { name: 'Salva bozza', exact: true })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
   expect(state.calls).toEqual([])
+})
+
+
+test('editor visuale scrive titoli e tabelle senza richiedere Markdown', async ({ page }) => {
+  await fixture(page)
+  await page.goto('/admin/articoli/nuovo')
+  const editor = page.getByRole('textbox', { name: 'Contenuto visuale' })
+  await editor.fill('Un titolo scritto nel visuale')
+  await page.getByRole('button', { name: 'Titolo sezione', exact: true }).click()
+  await expect(editor.locator('h2')).toHaveText('Un titolo scritto nel visuale')
+  await page.getByRole('button', { name: 'Inserisci tabella', exact: true }).click()
+  await expect(editor.locator('table')).toHaveCount(1)
+  await page.setViewportSize({ width: 375, height: 812 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+  await page.screenshot({ path: 'test-results/visual-editor-mobile.png', fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.screenshot({ path: 'test-results/visual-editor-desktop.png', fullPage: true, animations: 'disabled' })
+  await page.getByRole('button', { name: 'Markdown', exact: true }).click()
+  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/## Un titolo scritto nel visuale/)
+  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/\|/)
+  await page.getByRole('button', { name: 'Visuale', exact: true }).click()
+  await expect(editor.locator('table')).toHaveCount(1)
+})
+
+test('copia locale ripristina testo e claim dopo interruzione senza approvare', async ({ page }) => {
+  await fixture(page)
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByLabel('Contenuto (Markdown)').fill('Testo da recuperare dopo interruzione')
+  await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
+  await page.getByLabel('Fatto da verificare').fill('Un fatto ancora da controllare per il recupero.')
+  await expect(page.getByText('Copia di recupero salvata su questo browser.', { exact: false })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.reload()
+  await expect(page.getByRole('complementary', { name: 'Recupero bozza' })).toBeVisible()
+  await page.getByRole('button', { name: 'Ripristina copia locale' }).click()
+  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue('Testo da recuperare dopo interruzione')
+  await expect(page.getByLabel('Fatto da verificare')).toHaveValue('Un fatto ancora da controllare per il recupero.')
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+})
+
+test('recupero di una versione vecchia richiede esportazione senza sovrascrivere il server', async ({ page }) => {
+  const state = await fixture(page)
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByLabel('Contenuto (Markdown)').fill('Testo locale su vecchia versione')
+  await expect(page.getByText('Copia di recupero salvata su questo browser.', { exact: false })).toBeVisible()
+  state.row = { ...state.row, version: 2, content: 'Versione server aggiornata da un altro editor' }
+  page.once('dialog', dialog => dialog.accept())
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Ripristina copia locale' })).toBeDisabled()
+  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(state.row.content)
+  await expect(page.getByRole('button', { name: 'Scarica copia locale' })).toBeEnabled()
+})
+
+test('nuove bozze richiedono evidenze e mostrano estratti importati senza approvarli', async ({ page }) => {
+  const claim = { statement: 'Una affermazione tecnica da verificare.', source_url: source().url, evidence: '', rationale: '', decision: 'unknown', candidates: [{ source_url: source().url, excerpt: 'A short imported passage requiring human inspection.', verification: 'unverified' }] }
+  await fixture(page, { article: { claims_required: true }, claimDraft: { version: 1, claims: [claim] } })
+  await page.goto(`/admin/articoli/${id}`)
+  await expect(page.getByText(claim.candidates[0].excerpt)).toBeVisible()
+  await page.getByRole('button', { name: 'Usa passaggio 1' }).click()
+  await expect(page.getByLabel('Passaggio di supporto (massimo 240 caratteri)')).toHaveValue(claim.candidates[0].excerpt)
+  await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveValue('unknown')
+  await completeReview(page)
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Rimuovi', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+})
+
+test('foto privata nel visuale usa solo preview temporanea e salva il riferimento stabile', async ({ page }) => {
+  const state = await fixture(page)
+  await page.goto('/admin/articoli/nuovo')
+  await page.getByLabel('Titolo', { exact: true }).fill('Bozza con foto privata')
+  await page.getByRole('textbox', { name: 'Contenuto visuale' }).fill('Introduzione della bozza')
+  await page.getByLabel('Foto (JPEG, PNG, WebP, massimo 5 MB)').setInputFiles({ name: 'original.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJuUAAAAASUVORK5CYII=', 'base64') })
+  await page.getByLabel('Testo alternativo', { exact: true }).fill('Dettaglio originale')
+  await page.getByLabel('Didascalia', { exact: true }).fill('Foto riservata della bozza')
+  await page.getByLabel('Autore / credito', { exact: true }).fill('Redazione')
+  await page.getByLabel('Licenza o autorizzazione', { exact: true }).fill('Foto originale autorizzata')
+  await page.getByRole('button', { name: 'Carica e inserisci foto' }).click()
+  await expect(page.getByRole('textbox', { name: 'Contenuto visuale' }).locator('img')).toHaveAttribute('src', /token=synthetic/)
+  await page.getByRole('button', { name: 'Markdown', exact: true }).click()
+  await expect(page.getByLabel('Contenuto (Markdown)')).toHaveValue(/https:\/\/www.phonepulse.it\/api\/media\?path=/)
+  await expect(page.getByLabel('Contenuto (Markdown)')).not.toHaveValue(/token=/)
+  await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
+  await expect(page).toHaveURL(`/admin/articoli/${id}`)
+  expect(state.calls[0].args.p_article.content).toContain('Foto riservata della bozza')
+  expect(state.calls[0].args.p_article.content).not.toContain('token=')
+})
+
+
+test('salvare una nuova bozza elimina la copia locale prima del cambio di URL', async ({ page }) => {
+  await fixture(page)
+  await page.goto('/admin/articoli/nuovo')
+  await page.getByLabel('Titolo', { exact: true }).fill('Bozza nuova da salvare')
+  await page.getByRole('textbox', { name: 'Contenuto visuale' }).fill('Testo da conservare sul server')
+  await expect(page.getByText('Copia di recupero salvata su questo browser.', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
+  await expect(page).toHaveURL(`/admin/articoli/${id}`)
+  await page.goto('/admin/articoli/nuovo')
+  await expect(page.getByRole('textbox', { name: 'Contenuto visuale' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Recupero bozza' })).toHaveCount(0)
 })

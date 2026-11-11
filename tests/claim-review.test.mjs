@@ -44,3 +44,9 @@ test('no claim review is optional for legacy editorial workflow', () => {
   assert.deepEqual(claimReviewErrors([], sources), [])
   assert.equal(claimReviewSummary([], sources).complete, false)
 })
+
+
+test('a source URL containing credentials cannot support a claim', () => {
+  const url = 'https://user:secret@example.org/source'
+  assert.equal(claimReviewSummary([{ ...claim, source_url: url }], [{ ...sources[0], url }]).complete, false)
+})

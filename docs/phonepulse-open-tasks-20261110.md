@@ -25,18 +25,15 @@ Lettura SQL di produzione: nessun bucket Storage esistente e **0 eventi `approve
 
 La verifica di autenticazione, salvataggio/approvazione e audit reale richiede una sessione editor. I test SQL locali e i test browser con rete simulata non la sostituiscono. Nessun articolo pubblicato e nessun Job A/B avviato.
 
-## Editor guidato: tranche implementata
+## Editor: implementazione finale della PR #51
 
-- Template modificabili per news, guida documentale, confronto e prova diretta; strumenti per titoli, grassetto, elenchi, citazioni, link e tabelle nell'editor esistente.
-- Ricerca tag, canonical derivato dallo slug, snippet SEO, anteprima mobile/desktop.
-- Upload JPEG/PNG/WebP fino a 5 MB, con alt, didascalia, credito e licenza obbligatori. Metadata e posizione sono salvati nel Markdown dell'articolo, compatibile con entrambi i renderer esistenti; copertina opzionale e credito nel campo già disponibile.
-- Bucket `editorial-media` pubblico con INSERT riservato a editor autenticato e cartella del proprio utente. Nessun overwrite o delete client. Il file è pubblico già dopo l'upload: avviso esplicito in UI. Non caricare immagini riservate; i file non inseriti in bozze salvate possono restare orfani.
-- Claim incompleti salvati atomicamente con la bozza in `article_review_drafts`, tabella separata non pubblica, legata a versione e attore. Le revisioni per versioni diverse non vengono ricaricate. Nessuna trasformazione di una bozza claim in approvazione.
-- Import manuale di una ricerca esportata dal writer, con controlli di dimensione/schema, claim nuovamente `unknown` e provenienza registrata nell'audit del primo salvataggio. Nessun import diretto di stati approvati/pubblicati.
+- Editor visuale locale Tiptap MIT con titoli, elenchi, link e tabelle. Markdown resta il formato persistito; HTML legacy resta modificabile in Markdown per evitare conversioni distruttive. Caricamento separato dal sito pubblico.
+- Recupero locale per utente/articolo/versione, ripristino esplicito, download e cancellazione dopo salvataggio riuscito. Non sostituisce il salvataggio server.
+- Foto JPEG/PNG/WebP fino a 5 MB con alt, didascalia, credito e licenza, riordino e copertina. Bucket privato: preview firmate temporanee, URL stabili senza token nel documento. La route media usa chiave anon e RLS, restituisce solo foto associate a contenuti pubblicati e nega nuove letture dopo ritiro. Upload inutilizzati possono restare orfani; copie scaricate non sono revocabili.
+- Claim salvati atomicamente in tabella privata, legati a versione e attore. Modificare testo/fonti conserva le note e azzera gli esiti. I nuovi articoli richiedono evidenze complete anche nelle RPC server; il flag non è modificabile dal client. I contenuti preesistenti mantengono il gate precedente.
+- Import con estratti candidati non verificati, provenienza e avvisi per fonti identiche/stesso dominio. Suggerimenti di link interni da articoli pubblicati della stessa categoria. Nessuna approvazione implicita.
 
-Migrazione `20261110134623_guided_editor.sql` preparata e testata su PostgreSQL locale con fixture sintetiche. **Non applicata a Supabase remoto.** Distribuire schema e frontend insieme, dopo verifica della migrazione e smoke test autenticato.
-
-L'editor resta basato su Markdown con strumenti guidati: non è un editor WYSIWYG completo. Riordino visuale dei media, suggerimenti di link interni e revisione autenticata della nuova UI rimangono da completare prima della chiusura globale di #46.
+Migrazione `20261110134623_guided_editor.sql` testata su dati sintetici, **non applicata a produzione**. Distribuire schema e codice insieme e completare lo smoke test con vera sessione editor prima della chiusura operativa dei task. Vedi [runbook](editorial/admin-editor-runbook.md).
 
 ## Pipeline: collegamento al CMS e probe
 
@@ -66,7 +63,7 @@ Manifest locali in `/private/tmp/phonepulse-{health-connect,photo-picker,app-lin
 
 La richiesta è consentire `/admin` solo a determinati IP, non sostituire il login. Lista IP/CIDR e stabilità dell'IP ancora da specificare. Non applicato un filtro vuoto o un IP dedotto dalla rete attuale: potrebbe escludere l'editor dal pannello. Rimane da decidere il punto di enforcement e verificare accesso consentito/negato senza indebolire Auth/RLS.
 
-## Verifiche della tranche
+## Verifiche della prima tranche (storiche)
 
 - `npm run lint` e `npm run build`: superati.
 - `node --test tests/*.test.mjs`: 28 test superati, inclusa parità del testo alternativo delle foto nel renderer server.
@@ -91,3 +88,25 @@ Il [probe live #42831331448](https://github.com/flaviocp90/phonepulse.it/actions
 Anche il probe multi-fonte preesistente ha recuperato Samsung Health FAQ (5.025 caratteri), Android Track steps (14.478) e Android Get started (15.578). Tutti i claim restano `unknown` e le decisioni `needs_research`, con pubblicazione disabilitata: retrieval riuscito non equivale a verifica editoriale. La motivazione automatica “Unretrieved or missing supporting sources” non distingue il caso di claim recuperati ma non ancora revisionati; in questi run la mancanza è la revisione, non il download.
 
 Nessuna chiamata Gemini, bozza finale approvata o prova hardware. Rimangono i gate reali già descritti. Le prove CI offline e SEO sul medesimo commit sono SUCCESS; i link ai run sono nella PR #51.
+
+## Verifiche dell’implementazione finale
+
+- Lint e build superati. Node: 35 test; pipeline Python: 57; automazione Python: 43; Playwright: 58. Browser con rete Supabase simulata; provider/pubblicazione simulati nei test.
+- PostgreSQL 16: migrazione, RLS, gate claim, storage privato/pubblicato/ritirato, audit, regressioni e concorrenza superati. Manifest locale `/private/tmp/phonepulse-editorial-rpcs-yyjb8_9b/manifest.json`, SHA256 `b1acfc8bd9c6fad5e44bf528b065f19dad4047e81a1043777077d21012e02235`.
+- DOMPurify aggiornato a 3.4.17. Restano due avvisi moderati della dipendenza React Router 6 preesistente; migrazione major fuori ambito.
+- CI estesa ai test Node completi, gate SQL e tre artefatti di ricerca `--research-only`: nessun modello, database o pubblicazione. Nessuna fonte disponibile significa nessun import generato, conservando il manifest.
+- Nessuna chiamata a pagamento o modifica alla produzione. Auth/PostgREST reale e distribuzione restano da verificare; i test sintetici non li sostituiscono.
+
+## Chiusura operativa — 11 novembre 2026
+
+Inventario completo della fonte dati Notion `954ad1b9-045f-4554-bcee-f1ada5f34358`: cinque task PhonePulse non completati (editor, pipeline multi-fonte, verifica admin, audit analytics, allowlist IP). Gli altri otto task risultano già completati.
+
+Verifiche rieseguite sulla tranche finale: lint/build, 35 Node, 57 Python pipeline, 43 Python automazione e 58 Playwright superati. Il test SEO aveva un timeout di navigazione locale riproducibile; adesso usa il contesto gestito dalla fixture Playwright per il caso senza JavaScript e blocca risorse esterne nel caso React. Due casi mirati e suite completa verdi; la latenza locale della navigazione rimane variabile, senza prova di regressione del sito pubblico.
+
+SQL sintetico PostgreSQL 16 superato, incluse migrazione, RLS, claim, storage e concorrenza. Manifest `/private/tmp/phonepulse-editorial-rpcs-6zfdwxqk/manifest.json`, SHA256 `f87b44918022c721a15875d58c86390e8c75510ac3a91b56a8f278766da16425`.
+
+Controlli live read-only: robots e sitemap HTTP 200, 98 URL/90 articoli; database con 90 published, 4.359 draft e 357 discarded. Migrazione guided editor ancora assente e nessun bucket. Advisor invariati: daily_counters senza policy (accesso negato intenzionalmente) e protezione password compromesse disabilitata. Nessuna modifica a permessi Auth.
+
+Prima del merge, l'issue #46 richiede smoke autenticato. Il collegamento CUA a Chrome è andato in timeout due volte; mancano sessione editor utilizzabile, audit reale e verifica Storage tramite Auth/PostgREST. Il backup temporaneo storico non è più presente al percorso documentato: ripetere backup e restore in destinazione privata durevole prima di applicare la migrazione. Non eseguire un rilascio del solo frontend.
+
+Richiesti all'utente IP pubblici/CIDR e stabilità per l'allowlist, oltre a sessioni Search Console/GA4. Nessun firewall configurato sul progetto Vercel; task IP bloccato in attesa dei dati. Per la pipeline restano review editoriale reale, tre prove editoriali complete e quota Gemini gratuita verificata prima di qualsiasi chiamata provider. Nessuna nuova pubblicazione, Job A/B o spesa API.

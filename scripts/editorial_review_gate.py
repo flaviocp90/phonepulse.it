@@ -25,6 +25,8 @@ def manifest_fingerprint(manifest: dict) -> str:
     """Hash the substantive evidence, excluding non-semantic timestamps."""
     stable = {key: manifest.get(key) for key in
               ("schema_version", "topic", "sources", "candidate_evidence", "assessment")}
+    if "source_checks" in manifest:
+        stable["source_checks"] = manifest["source_checks"]
     serialized = json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 

@@ -29,6 +29,8 @@ def export_for_admin(manifest: dict, ledger: dict, experiment: dict) -> dict:
     sources = {}
     claims = []
     links = {}
+    decisions = {row['claim_id']: row for row in ledger['decisions']}
+    candidates = {row['candidate_id']: row for row in manifest['candidate_evidence']}
     for claim in brief['claims']:
         ref = claim['references'][0]
         row = records[ref['source_id']]
@@ -39,9 +41,12 @@ def export_for_admin(manifest: dict, ledger: dict, experiment: dict) -> dict:
                         'publisher': row['publisher'], 'retrieved_at': stamp,
                         'published_at': None}
         links[claim['claim_id']] = url
-        # Imported research is not authenticated editorial approval in the CMS.
+        hints = [candidates[cid] for cid in decisions[claim['claim_id']]['candidate_ids']]
         claims.append({'statement': claim['statement'], 'source_url': url,
-                       'evidence': '', 'rationale': '', 'decision': 'unknown'})
+                       'evidence': '', 'rationale': '', 'decision': 'unknown',
+                       'candidates': [{'source_url': canonical_public_url(item['source_url']),
+                                       'excerpt': item['excerpt'], 'verification': 'unverified'}
+                                      for item in hints[:3]]})
     if len(claims) > 12:
         raise ValueError('Admin supports at most 12 claims')
     content = re.sub(r'\[(c[0-9]+)\]', lambda match: f'[{match[1]}]({links[match[1]]})', draft['content'])
@@ -57,13 +62,63 @@ def export_for_admin(manifest: dict, ledger: dict, experiment: dict) -> dict:
     }
 
 
+class ResearchUnavailable(ValueError):
+    pass
+
+
+def export_research(manifest: dict) -> dict:
+    if manifest.get('schema_version') != 1 or manifest.get('mode') != 'live_readonly' or manifest.get('publication_allowed') is not False:
+        raise ValueError('A non-publishable live evidence manifest is required')
+    stamp = manifest.get('generated_at')
+    if not isinstance(stamp, str) or datetime.fromisoformat(stamp.replace('Z', '+00:00')).tzinfo is None:
+        raise ValueError('Source retrieval timestamp required')
+    sources = []
+    records = {}
+    for row in manifest.get('sources', []):
+        if row.get('retrieval') == 'ok':
+            url = canonical_public_url(row['final_url'])
+            records[row['source_id']] = url
+            sources.append({'url': url, 'title': row.get('title') or row['publisher'],
+                            'publisher': row['publisher'], 'retrieved_at': stamp, 'published_at': None})
+    if not sources:
+        raise ResearchUnavailable('No retrieved sources; keep researching')
+    candidates = manifest.get('candidate_evidence', [])
+    claims = []
+    for row in manifest.get('assessment', {}).get('claims', []):
+        refs = row.get('supporting_sources', []) + row.get('conflicting_sources', [])
+        hints = [item for item in candidates if item.get('source_id') in refs and item.get('source_url') == records.get(item.get('source_id'))]
+        claims.append({'statement': row['statement'], 'source_url': next((records[sid] for sid in refs if sid in records), ''),
+                       'evidence': '', 'rationale': '', 'decision': 'unknown',
+                       'candidates': [{'source_url': canonical_public_url(item['source_url']), 'excerpt': item['excerpt'], 'verification': 'unverified'} for item in hints[:3]]})
+    if not claims or len(claims) > 12:
+        raise ValueError('Research requires 1-12 claims')
+    topic = str(manifest.get('topic') or 'Ricerca documentale')[:200]
+    return {'schema': 'phonepulse_review_import_v1', 'publish_allowed': False,
+            'article': {'title': topic, 'excerpt': 'Ricerca in corso: contenuto da scrivere e verificare.',
+                        'content': '## Obiettivo\n\n\n## Fatti da verificare\n\n\n## Valore per il lettore\n\n',
+                        'content_format': 'guide', 'sources': sources},
+            'claims': claims,
+            'provenance': {'manifest_sha256': manifest_fingerprint(manifest), 'model': 'none-research-only',
+                           'authentication_verified': False, 'review_required': True,
+                           'source_checks': manifest.get('source_checks', {})}}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Export a review-only draft for manual admin import')
     for name in ('manifest', 'review', 'experiment', 'output'):
-        parser.add_argument('--' + name, required=True, type=Path)
+        parser.add_argument('--' + name, required=name in ('manifest', 'output'), type=Path)
+    parser.add_argument('--research-only', action='store_true', help='Export research without a model or approval')
     args = parser.parse_args(argv)
-    result = export_for_admin(*(json.loads(path.read_text(encoding='utf-8'))
-                                for path in (args.manifest, args.review, args.experiment)))
+    if args.research_only:
+        try:
+            result = export_research(json.loads(args.manifest.read_text(encoding='utf-8')))
+        except ResearchUnavailable:
+            print('No import generated: sources unavailable; manifest retained for research.')
+            return 0
+    else:
+        if not args.review or not args.experiment:
+            parser.error('--review and --experiment are required without --research-only')
+        result = export_for_admin(*(json.loads(path.read_text(encoding='utf-8')) for path in (args.manifest, args.review, args.experiment)))
     with args.output.open('x', encoding='utf-8') as output:
         json.dump(result, output, ensure_ascii=False, indent=2)
         output.write('\n')

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -7,7 +7,12 @@ import { checklist, editorialAction, statusLabels } from '../../lib/editorial'
 import { claimReviewAudit, claimReviewSummary, readClaimDraft } from '../../lib/claimReview'
 import ClaimReviewPanel from './ClaimReviewPanel'
 import PhotoInsert from './PhotoInsert'
-import { templates, contentTools, readResearchImport } from '../../lib/guidedEditor'
+import DraftRecovery from './DraftRecovery'
+import { mediaPath } from '../../lib/privateMedia'
+import { usePrivateMedia } from '../../lib/usePrivateMedia'
+import { templates, contentTools, readResearchImport, hasRawHtml, articlePhotos, movePhoto } from '../../lib/guidedEditor'
+
+const VisualEditor = lazy(() => import('./VisualEditor'))
 
 marked.setOptions({ breaks: true, gfm: true })
 const EMPTY_FORM = { title: '', slug: '', category_id: '', excerpt: '', content: '', cover_image_url: '', score: '', seo_title: '', seo_description: '', affiliate_links: '', author: '', image_source: '', content_format: '', sources: [] }
@@ -45,6 +50,11 @@ export default function AdminArticleEditor() {
   const [success, setSuccess] = useState('')
   const [preview, setPreview] = useState(false)
   const [previewMobile, setPreviewMobile] = useState(false)
+  const [contentMode, setContentMode] = useState(isNew ? 'visual' : 'markdown')
+  const [editorId, setEditorId] = useState(null)
+  const recoveryRef = useRef(null)
+  const [related, setRelated] = useState(null)
+  const visualRef = useRef(null)
   const [tagSearch, setTagSearch] = useState('')
   const [importProvenance, setImportProvenance] = useState(null)
   const contentRef = useRef(null)
@@ -61,12 +71,17 @@ export default function AdminArticleEditor() {
   routeRef.current = id
   const status = record?.status || 'draft'
   const claimSummary = claimReviewSummary(claimReviews, form.sources)
-  const completeReview = claimsReady && Object.keys(checklist).every(key => review[key] === true) && (!claimReviews.length || claimSummary.complete)
+  const claimsRequired = isNew || record?.claims_required === true
+  const photos = articlePhotos(form.content)
+  const { urls: privateUrls, error: photoWarning } = usePrivateMedia(form.content, form.cover_image_url)
+  const completeReview = claimsReady && Object.keys(checklist).every(key => review[key] === true) && (claimsRequired ? claimSummary.complete : (!claimReviews.length || claimSummary.complete))
 
   useEffect(() => {
     let active = true
-    Promise.all([supabase.from('categories').select('id, name').order('name'), supabase.from('tags').select('id, name').order('name')]).then(([cats, tgs]) => {
+    Promise.all([supabase.from('categories').select('id, name').order('name'), supabase.from('tags').select('id, name').order('name'), supabase.auth.getUser()]).then(([cats, tgs, auth]) => {
       if (!active) return
+      if (auth.error || !auth.data.user) { setError('Accesso editor indisponibile. Riprova prima di salvare.'); return }
+      setEditorId(auth.data.user.id)
       if (cats.error || tgs.error) { setError('Categorie o tag indisponibili. Ricarica prima di salvare.'); return }
       setCategories(cats.data || [])
       setTags(tgs.data || []); setOptionsReady(true)
@@ -77,7 +92,7 @@ export default function AdminArticleEditor() {
   useEffect(() => {
     let active = true
     routeGeneration.current++
-    setSaving(false); setMetadataWarning(''); setImportProvenance(null); setClaimsReady(isNew)
+    setContentMode(isNew ? 'visual' : 'markdown'); setSaving(false); setMetadataWarning(''); setImportProvenance(null); setClaimsReady(isNew)
     setError(''); setSuccess(''); setReview({}); setClaimReviews([]); setClaimBaseline('[]'); setPreview(false)
     if (isNew) {
       setForm(EMPTY_FORM); setRecord(null); setSelectedTags([]); setBaseline(snapshot(EMPTY_FORM, [])); setSlugManual(false); setLoading(false)
@@ -117,8 +132,23 @@ export default function AdminArticleEditor() {
     return () => { window.removeEventListener('beforeunload', beforeUnload); document.removeEventListener('click', internalNavigation, true) }
   }, [])
 
-  function change(field, value) { setForm(previous => ({ ...previous, [field]: value })); setReview({}); if (field === 'content' || field === 'sources') setClaimReviews([]); setSuccess(''); if (field === 'cover_image_url') setCoverError(false) }
+  useEffect(() => {
+    if (!form.category_id) return
+    let active = true
+    supabase.from('articles').select('id, title, slug').eq('is_published', true).eq('category_id', form.category_id).order('published_at', { ascending: false }).limit(4)
+      .then(({ data, error }) => { if (active && !error && Array.isArray(data)) setRelated({ category: form.category_id, items: data.filter(row => row.id !== id && /^[a-z0-9][a-z0-9-]{0,180}$/.test(row.slug)) }) }).catch(() => {})
+    return () => { active = false }
+  }, [form.category_id, id])
+
+  function previewSrc(url) { return privateUrls[url] || (mediaPath(url) ? undefined : url) }
+  function previewHtml() {
+    const document = new window.DOMParser().parseFromString(DOMPurify.sanitize(marked.parse(form.content || '_Nessun contenuto._')), 'text/html')
+    document.querySelectorAll('img').forEach(img => { const url = previewSrc(img.getAttribute('src')); if (url) img.setAttribute('src', url); else img.removeAttribute('src') })
+    return DOMPurify.sanitize(document.body.innerHTML)
+  }
+  function change(field, value) { setForm(previous => ({ ...previous, [field]: value })); setReview({}); if (field === 'content' || field === 'sources') setClaimReviews(previous => previous.map(claim => ({ ...claim, decision: 'unknown', ...(field === 'sources' && !value.some(source => source?.url === claim.source_url) ? { source_url: '' } : {}) }))); setSuccess(''); if (field === 'cover_image_url') setCoverError(false) }
   function insertContent(before, after = '') {
+    if (contentMode === 'visual' && !hasRawHtml(form.content) && visualRef.current) { visualRef.current.insertMarkdown(before + after); return }
     const input = contentRef.current
     const start = input?.selectionStart ?? form.content.length
     const end = input?.selectionEnd ?? start
@@ -210,6 +240,7 @@ export default function AdminArticleEditor() {
       }
       const result = await editorialAction(name, args)
       if (!current()) return
+      recoveryRef.current?.clear()
       setRecord(previous => ({ ...previous, ...(kind === 'save' ? args.p_article : {}), ...result, ...(result.status === 'draft' || result.status === 'discarded' ? { approved_version: null, approved_at: null, approved_by: null, last_verified_at: null } : {}) }))
       if (kind === 'save') { dirtyRef.current = false; setBaseline(snapshot(form, selectedTags)) }
       if (kind === 'save' && status !== 'published') setClaimBaseline(JSON.stringify(claimReviews))
@@ -239,6 +270,9 @@ export default function AdminArticleEditor() {
       <button onClick={() => setPreview(value => !value)} className={buttonClass}>{preview ? 'Editor' : 'Preview'}</button>
     </div>
     {error && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 break-words">{error}</p>}
+    {editorId && ((isNew && !record) || record?.id === id) && <DraftRecovery ref={recoveryRef} key={`${editorId}:${id || 'nuovo'}:${reload}`} userId={editorId} articleId={id || 'nuovo'} version={record?.version ?? null} dirty={dirtyRef.current} value={{ form, tags: selectedTags, claims: claimReviews, provenance: importProvenance }} onRestore={copy => { setForm(copy.form); setSelectedTags(copy.tags); setClaimReviews(copy.claims); setImportProvenance(copy.provenance); setReview({}); setSuccess('Copia ripristinata. Verifica il contenuto e salva la bozza sul server.') }} />}
+    {importProvenance?.source_checks && <aside className="border border-border rounded-xl p-4 mb-4 text-sm"><p>Indipendenza delle fonti da verificare manualmente.</p>{importProvenance.source_checks.duplicate_content?.length > 0 && <p className="text-amber-700">Rilevati testi identici tra fonti: {JSON.stringify(importProvenance.source_checks.duplicate_content)}. Non considerarli conferme indipendenti.</p>}{importProvenance.source_checks.same_host?.length > 0 && <p>Fonti dello stesso sito: {JSON.stringify(importProvenance.source_checks.same_host)}.</p>}</aside>}
+    {photoWarning && <p role="alert" className="text-amber-700 text-sm mb-4">{photoWarning}</p>}
     {metadataWarning && <p className="text-amber-700 text-sm mb-4">{metadataWarning}</p>}
     {success && <p role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4">{success}</p>}
     <div className={`${panelClass} mb-5 text-sm break-words`}>
@@ -254,10 +288,10 @@ export default function AdminArticleEditor() {
       <div className="flex flex-wrap gap-2 mb-4"><button onClick={() => setPreviewMobile(false)} aria-pressed={!previewMobile} className={buttonClass}>Desktop</button><button onClick={() => setPreviewMobile(true)} aria-pressed={previewMobile} className={buttonClass}>Mobile</button></div>
       <div className={`${panelClass} break-words mx-auto ${previewMobile ? 'max-w-[375px]' : 'max-w-3xl'}`}>
       <h2 className="text-3xl font-heading font-bold">{form.title}</h2><p>{form.excerpt}</p>
-      {form.cover_image_url && <img src={form.cover_image_url} alt="Cover da verificare" className="w-full max-h-80 object-cover rounded-xl" onError={() => setCoverError(true)} />}
+      {form.cover_image_url && <img src={previewSrc(form.cover_image_url)} alt="Cover da verificare" className="w-full max-h-80 object-cover rounded-xl" onError={() => setCoverError(true)} />}
       {coverError && <p role="alert">Cover non caricabile: controlla URL e diritti prima di attestare la verifica.</p>}
       <p>Autore: {form.author || 'Mancante'} · Formato: {form.content_format || 'Mancante'}</p>
-      <div className="article-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(form.content || '_Nessun contenuto._')) }} />
+      <div className="article-content" dangerouslySetInnerHTML={{ __html: previewHtml() }} />
       <h3 className="font-bold">Fonti</h3>
       {form.sources.map((rawSource, index) => { const source = rawSource || {}; return <div key={index} className="break-words"><p>{index === 0 ? 'Principale: ' : ''}{/^https?:\/\//i.test(source.url) ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">{sourceText(source.title) || sourceText(source.url)}</a> : sourceText(source.title)}</p><p>{sourceText(source.publisher)} · Pubblicazione: {dateLabel(source.published_at)} · Consultazione: {dateLabel(source.retrieved_at)}</p></div> })}
     </div></div> : <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -268,7 +302,9 @@ export default function AdminArticleEditor() {
           <Field label="Autore"><input className={inputClass} value={form.author} onChange={e => change('author', e.target.value)} /></Field>
           <Field label="Excerpt"><textarea className={inputClass} rows={3} value={form.excerpt} onChange={e => change('excerpt', e.target.value)} /></Field>
         </div>
-        <div className={panelClass}><div className="flex flex-wrap gap-2" role="toolbar" aria-label="Strumenti di scrittura">{Object.entries(contentTools).map(([label, [before, after]]) => <button key={label} onMouseDown={e => e.preventDefault()} onClick={() => insertContent(before, after)} className={buttonClass}>{label}</button>)}</div><Field label="Contenuto (Markdown)"><textarea ref={contentRef} className={`${inputClass} font-mono resize-y`} rows={20} value={form.content} onChange={e => change('content', e.target.value)} /></Field></div>
+        <div className={panelClass}><div className="flex gap-2 mb-3"><button type="button" className={buttonClass} aria-pressed={contentMode === 'visual'} disabled={hasRawHtml(form.content)} onClick={() => setContentMode('visual')}>Visuale</button><button type="button" className={buttonClass} aria-pressed={contentMode === 'markdown'} onClick={() => setContentMode('markdown')}>Markdown</button></div>
+          {hasRawHtml(form.content) && <p className="text-xs text-amber-700 mb-3">Questo contenuto include HTML: usa Markdown per preservarlo senza conversioni.</p>}
+          {contentMode === 'visual' && !hasRawHtml(form.content) ? <Suspense fallback={<p role="status">Caricamento editor visuale...</p>}><VisualEditor ref={visualRef} value={form.content} onChange={value => change('content', value)} disabled={saving} privateUrls={privateUrls} /></Suspense> : <><div className="flex flex-wrap gap-2" role="toolbar" aria-label="Strumenti di scrittura">{Object.entries(contentTools).map(([label, [before, after]]) => <button key={label} onMouseDown={e => e.preventDefault()} onClick={() => insertContent(before, after)} className={buttonClass}>{label}</button>)}</div><Field label="Contenuto (Markdown)"><textarea ref={contentRef} className={`${inputClass} font-mono resize-y`} rows={20} value={form.content} onChange={e => change('content', e.target.value)} /></Field></>}</div>
         <div className={panelClass}>
           <h2 className="font-heading font-bold">Fonti</h2><p className="text-xs text-gray-500">La prima fonte è principale. Date e consultazione effettiva in fuso locale ({Intl.DateTimeFormat().resolvedOptions().timeZone}); salvate come ISO con timezone. Data ignota resta vuota. Nuovi URL HTTPS.</p>
           {form.sources.map((rawSource, index) => { const source = rawSource || {}; return <div key={index} className="space-y-3 border border-border rounded-xl p-3">
@@ -284,6 +320,7 @@ export default function AdminArticleEditor() {
           <p className="text-xs text-gray-500">Titolo: {form.seo_title.length}/60 · Descrizione: {form.seo_description.length}/160 caratteri consigliati.</p>
           <Field label="SEO Description"><textarea className={inputClass} rows={3} value={form.seo_description} onChange={e => change('seo_description', e.target.value)} /></Field>
           <div className="border-l-4 border-primary/30 pl-4 break-words"><p className="text-xs text-gray-500">Canonical</p><p className="text-xs">https://www.phonepulse.it/articoli/{form.slug}</p><h3 className="text-lg text-blue-800">{form.seo_title || form.title || 'Titolo da compilare'}</h3><p className="text-sm text-gray-600">{form.seo_description || form.excerpt || 'Descrizione da compilare'}</p></div>
+          {related?.category === form.category_id && related.items.length > 0 && <section className="space-y-2" aria-label="Link interni suggeriti"><h3 className="text-sm font-semibold">Articoli pubblicati nella categoria</h3>{related.items.slice(0, 3).map(row => <button type="button" key={row.id} className="block text-left text-sm text-primary underline" onClick={() => insertContent(`[${row.title.replace(/[\\[\]]/g, '\\$&')}](/articoli/${row.slug})`)}>{row.title}</button>)}</section>}
           <Field label="Affiliate links (JSON)"><textarea className={`${inputClass} font-mono`} rows={4} value={form.affiliate_links} onChange={e => change('affiliate_links', e.target.value)} /></Field>
         </div>
       </div>
@@ -296,21 +333,22 @@ export default function AdminArticleEditor() {
           <Field label="Voto (0–100)"><input className={inputClass} type="number" min="0" max="100" step="1" value={form.score} onChange={e => change('score', e.target.value)} /></Field>
         </div>
         <div className={panelClass}>
-          <PhotoInsert key={id || 'new'} disabled={saving} onInsert={({ figure, url, cover, credit }) => { insertContent(figure); if (cover) { change('cover_image_url', url); change('image_source', credit) } }} />
+          <PhotoInsert key={id || 'new'} disabled={saving || photos.length >= 20} onInsert={({ figure, url, cover, credit }) => { insertContent(figure); if (cover) { change('cover_image_url', url); change('image_source', credit) } }} />
+          {photos.length > 0 && <section aria-label="Ordine delle foto" className="space-y-3"><h3 className="text-sm font-semibold">Foto nell’articolo</h3>{photos.map((photo, index) => <div key={photo.start} className="border border-border rounded-lg p-2 space-y-2"><img src={previewSrc(photo.url)} alt={photo.alt} className="w-full h-24 object-contain" /><p className="text-xs break-words">{photo.alt}</p><div className="flex gap-2"><button type="button" disabled={index === 0} className={buttonClass} onClick={() => change('content', movePhoto(form.content, index, -1))}>Sposta foto {index + 1} su</button><button type="button" disabled={index === photos.length - 1} className={buttonClass} onClick={() => change('content', movePhoto(form.content, index, 1))}>Sposta foto {index + 1} giù</button></div><button type="button" className={buttonClass} onClick={() => change('cover_image_url', photo.url)}>Copertina foto {index + 1}</button></div>)}</section>}
           <Field label="Cover Image URL"><input className={inputClass} type="url" value={form.cover_image_url} onChange={e => change('cover_image_url', e.target.value)} /></Field>
-          {form.cover_image_url && <img src={form.cover_image_url} alt="Cover da verificare" className="w-full h-40 object-cover rounded-xl" onError={() => setCoverError(true)} />}
+          {form.cover_image_url && <img src={previewSrc(form.cover_image_url)} alt="Cover da verificare" className="w-full h-40 object-cover rounded-xl" onError={() => setCoverError(true)} />}
           {coverError && <p role="alert" className="text-red-700 text-sm">Cover non caricabile: controlla URL e diritti prima di attestare la verifica.</p>}
           <Field label="Provenienza cover"><input className={inputClass} value={form.image_source} onChange={e => change('image_source', e.target.value)} /></Field>
         </div>
         <div className={panelClass}><h2 className="font-semibold text-sm">Tag</h2><Field label="Cerca tag"><input className={inputClass} value={tagSearch} onChange={e => setTagSearch(e.target.value)} /></Field><div className="flex flex-wrap gap-2">{tags.filter(tag => tag.name.toLocaleLowerCase('it').includes(tagSearch.toLocaleLowerCase('it'))).map(tag => <button key={tag.id} aria-pressed={selectedTags.includes(tag.id)} onClick={() => { setSelectedTags(previous => previous.includes(tag.id) ? previous.filter(id => id !== tag.id) : [...previous, tag.id]); setReview({}); setSuccess('') }} className={`text-xs px-3 py-1.5 rounded-full border ${selectedTags.includes(tag.id) ? 'bg-primary text-white border-primary' : 'border-border'}`}>{tag.name}</button>)}</div></div>
       </div>
     </div>}
-    <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setReview(previous => ({ ...previous, claims_sourced: false })); setSuccess('') }} /></div>
+    <div className="mt-6"><ClaimReviewPanel required={claimsRequired} claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setReview(previous => ({ ...previous, claims_sourced: false })); setSuccess('') }} /></div>
     <div className={`${panelClass} mt-6`}>
       <h2 className="font-heading font-bold">Revisione umana della versione</h2><p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
       {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
       {problem && <p className="text-amber-700 text-sm">{problem}</p>}
-      {!!claimReviews.length && !claimSummary.complete && <p className="text-amber-700 text-sm">Completa o rimuovi le verifiche dettagliate prima dell'approvazione.</p>}
+      {!!claimReviews.length && !claimSummary.complete && <p className="text-amber-700 text-sm">Completa le verifiche dettagliate prima dell'approvazione.</p>}
       {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
       <div className="flex flex-wrap gap-3">
         {status !== 'discarded' && <button disabled={saving || !optionsReady || !claimsReady || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}

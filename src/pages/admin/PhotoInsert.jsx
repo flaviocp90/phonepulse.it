@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { mediaUrl } from '../../lib/privateMedia'
 import { photoMarkdown, validatePhoto } from '../../lib/guidedEditor'
 
 export default function PhotoInsert({ onInsert, disabled }) {
@@ -31,7 +32,7 @@ export default function PhotoInsert({ onInsert, disabled }) {
       const path = `${data.user.id}/${window.crypto.randomUUID()}.${extension}`
       const { error: uploadError } = await supabase.storage.from('editorial-media').upload(path, file, { contentType: file.type, upsert: false })
       if (uploadError) throw new Error('Caricamento non riuscito. Controlla connessione e permessi; il testo è conservato.')
-      const { data: { publicUrl } } = supabase.storage.from('editorial-media').getPublicUrl(path)
+      const publicUrl = mediaUrl(path)
       if (!alive.current) return
       insertRef.current({ figure: photoMarkdown({ ...details, url: publicUrl }), url: publicUrl, cover, credit: `${details.credit} · ${details.license}` })
       setFile(null); if (fileRef.current) fileRef.current.value = ''; setDetails({ alt: '', caption: '', credit: '', license: '' })
@@ -41,7 +42,7 @@ export default function PhotoInsert({ onInsert, disabled }) {
 
   return <fieldset disabled={disabled || busy} className="space-y-3 min-w-0">
     <legend className="font-heading font-bold mb-2">Inserisci una foto</legend>
-    <p className="text-xs text-gray-500">Carica solo foto originali o autorizzate. Il file sarà accessibile pubblicamente dal caricamento, anche se l’articolo è ancora in bozza.</p>
+    <p className="text-xs text-gray-500">Carica solo foto originali o autorizzate. Le foto restano private durante la bozza e diventano accessibili quando l’articolo viene pubblicato.</p>
     <label className="block text-sm">Foto (JPEG, PNG, WebP, massimo 5 MB)<input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="block w-full text-xs mt-2" onChange={e => { setError(''); const next = e.target.files?.[0]; try { validatePhoto(next); setFile(next) } catch (err) { setFile(null); setError(err.message) } }} /></label>
     {preview && <img src={preview} alt="Anteprima foto da inserire" className="w-full max-h-48 object-contain" />}
     {Object.entries({ alt: 'Testo alternativo', caption: 'Didascalia', credit: 'Autore / credito', license: 'Licenza o autorizzazione' }).map(([key, label]) => <label key={key} className="block text-xs text-gray-600">{label}<input className="block w-full border border-border rounded-lg p-2 mt-1" maxLength={500} value={details[key]} onChange={e => setDetails(previous => ({ ...previous, [key]: e.target.value }))} /></label>)}

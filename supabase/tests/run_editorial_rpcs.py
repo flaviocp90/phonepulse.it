@@ -21,7 +21,7 @@ parser.add_argument('--automation', action='store_true')
 parser.add_argument('--automation-red-only', action='store_true')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
-base = Path(tempfile.mkdtemp(prefix='phonepulse-editorial-rpcs-', dir='/private/tmp'))
+base = Path(tempfile.mkdtemp(prefix='phonepulse-editorial-rpcs-', dir='/private/tmp' if Path('/private/tmp').is_dir() else '/tmp'))
 (base / 'socket').mkdir(mode=0o700)
 entries = []
 manifest = base / 'manifest.json'
@@ -160,7 +160,8 @@ try:
             assert len(migrations) == 1
             run('guided-migration', psql + ['-f', str(migrations[0])])
             run('guided-green', psql + ['-f', 'supabase/tests/guided_editor.sql'])
-            run('guided-regression', psql + ['-f', 'supabase/tests/editorial_rpcs.sql'])
+            run('guided-legacy-default', psql, sql='alter table public.articles alter column claims_required set default false;')
+            run('guided-legacy-regression', psql + ['-f', 'supabase/tests/editorial_rpcs.sql'])
         if args.social:
             run('social-red', psql + ['-f', 'supabase/tests/social_delivery.sql'], expected=3)
             assert 'social delivery RPCs absent' in (base / 'social-red.stderr').read_text(), 'wrong social RED failure'

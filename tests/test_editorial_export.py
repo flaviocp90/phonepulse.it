@@ -42,3 +42,21 @@ class ExportTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class ResearchOnlyTests(unittest.TestCase):
+    def test_manifest_exports_research_without_a_writer_or_approval(self):
+        from editorial_export import export_research
+        result = export_research(manifest())
+        self.assertEqual(result['provenance']['model'], 'none-research-only')
+        self.assertFalse(result['publish_allowed'])
+        self.assertEqual(result['claims'][0]['decision'], 'unknown')
+        self.assertEqual(result['claims'][0]['evidence'], '')
+        self.assertTrue(result['claims'][0]['candidates'])
+        self.assertEqual(result['claims'][0]['candidates'][0]['verification'], 'unverified')
+
+    def test_unretrieved_sources_never_become_research_imports(self):
+        from editorial_export import export_research
+        data = manifest()
+        data['sources'][0]['retrieval'] = 'unavailable'
+        with self.assertRaisesRegex(ValueError, 'No retrieved sources'):
+            export_research(data)

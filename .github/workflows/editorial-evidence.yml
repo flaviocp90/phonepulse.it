@@ -21,6 +21,7 @@ on:
       - 'tests/test_editorial_writer.py'
       - 'tests/test_editorial_gemini_experiment.py'
       - 'tests/test_editorial_export.py'
+      - 'tests/test_editorial_source_checks.py'
       - 'docs/editorial/pilots/**'
       - '.github/workflows/editorial-evidence.yml'
   workflow_dispatch:

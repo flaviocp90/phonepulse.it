@@ -6,7 +6,7 @@ export const EMPTY_CLAIM_REVIEW = {
   statement: '', source_url: '', evidence: '', rationale: '', decision: 'unknown',
 }
 
-export default function ClaimReviewPanel({ claims, sources, onChange }) {
+export default function ClaimReviewPanel({ claims, sources, onChange, required = false }) {
   const { errors, complete } = claimReviewSummary(claims, sources)
   const available = (sources || []).filter(source => source && /^https:\/\//i.test(source.url || '') && source.retrieved_at)
   const update = (index, key, value) => onChange(claims.map((item, i) => i === index ? { ...item, [key]: value } : item))
@@ -20,7 +20,7 @@ export default function ClaimReviewPanel({ claims, sources, onChange }) {
           I controlli qui sono manuali, non un fact-check automatico.
         </p>
         <p className="text-xs text-amber-700 mt-1">
-          Salva bozza per conservare anche le verifiche incomplete. Approvazione e correzione pubblicata registrano la revisione nel registro; cambiare contenuto o fonti richiede nuove verifiche.
+          Salva bozza per conservare anche le verifiche incomplete. Approvazione e correzione pubblicata registrano la revisione nel registro; cambiare contenuto o fonti conserva le note ma riporta gli esiti a Da verificare.
         </p>
       </div>
       {claims.map((claim, index) => (
@@ -32,6 +32,7 @@ export default function ClaimReviewPanel({ claims, sources, onChange }) {
           <label className="block text-xs text-gray-600">Fatto da verificare
             <textarea className={fieldClass} maxLength={700} rows={2} value={claim.statement} onChange={e => update(index, 'statement', e.target.value)} placeholder="Es. Android 14 integra Health Connect nelle impostazioni di sistema." />
           </label>
+          {!!claim.candidates?.length && <aside className="bg-gray-50 border border-border rounded-lg p-3 space-y-2" aria-label={`Evidenze importate affermazione ${index + 1}`}><p className="text-xs font-semibold">Estratti di ricerca non verificati</p><p className="text-xs text-gray-500">Apri la fonte e controlla contesto e data. Usare un passaggio non approva l’affermazione.</p>{claim.candidates.map((candidate, candidateIndex) => <div key={candidateIndex} className="space-y-1"><blockquote className="text-sm border-l-2 border-primary/30 pl-2">{candidate.excerpt}</blockquote><a className="block text-xs text-primary underline break-all" href={candidate.source_url} target="_blank" rel="noopener noreferrer">Apri fonte dell’estratto {candidateIndex + 1}</a><button type="button" className="text-xs underline" onClick={() => onChange(claims.map((item, i) => i === index ? { ...item, source_url: candidate.source_url, evidence: candidate.excerpt, decision: 'unknown' } : item))}>Usa passaggio {candidateIndex + 1}</button></div>)}</aside>}
           <label className="block text-xs text-gray-600">Fonte effettivamente consultata
             <select className={fieldClass} value={claim.source_url} onChange={e => update(index, 'source_url', e.target.value)}>
               <option value="">Seleziona una fonte</option>
@@ -54,7 +55,7 @@ export default function ClaimReviewPanel({ claims, sources, onChange }) {
         </div>
       ))}
       {claims.length < MAX_CLAIMS && <button type="button" className="px-4 py-2 rounded-xl bg-gray-100 text-sm hover:bg-gray-200" onClick={() => onChange([...claims, { ...EMPTY_CLAIM_REVIEW }])}>Aggiungi affermazione</button>}
-      {!claims.length && <p className="text-sm text-gray-500">Nessuna verifica dettagliata ancora compilata. La checklist generale rimane obbligatoria.</p>}
+      {!claims.length && <p className="text-sm text-gray-500">{required ? 'Aggiungi almeno un’affermazione supportata: le evidenze sono obbligatorie per questa bozza.' : 'Nessuna verifica dettagliata ancora compilata. La checklist generale rimane obbligatoria.'}</p>}
       {!!claims.length && <p role="status" className={complete ? 'text-sm text-green-700' : 'text-sm text-amber-700'}>
         {complete ? 'Tutte le affermazioni inserite risultano supportate secondo la tua verifica manuale.' : 'La verifica dettagliata non è completa: non attestare il supporto delle fonti.'}
       </p>}

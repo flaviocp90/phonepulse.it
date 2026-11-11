@@ -1,3 +1,5 @@
+import { marked } from 'marked'
+
 export const templates = {
   news: '## Cosa è successo\n\n\n## Cosa cambia per chi legge\n\n\n## Disponibilità e limiti\n\n',
   guide: '## Il problema e a chi serve questa guida\n\n\n## Prima di iniziare\n\n\n## Procedura\n\n1. \n2. \n\n## Se non funziona\n\n\n## Limiti della guida documentale\n\n',
@@ -39,8 +41,44 @@ export function readResearchImport(value) {
   })
   const provenance = value.provenance
   if (!provenance || !/^[a-f0-9]{64}$/.test(provenance.manifest_sha256) || typeof provenance.model !== 'string' || provenance.model.length > 100) throw new Error('Provenienza della ricerca mancante.')
+  const checks = provenance.source_checks
+  if (checks && (typeof checks !== 'object' || JSON.stringify(checks).length > 1500)) throw new Error('Controlli sulle fonti non validi.')
   return {
     article: { title: article.title, excerpt: article.excerpt, content: article.content, content_format: 'guide', sources: cleanSources },
-    provenance: { manifest_sha256: provenance.manifest_sha256, model: provenance.model, authentication_verified: false, review_required: true },
+    provenance: { manifest_sha256: provenance.manifest_sha256, model: provenance.model, authentication_verified: false, review_required: true, ...(checks ? { source_checks: { duplicate_content: checks.duplicate_content, same_host: checks.same_host, independence: 'not_assessed' } } : {}) },
   }
+}
+
+
+export function hasRawHtml(content) {
+  let found = false
+  marked.walkTokens(marked.lexer(content), token => { if (token.type === 'html') found = true })
+  return found
+}
+
+export function articlePhotos(content) {
+  const tokens = marked.lexer(content)
+  if (tokens.map(token => token.raw).join('') !== content) return []
+  const photos = []
+  let offset = 0
+  tokens.forEach((token, index) => {
+    const image = token.type === 'paragraph' && token.tokens?.length === 1 && token.tokens[0].type === 'image' ? token.tokens[0] : null
+    if (image) {
+      let raw = token.raw
+      const next = tokens[index + 1]?.type === 'space' ? index + 2 : index + 1
+      const caption = tokens[next]
+      if (caption?.type === 'paragraph' && caption.tokens?.length === 1 && caption.tokens[0].type === 'em') raw += tokens.slice(index + 1, next + 1).map(item => item.raw).join('')
+      photos.push({ start: offset, end: offset + raw.length, raw, url: image.href, alt: image.text })
+    }
+    offset += token.raw.length
+  })
+  return photos
+}
+
+export function movePhoto(content, index, delta) {
+  const photos = articlePhotos(content)
+  const target = index + delta
+  if (!photos[index] || !photos[target]) return content
+  const [first, second] = [photos[index], photos[target]].sort((a, b) => a.start - b.start)
+  return content.slice(0, first.start) + second.raw + content.slice(first.end, second.start) + first.raw + content.slice(second.end)
 }
