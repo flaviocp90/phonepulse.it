@@ -29,11 +29,10 @@ async function mockedInitialHtml(request) {
   return composeArticleDocument(await shell.text(), renderPreview(article))
 }
 
-test('article HTML remains readable without JavaScript', async ({ browser, request }) => {
-  const html = await mockedInitialHtml(request)
-  const context = await browser.newContext({ javaScriptEnabled: false, baseURL: 'http://127.0.0.1:4173' })
-  try {
-    const page = await context.newPage()
+test.describe('server HTML without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+  test('article HTML remains readable without JavaScript', async ({ page, request }) => {
+    const html = await mockedInitialHtml(request)
     await page.route('**/articoli/seo-integration-test', route =>
       route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }))
     const response = await page.goto(path, { waitUntil: 'domcontentloaded' })
@@ -48,13 +47,15 @@ test('article HTML remains readable without JavaScript', async ({ browser, reque
     await expect(page.getByRole('link', { name: 'Fonte verificata' })).toHaveAttribute('href', 'https://example.org/')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical)
     await expect(page).toHaveTitle('Guida SEO completa — PhonePulse')
-  } finally {
-    await context.close()
-  }
+  })
 })
 
 test('React takes over article and keeps metadata and navigation correct', async ({ page, request }) => {
   const html = await mockedInitialHtml(request)
+  await page.route('**/*', route => {
+    const host = new URL(route.request().url()).hostname
+    return ['127.0.0.1', 'supabase.test'].includes(host) ? route.continue() : route.abort()
+  })
   await page.route('**/articoli/seo-integration-test', route =>
     route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }))
   await page.route('**/rest/v1/**', async route => {

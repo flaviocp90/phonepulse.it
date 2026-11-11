@@ -11,6 +11,7 @@ on:
       - 'scripts/editorial_review_gate.py'
       - 'scripts/editorial_writer.py'
       - 'scripts/editorial_gemini_experiment.py'
+      - 'scripts/editorial_export.py'
       - 'tests/test_editorial_evidence.py'
       - 'tests/test_editorial_retrieval.py'
       - 'tests/test_editorial_dry_run.py'
@@ -19,6 +20,8 @@ on:
       - 'tests/test_editorial_review_gate.py'
       - 'tests/test_editorial_writer.py'
       - 'tests/test_editorial_gemini_experiment.py'
+      - 'tests/test_editorial_export.py'
+      - 'tests/test_editorial_source_checks.py'
       - 'docs/editorial/pilots/**'
       - '.github/workflows/editorial-evidence.yml'
   workflow_dispatch:

@@ -103,6 +103,10 @@ def assess_pack(sources: list[Source], claims: list[Claim]) -> dict:
     if len({claim.claim_id for claim in claims}) != len(claims):
         raise EvidenceError("Duplicate claim IDs")
 
+    statements = [' '.join(claim.statement.casefold().split()) for claim in claims]
+    if len(set(statements)) != len(statements):
+        raise EvidenceError('Duplicate claim statements')
+
     reviewed = []
     for claim in claims:
         supporting = set(claim.supporting_source_ids)
@@ -116,7 +120,7 @@ def assess_pack(sources: list[Source], claims: list[Claim]) -> dict:
         status = ("conflicted" if read_conflict else
                   "supported" if read_support and claim.editorially_verified else "unknown")
         reviewed.append({"claim_id": claim.claim_id, "statement": claim.statement,
-                         "status": status, "editorially_verified": claim.editorially_verified,
+                         "status": status, "review_reason": ("source_conflict" if read_conflict else "source_unavailable" if not read_support else "unreviewed" if not claim.editorially_verified else "verified"), "editorially_verified": claim.editorially_verified,
                          "supporting_sources": read_support,
                          "conflicting_sources": read_conflict})
 
@@ -125,7 +129,7 @@ def assess_pack(sources: list[Source], claims: list[Claim]) -> dict:
     elif any(c["status"] == "conflicted" for c in reviewed):
         decision, reason = "needs_research", "Conflicting claims require human investigation"
     elif any(c["status"] == "unknown" for c in reviewed):
-        decision, reason = "needs_research", "Unretrieved or missing supporting sources"
+        decision, reason = "needs_research", ("Claims require explicit editorial review" if any(c["review_reason"] == "unreviewed" for c in reviewed) else "Supporting sources unavailable or missing")
     elif len(reviewed) < 3:
         decision, reason = "skip", "Fewer than three substantiated editorial facts"
     else:

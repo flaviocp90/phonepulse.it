@@ -1,9 +1,11 @@
+import { safeExternalUrl } from './publicEditorial.js'
+
 export const MAX_CLAIMS = 12
 
 export function claimReviewErrors(claims, sources) {
   if (!Array.isArray(claims) || claims.length > MAX_CLAIMS) return ['Numero di verifiche non valido.']
   if (!claims.length) return []
-  const validUrls = new Set((sources || []).filter(s => s && /^https:\/\//i.test(s.url || '') && s.retrieved_at).map(s => s.url))
+  const validUrls = new Set((sources || []).filter(s => s && safeExternalUrl(s.url) && /^https:\/\//i.test(s.url || '') && s.retrieved_at).map(s => s.url))
   const errors = []
   claims.forEach((claim, index) => {
     const label = `Affermazione ${index + 1}`
@@ -34,4 +36,17 @@ export function claimReviewAudit(claims, sources) {
       rationale: rationale.trim(), decision
     }))
   }
+}
+
+export function readClaimDraft(value) {
+  if (!Array.isArray(value) || value.length > MAX_CLAIMS) throw new Error('Verifiche salvate non valide.')
+  return value.map(item => {
+    if (!item || typeof item !== 'object' || ['statement', 'source_url', 'evidence', 'rationale', 'decision'].some(key => typeof item[key] !== 'string') || item.statement.length > 700 || item.source_url.length > 2048 || item.evidence.length > 240 || item.rationale.length > 500 || !['supported', 'conflicted', 'unknown'].includes(item.decision)) throw new Error('Verifiche salvate non valide.')
+    const candidates = item.candidates
+    if (candidates !== undefined && (!Array.isArray(candidates) || candidates.length > 3 || candidates.some(candidate => {
+      if (!candidate || typeof candidate.excerpt !== 'string' || !candidate.excerpt.trim() || candidate.excerpt.length > 110 || candidate.verification !== 'unverified' || typeof candidate.source_url !== 'string' || candidate.source_url.length > 2048) return true
+      try { const url = new URL(candidate.source_url); return url.protocol !== 'https:' || !!url.username || !!url.password } catch { return true }
+    }))) throw new Error('Estratti di ricerca non validi.')
+    return { ...Object.fromEntries(['statement', 'source_url', 'evidence', 'rationale', 'decision'].map(key => [key, item[key]])), ...(candidates ? { candidates: candidates.map(({ source_url, excerpt }) => ({ source_url, excerpt, verification: 'unverified' })) } : {}) }
+  })
 }

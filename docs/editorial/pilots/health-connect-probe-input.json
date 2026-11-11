@@ -1,0 +1,34 @@
+{
+  "topic": "Health Connect: installazione e accesso",
+  "sources": [
+    {
+      "source_id": "s1",
+      "url": "https://developer.android.com/health-and-fitness/health-connect/get-started",
+      "publisher": "Android Developers",
+      "kind": "primary"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "c1",
+      "statement": "Health Connect è integrato nel framework da Android 14.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c2",
+      "statement": "Su Android 13 e precedenti Health Connect richiede una app separata.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c3",
+      "statement": "Il percorso nelle impostazioni varia in base alla versione Android.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    }
+  ]
+}

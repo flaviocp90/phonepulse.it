@@ -1,0 +1,34 @@
+{
+  "topic": "App Links: verifica dei domini",
+  "sources": [
+    {
+      "source_id": "s1",
+      "url": "https://developer.android.com/training/app-links/verify-applinks",
+      "publisher": "Android Developers",
+      "kind": "primary"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "c1",
+      "statement": "Android verifica i domini associati agli intent filter quando autoVerify è attivo.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c2",
+      "statement": "La verifica utilizza il file assetlinks.json sul dominio associato.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "claim_id": "c3",
+      "statement": "Da Android 12 la verifica può essere avviata manualmente.",
+      "supporting_source_ids": [
+        "s1"
+      ]
+    }
+  ]
+}
