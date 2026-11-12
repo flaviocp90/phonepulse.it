@@ -62,6 +62,7 @@ class RunTests(unittest.TestCase):
     def test_generation_summary_replaces_per_article_notification(self):
         db = database([{'id': 'run'}])
         with patch.object(news, 'get_supabase', return_value=db), \
+             patch.object(news, 'OPENROUTER_API_KEY', 'test-only'), \
              patch.object(news, 'run_generation', return_value='completed'), \
              patch.object(news, 'invia_telegram') as notify, \
              patch.dict(news.os.environ, {'PHONEPULSE_EDITOR_AUTHOR': 'Editor'}), patch('builtins.print'):

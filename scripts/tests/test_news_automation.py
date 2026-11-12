@@ -32,6 +32,43 @@ def database(data=None, count=0):
 
 
 class AutomationTests(unittest.TestCase):
+    def test_drafting_uses_only_zero_price_router_even_with_gemini_configured(self):
+        response = Mock(status_code=200)
+        response.json.return_value = {'choices': [{'message': {'content': '{"decision":"skip"}'}}]}
+        with patch.object(news, 'OPENROUTER_API_KEY', 'fake'), \
+             patch.object(news, 'GEMINI_API_KEY', 'configured-but-never-used'), \
+             patch.object(news, 'get_gemini_calls_oggi', return_value=0), \
+             patch.object(news, 'chiama_gemini', return_value=(None, None)) as gemini, \
+             patch.object(news.requests, 'post', return_value=response) as request:
+            article, model = news.genera_bozza(database(), item())
+        self.assertEqual(article, {'decision': 'skip'})
+        self.assertEqual(model, 'openrouter/free')
+        gemini.assert_not_called()
+        self.assertEqual(request.call_count, 1)
+        payload = request.call_args.kwargs['json']
+        self.assertEqual(payload['model'], 'openrouter/free')
+        self.assertEqual(payload['provider']['max_price'], {'prompt': 0, 'completion': 0})
+
+    def test_missing_free_provider_key_fails_before_database_access(self):
+        with patch.object(news, 'OPENROUTER_API_KEY', ''), \
+             patch.object(news, 'get_supabase') as db:
+            with self.assertRaisesRegex(RuntimeError, 'OPENROUTER_API_KEY'):
+                news.main()
+            db.assert_not_called()
+
+    def test_free_provider_failure_never_falls_back_to_gemini(self):
+        with patch.object(news, 'chiama_openrouter', return_value=(None, None)), \
+             patch.object(news, 'chiama_gemini') as gemini:
+            self.assertEqual(news.genera_bozza(database(), item()), (None, None))
+            gemini.assert_not_called()
+
+    def test_candidate_scan_is_bounded_even_when_every_item_is_skipped(self):
+        sources = [item(link=f'https://example.com/{i}') for i in range(30)]
+        with patch.object(news, 'raccogli_tutti_i_feed', return_value=sources), \
+             patch.object(news, 'processa_articolo', return_value='skipped') as process:
+            self.assertEqual(news.run_generation(database([{'id': 'news'}]), {}, 'Editor'), 'no_candidates')
+            self.assertEqual(process.call_count, 10)
+
     def setUp(self):
         sleeper = patch.object(news.time, 'sleep')
         sleeper.start()

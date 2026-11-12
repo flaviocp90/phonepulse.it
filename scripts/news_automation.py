@@ -65,6 +65,7 @@ GOOGLE_CSE_DAILY_LIMIT = 99
 
 MAX_DRAFTS_PER_RUN = 5
 MAX_OPEN_DRAFTS = 20
+MAX_CANDIDATES_PER_RUN = 10
 MAX_FEED_BYTES = 2 * 1024 * 1024
 PROMPT_PATH = Path(__file__).resolve().parents[1] / 'docs/editorial/prompt-news.md'
 
@@ -231,11 +232,7 @@ def chiama_gemini(supabase: Client, prompt: str) -> tuple[str | None, str | None
 
 
 OPENROUTER_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "mistralai/mistral-small-3.1-24b-instruct:free",
-    "google/gemma-3-27b-it:free",
-    "qwen/qwen3-next-80b-a3b-instruct:free",
-    "openrouter/free",  # router automatico OpenRouter, fallback finale
+    "openrouter/free",
 ]
 
 
@@ -264,6 +261,7 @@ def chiama_openrouter(prompt: str) -> tuple[str | None, str | None]:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
             "max_tokens": 2048,
+            "provider": {"max_price": {"prompt": 0, "completion": 0}},
         }
         try:
             logger.info("OpenRouter request attempt: %s", model)
@@ -294,30 +292,11 @@ def chiama_openrouter(prompt: str) -> tuple[str | None, str | None]:
 
 
 def genera_bozza(supabase: Client, item: dict) -> tuple[dict | None, str | None]:
-    """
-    Seleziona il motore LLM corretto, chiama l'API e restituisce il dict JSON + nome modello.
-    Gestisce il dual-engine; il conteggio Gemini precede ogni tentativo.
-    """
-    prompt = build_prompt(item)
-    gemini_calls = get_gemini_calls_oggi(supabase)
-    testo_risposta = None
-    llm_model = None
-
-    if gemini_calls < GEMINI_DAILY_LIMIT:
-        logger.info(f"Uso Gemini (chiamate oggi: {gemini_calls})")
-        testo_risposta, llm_model = chiama_gemini(supabase, prompt)
-        if testo_risposta:
-            time.sleep(4)  # rispetta i rate limit del tier free Gemini
-        else:
-            # Gemini fallito → prova OpenRouter
-            logger.warning("Gemini fallito, fallback su OpenRouter")
-            testo_risposta, llm_model = chiama_openrouter(prompt)
-    else:
-        logger.info(f"Limite Gemini raggiunto ({gemini_calls}), uso OpenRouter")
-        testo_risposta, llm_model = chiama_openrouter(prompt)
+    """Draft only through the free router; never fall back to a billable API."""
+    testo_risposta, llm_model = chiama_openrouter(build_prompt(item))
 
     if not testo_risposta:
-        logger.error("Entrambi i motori LLM hanno fallito")
+        logger.error("Generazione gratuita non disponibile; nessun fallback a pagamento")
         return None, None
 
     # Parsing JSON
@@ -546,7 +525,7 @@ def run_generation(supabase, counts, author):
         logger.info('RSS queue is full; no provider calls')
         return 'skipped_queue_full'
     category_id = get_category_id_news(supabase)
-    candidates = raccogli_tutti_i_feed()
+    candidates = sorted(raccogli_tutti_i_feed(), key=lambda row: row.get('published_at') or '', reverse=True)
     seen = set()
     counts.update(created=0, failed=0, skipped=0)
     for source in candidates:
@@ -558,7 +537,7 @@ def run_generation(supabase, counts, author):
         seen.add(key)
         outcome = processa_articolo(source, supabase, category_id, author)
         counts[outcome] += 1
-        if counts['created'] >= capacity:
+        if counts['created'] >= capacity or sum(counts.values()) >= MAX_CANDIDATES_PER_RUN:
             break
     if counts['failed'] and not counts['created']:
         raise RuntimeError('All draft generation attempts failed')
@@ -566,6 +545,8 @@ def run_generation(supabase, counts, author):
 
 
 def main():
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError('OPENROUTER_API_KEY required for zero-cost draft generation')
     author = os.environ.get('PHONEPULSE_EDITOR_AUTHOR', '').strip()
     result = run_tracked(get_supabase(), 'generation',
                          lambda db, counts: run_generation(db, counts, author))
