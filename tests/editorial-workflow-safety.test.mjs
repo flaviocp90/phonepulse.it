@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs'
 
 const workflow = file => readFileSync(new URL(`../.github/workflows/${file}`, import.meta.url), 'utf8')
 
-test('scheduled research uses the review-only export without production secrets', () => {
+test('scheduled generation saves drafts using only the free provider', () => {
   const yaml = workflow('job-a-scraping.yml')
-  assert.match(yaml, /schedule:\s*\n\s*- cron: '17 2 \* \* \*'/)
+  assert.match(yaml, /schedule:\s*\n\s*- cron: '23 2 \* \* \*'/)
   assert.match(yaml, /if: github\.ref == 'refs\/heads\/master' && vars\.PHONEPULSE_RESEARCH_ENABLED == 'true'/)
-  assert.match(yaml, /python scripts\/editorial_dry_run\.py .* --fetch/)
-  assert.match(yaml, /python scripts\/editorial_export\.py --research-only/)
-  assert.doesNotMatch(yaml, /secrets\.|news_automation\.py|publish_article\.py|contents: write/)
+  assert.match(yaml, /python scripts\/news_automation\.py/)
+  for (const key of ['OPENROUTER_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY']) assert.ok(yaml.includes(`secrets.${key}`))
+  assert.doesNotMatch(yaml, /GEMINI|GOOGLE_CSE|TELEGRAM|publish_article\.py|contents: write/)
 })
 
 test('publisher defaults to a dry-run and uses the evidence gate in both modes', () => {
