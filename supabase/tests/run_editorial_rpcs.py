@@ -160,7 +160,9 @@ try:
             assert len(migrations) == 1
             run('guided-migration', psql + ['-f', str(migrations[0])])
             run('guided-green', psql + ['-f', 'supabase/tests/guided_editor.sql'])
-            run('guided-legacy-default', psql, sql='alter table public.articles alter column claims_required set default false;')
+            optional = list((repo / 'supabase/migrations').glob('*_optional_claim_review.sql'))
+            assert len(optional) == 1
+            run('optional-claims-migration', psql + ['-f', str(optional[0])])
             run('guided-legacy-regression', psql + ['-f', 'supabase/tests/editorial_rpcs.sql'])
         if args.social:
             run('social-red', psql + ['-f', 'supabase/tests/social_delivery.sql'], expected=3)

@@ -71,10 +71,9 @@ export default function AdminArticleEditor() {
   routeRef.current = id
   const status = record?.status || 'draft'
   const claimSummary = claimReviewSummary(claimReviews, form.sources)
-  const claimsRequired = isNew || record?.claims_required === true
   const photos = articlePhotos(form.content)
   const { urls: privateUrls, error: photoWarning } = usePrivateMedia(form.content, form.cover_image_url)
-  const completeReview = claimsReady && Object.keys(checklist).every(key => review[key] === true) && (claimsRequired ? claimSummary.complete : (!claimReviews.length || claimSummary.complete))
+  const completeReview = Object.keys(checklist).every(key => review[key] === true)
 
   useEffect(() => {
     let active = true
@@ -113,7 +112,7 @@ export default function AdminArticleEditor() {
         if (draftError) throw draftError
         if (draft?.version === data.version && data.status === 'draft') { const claims = readClaimDraft(draft.claims); setClaimReviews(claims); setClaimBaseline(JSON.stringify(claims)) }
         setClaimsReady(true)
-      } catch { if (active) setMetadataWarning('Verifiche salvate indisponibili. Il contenuto è caricato; riprova prima di revisionare.') }
+      } catch { if (active) setMetadataWarning('Verifiche salvate indisponibili. Ricarica se vuoi recuperarle.') }
       if (active) setLoading(false)
     }).catch(() => { if (active) { setError('Articolo indisponibile. Riprova il caricamento.'); setRecord(null); setLoading(false) } })
     return () => { active = false }
@@ -204,10 +203,10 @@ export default function AdminArticleEditor() {
     const current = () => routeRef.current === currentId && routeGeneration.current === generation
     try {
       let name, args, message
-      const claimEvidence = claimReviews.length && (kind === 'approve' || (kind === 'save' && status === 'published')) ? claimReviewAudit(claimReviews, form.sources) : null
+      const claimEvidence = claimSummary.complete && (kind === 'approve' || (kind === 'save' && status === 'published')) ? claimReviewAudit(claimReviews, form.sources) : null
       const reviewPayload = claimEvidence ? { ...review, claim_evidence: claimEvidence } : review
       if (kind === 'save') {
-        if (!claimsReady) throw new Error('Verifiche salvate indisponibili. Ricarica prima di salvare.')
+        if (status !== 'published' && !claimsReady) throw new Error('Note salvate indisponibili. Ricarica per conservarle nella bozza.')
         if (!optionsReady) throw new Error('Categorie o tag indisponibili. Ricarica prima di salvare.')
         const affiliateUnchanged = !isNew && form.affiliate_links === JSON.parse(baseline)[0].affiliate_links
         let affiliate = []
@@ -343,15 +342,14 @@ export default function AdminArticleEditor() {
         <div className={panelClass}><h2 className="font-semibold text-sm">Tag</h2><Field label="Cerca tag"><input className={inputClass} value={tagSearch} onChange={e => setTagSearch(e.target.value)} /></Field><div className="flex flex-wrap gap-2">{tags.filter(tag => tag.name.toLocaleLowerCase('it').includes(tagSearch.toLocaleLowerCase('it'))).map(tag => <button key={tag.id} aria-pressed={selectedTags.includes(tag.id)} onClick={() => { setSelectedTags(previous => previous.includes(tag.id) ? previous.filter(id => id !== tag.id) : [...previous, tag.id]); setReview({}); setSuccess('') }} className={`text-xs px-3 py-1.5 rounded-full border ${selectedTags.includes(tag.id) ? 'bg-primary text-white border-primary' : 'border-border'}`}>{tag.name}</button>)}</div></div>
       </div>
     </div>}
-    <div className="mt-6"><ClaimReviewPanel required={claimsRequired} claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setReview(previous => ({ ...previous, claims_sourced: false })); setSuccess('') }} /></div>
+    <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setSuccess('') }} /></div>
     <div className={`${panelClass} mt-6`}>
       <h2 className="font-heading font-bold">Revisione umana della versione</h2><p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
       {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
       {problem && <p className="text-amber-700 text-sm">{problem}</p>}
-      {!!claimReviews.length && !claimSummary.complete && <p className="text-amber-700 text-sm">Completa le verifiche dettagliate prima dell'approvazione.</p>}
       {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
       <div className="flex flex-wrap gap-3">
-        {status !== 'discarded' && <button disabled={saving || !optionsReady || !claimsReady || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
+        {status !== 'discarded' && <button disabled={saving || !optionsReady || (status !== 'published' && !claimsReady) || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
         {status === 'draft' && <button disabled={saving || dirty || isNew || !completeReview || !!problem} onClick={() => action('approve')} className={buttonClass}>Approva</button>}
         {status === 'approved' && <button disabled={saving || dirty || !!problem} onClick={() => action('publish')} className="px-4 py-2.5 rounded-xl bg-primary text-white disabled:opacity-40">Pubblica</button>}
         {!isNew && (status === 'discarded' ? <button onClick={() => action('restore')} className={buttonClass}>Recupera come bozza</button> : <button onClick={() => action('discard')} className={buttonClass}>{status === 'published' ? 'Ritira' : 'Scarta'}</button>)}
