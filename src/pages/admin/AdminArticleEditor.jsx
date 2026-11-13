@@ -343,10 +343,10 @@ export default function AdminArticleEditor() {
       </div>
     </div>}
     <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setSuccess('') }} /></div>
-    <div className={`${panelClass} mt-6`}>
+    <section className={`${panelClass} mt-6`} aria-labelledby="human-review-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-heading font-bold">Revisione umana della versione</h2>
+          <h2 id="human-review-heading" className="font-heading font-bold">Revisione umana della versione</h2>
           <p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
         </div>
         <button
@@ -366,7 +366,7 @@ export default function AdminArticleEditor() {
         {status === 'approved' && <button disabled={saving || dirty || !!problem} onClick={() => action('publish')} className="px-4 py-2.5 rounded-xl bg-primary text-white disabled:opacity-40">Pubblica</button>}
         {!isNew && (status === 'discarded' ? <button onClick={() => action('restore')} className={buttonClass}>Recupera come bozza</button> : <button onClick={() => action('discard')} className={buttonClass}>{status === 'published' ? 'Ritira' : 'Scarta'}</button>)}
       </div>
-    </div>
+    </section>
     </fieldset>
   </div>
 }
