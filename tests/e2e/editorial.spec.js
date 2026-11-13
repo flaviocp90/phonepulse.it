@@ -44,10 +44,10 @@ async function fixture(page, options = {}) {
         if (args.p_publish_correction && reviewKeys.some(key => args.p_review?.[key] !== true)) return fail('Checklist missing')
         const changed = Object.entries(args.p_article).some(([key, value]) => key !== 'id' && JSON.stringify(value) !== JSON.stringify(state.row[key])) || JSON.stringify([...args.p_tag_ids].sort()) !== JSON.stringify(state.row.article_tags.map(tag => tag.tag_id).sort())
         state.claimDraft = { version: state.row.version + (changed ? 1 : 0), claims: args.p_review?.claim_draft || [] }
-        state.row = { ...state.row, ...args.p_article, ...(args.p_article.id ? {} : { claims_required: true }), id, version: state.row.version + (changed ? 1 : 0), status: changed && state.row.status === 'approved' ? 'draft' : state.row.status, article_tags: args.p_tag_ids.map(tag_id => ({ tag_id })) }
+        state.row = { ...state.row, ...args.p_article, ...(args.p_article.id ? {} : { claims_required: false }), id, version: state.row.version + (changed ? 1 : 0), status: changed && state.row.status === 'approved' ? 'draft' : state.row.status, article_tags: args.p_tag_ids.map(tag_id => ({ tag_id })) }
       }
       if (name === 'approve_article') {
-        if (reviewKeys.some(key => args.p_review[key] !== true) || !state.row.sources.length || (state.row.claims_required && !args.p_review.claim_evidence?.claims?.length)) return fail('Checklist or sources missing')
+        if (reviewKeys.some(key => args.p_review[key] !== true) || !state.row.sources.length) return fail('Checklist or sources missing')
         state.row.status = 'approved'; state.row.approved_version = state.row.version; state.row.approved_at = new Date().toISOString(); state.row.last_verified_at = state.row.approved_at; state.row.approved_by = id
       }
       if (name === 'publish_article') { if (state.row.status !== 'approved') return fail('Approval required'); state.row.status = 'published' }
@@ -396,7 +396,7 @@ test('claim review guidata: approvazione registra dati nel RPC audit e non nelle
   expect(state.violations).toEqual([])
 })
 
-test('claim review: affermazione contraddittoria blocca approvazione ma permette salvataggio bozza', async ({ page }) => {
+test('claim review: le note incomplete si salvano e non diventano attestazioni', async ({ page }) => {
   const state = await fixture(page)
   await page.goto(`/admin/articoli/${id}`)
   await page.getByRole('button', { name: 'Aggiungi affermazione' }).click()
@@ -406,11 +406,15 @@ test('claim review: affermazione contraddittoria blocca approvazione ma permette
   await page.getByLabel('Motivazione della revisione').fill('Il documento disponibile è incompleto e non sostiene il claim in modo certo.')
   await page.getByLabel('Esito').selectOption('conflicted')
   await completeReview(page)
-  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Bozza salvata' })).toBeVisible()
   expect(state.calls.map(c => c.name)).toEqual(['save_article'])
   expect(state.calls[0].args.p_review.claim_draft).toHaveLength(1)
+  await completeReview(page)
+  await page.getByRole('button', { name: 'Approva', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Versione approvata' })).toBeVisible()
+  expect(state.calls.at(-1).args.p_review).not.toHaveProperty('claim_evidence')
 })
 
 test('claim review: cambiando contenuto le note restano e gli esiti tornano da verificare', async ({ page }) => {
@@ -563,7 +567,7 @@ test('recupero di una versione vecchia richiede esportazione senza sovrascrivere
   await expect(page.getByRole('button', { name: 'Scarica copia locale' })).toBeEnabled()
 })
 
-test('nuove bozze richiedono evidenze e mostrano estratti importati senza approvarli', async ({ page }) => {
+test('estratti importati restano facoltativi e non vengono attestati automaticamente', async ({ page }) => {
   const claim = { statement: 'Una affermazione tecnica da verificare.', source_url: source().url, evidence: '', rationale: '', decision: 'unknown', candidates: [{ source_url: source().url, excerpt: 'A short imported passage requiring human inspection.', verification: 'unverified' }] }
   await fixture(page, { article: { claims_required: true }, claimDraft: { version: 1, claims: [claim] } })
   await page.goto(`/admin/articoli/${id}`)
@@ -572,9 +576,9 @@ test('nuove bozze richiedono evidenze e mostrano estratti importati senza approv
   await expect(page.getByLabel('Passaggio di supporto (massimo 240 caratteri)')).toHaveValue(claim.candidates[0].excerpt)
   await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveValue('unknown')
   await completeReview(page)
-  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: 'Rimuovi', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeEnabled()
 })
 
 test('foto privata nel visuale usa solo preview temporanea e salva il riferimento stabile', async ({ page }) => {

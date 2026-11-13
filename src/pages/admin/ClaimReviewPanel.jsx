@@ -6,21 +6,19 @@ export const EMPTY_CLAIM_REVIEW = {
   statement: '', source_url: '', evidence: '', rationale: '', decision: 'unknown',
 }
 
-export default function ClaimReviewPanel({ claims, sources, onChange, required = false }) {
+export default function ClaimReviewPanel({ claims, sources, onChange }) {
   const { errors, complete } = claimReviewSummary(claims, sources)
   const available = (sources || []).filter(source => source && /^https:\/\//i.test(source.url || '') && source.retrieved_at)
   const update = (index, key, value) => onChange(claims.map((item, i) => i === index ? { ...item, [key]: value } : item))
   return (
     <section className="bg-white border border-border rounded-2xl p-5 space-y-4" aria-labelledby="claims-heading">
       <div>
-        <h2 id="claims-heading" className="font-heading font-bold">Verifica guidata delle affermazioni</h2>
+        <h2 id="claims-heading" className="font-heading font-bold">Verifica guidata delle affermazioni <span className="text-xs font-normal text-gray-500">(facoltativa)</span></h2>
         <p className="text-xs text-gray-500 mt-1">
-          Collega ogni fatto importante a una fonte consultata, trascrivi un breve passaggio e annota perché lo ritieni corretto.
-          I dati vengono inclusi nel registro dell'approvazione, non nei metadati pubblici dell'articolo.
-          I controlli qui sono manuali, non un fact-check automatico.
+          Se vuoi documentare una verifica, collega l’affermazione alla fonte, aggiungi un passaggio e spiega il controllo svolto. Le verifiche complete vengono registrate nel registro privato della revisione.
         </p>
         <p className="text-xs text-amber-700 mt-1">
-          Salva bozza per conservare anche le verifiche incomplete. Approvazione e correzione pubblicata registrano la revisione nel registro; cambiare contenuto o fonti conserva le note ma riporta gli esiti a Da verificare.
+          Salva la bozza per conservare le note in corso. Puoi approvare anche senza compilare questo pannello.
         </p>
       </div>
       {claims.map((claim, index) => (
@@ -55,9 +53,9 @@ export default function ClaimReviewPanel({ claims, sources, onChange, required =
         </div>
       ))}
       {claims.length < MAX_CLAIMS && <button type="button" className="px-4 py-2 rounded-xl bg-gray-100 text-sm hover:bg-gray-200" onClick={() => onChange([...claims, { ...EMPTY_CLAIM_REVIEW }])}>Aggiungi affermazione</button>}
-      {!claims.length && <p className="text-sm text-gray-500">{required ? 'Aggiungi almeno un’affermazione supportata: le evidenze sono obbligatorie per questa bozza.' : 'Nessuna verifica dettagliata ancora compilata. La checklist generale rimane obbligatoria.'}</p>}
+
       {!!claims.length && <p role="status" className={complete ? 'text-sm text-green-700' : 'text-sm text-amber-700'}>
-        {complete ? 'Tutte le affermazioni inserite risultano supportate secondo la tua verifica manuale.' : 'La verifica dettagliata non è completa: non attestare il supporto delle fonti.'}
+        {complete ? 'Tutte le affermazioni inserite risultano supportate secondo la tua verifica manuale.' : 'Le note incomplete restano fuori dal registro dell’approvazione.'}
       </p>}
       {errors.length > 0 && <ul className="list-disc pl-5 text-sm text-red-700">{errors.map(error => <li key={error}>{error}</li>)}</ul>}
     </section>
