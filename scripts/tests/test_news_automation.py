@@ -42,12 +42,48 @@ class AutomationTests(unittest.TestCase):
              patch.object(news.requests, 'post', return_value=response) as request:
             article, model = news.genera_bozza(database(), item())
         self.assertEqual(article, {'decision': 'skip'})
-        self.assertEqual(model, 'openrouter/free')
+        self.assertEqual(model, news.OPENROUTER_MODELS[0])
         gemini.assert_not_called()
         self.assertEqual(request.call_count, 1)
         payload = request.call_args.kwargs['json']
-        self.assertEqual(payload['model'], 'openrouter/free')
+        self.assertEqual(payload['model'], news.OPENROUTER_MODELS[0])
+        self.assertEqual(payload['response_format'], {'type': 'json_object'})
         self.assertEqual(payload['provider']['max_price'], {'prompt': 0, 'completion': 0})
+
+    def test_empty_or_invalid_completion_falls_back_to_another_free_model(self):
+        good = Mock(status_code=200)
+        good.json.return_value = {
+            'model': 'test-model:free',
+            'choices': [{'finish_reason': 'stop', 'message': {'content': '{"decision":"skip"}'}}],
+        }
+        for content in (None, 'not JSON', '{"unexpected":true}'):
+            with self.subTest(content=content):
+                bad = Mock(status_code=200)
+                bad.json.return_value = {'choices': [{'message': {'content': content}}]}
+                with patch.object(news, 'OPENROUTER_API_KEY', 'fake'), \
+                     patch.object(news.requests, 'post', side_effect=[bad, good]) as request:
+                    self.assertEqual(news.chiama_openrouter('test'), ({'decision': 'skip'}, 'test-model:free'))
+                self.assertEqual([call.kwargs['json']['model'] for call in request.call_args_list],
+                                 list(news.OPENROUTER_MODELS))
+                for call in request.call_args_list:
+                    self.assertEqual(call.kwargs['json']['provider']['max_price'], {'prompt': 0, 'completion': 0})
+
+    def test_atom_entry_uses_feed_content_and_updated_date_when_publish_date_is_absent(self):
+        xml = b"""<feed xmlns="http://www.w3.org/2005/Atom"><title>Example</title><entry>
+          <title>Android update</title><link href="https://example.com/news" />
+          <updated>2026-11-13T12:00:00Z</updated><summary>A short summary</summary>
+          <content type="html">&lt;p&gt;Extra details supplied by the feed.&lt;/p&gt;</content>
+        </entry></feed>"""
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        response.iter_content.return_value = [xml]
+        with patch.object(news.requests, 'get', return_value=response):
+            source, = news.leggi_feed('https://example.com/feed')
+        self.assertEqual(source['published_at'], '2026-11-13T12:00:00+00:00')
+        self.assertEqual(source['excerpt'], 'A short summary')
+        self.assertEqual(source['feed_text'], 'Extra details supplied by the feed.')
+        self.assertIn(source['feed_text'], news.build_prompt(source))
 
     def test_missing_free_provider_key_fails_before_database_access(self):
         with patch.object(news, 'OPENROUTER_API_KEY', ''), \
