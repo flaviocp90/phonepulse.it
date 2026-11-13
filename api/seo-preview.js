@@ -105,7 +105,7 @@ export function renderPreview(article) {
   const archiveNote = article.origin === 'legacy'
     ? '<aside>Articolo d’archivio: le informazioni non documentate non attestano prove dirette.</aside>'
     : article.origin === 'rss'
-      ? '<aside>Bozza preparata con assistenza AI; la verifica è responsabilità dell’autore.</aside>' : '';
+      ? '<aside>Articolo preparato con assistenza AI e rivisto dalla redazione.</aside>' : '';
   return '<!doctype html><html lang="it"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>' + e(title) + ' — PhonePulse</title>' +

@@ -78,6 +78,6 @@ test('presentazione dichiara responsabilità e metodo senza promettere prove ine
 test('firma del sito è un’organizzazione e la bozza AI è dichiarata', async ({ page }) => {
   await fixtures(page, { ...record, author: 'PhonePulse', origin: 'rss' })
   await page.goto('/articoli/pilot')
-  await expect(page.locator('article').getByText(/Bozza preparata con assistenza AI/)).toBeVisible()
+  await expect(page.locator('article').getByText(/Articolo preparato con assistenza AI/)).toBeVisible()
   await expect.poll(async () => page.locator('script[type="application/ld+json"]').evaluateAll(nodes => nodes.map(node => JSON.parse(node.textContent)).find(data => data['@type'] === 'Article')?.author)).toEqual({ '@type': 'Organization', name: 'PhonePulse' })
 })

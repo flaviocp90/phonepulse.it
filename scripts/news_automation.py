@@ -72,6 +72,8 @@ MAX_OPEN_DRAFTS = 20
 MAX_CANDIDATES_PER_RUN = 10
 PREFERRED_EVIDENCE_CHARS = 400
 MAX_FEED_BYTES = 2 * 1024 * 1024
+EDITORIAL_COVER_URL = 'https://www.phonepulse.it/cover-news.svg'
+EDITORIAL_COVER_CREDIT = 'Illustrazione editoriale PhonePulse'
 PROMPT_PATH = Path(__file__).resolve().parents[1] / 'docs/editorial/prompt-news.md'
 
 
@@ -473,18 +475,18 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
     if size and not has_list_items(item.get('excerpt', ''), size):
         logger.warning('Draft list is unsupported by supplied evidence')
         return 'failed'
-    cover_url, image_source = cerca_cover_image('', item['title'], supabase)
     record = {field: article[field] for field in ('title', 'slug', 'excerpt', 'content')}
     record.update({
         'seo_title': article['title'], 'seo_description': article['excerpt'],
-        'category_id': category_id, 'cover_image_url': cover_url,
+        'category_id': category_id, 'cover_image_url': EDITORIAL_COVER_URL,
         'author': author, 'status': 'draft', 'origin': 'rss', 'content_format': 'news',
         'sources': [{'url': item['link'], 'title': item['title'], 'publisher': item.get('publisher'),
                      'published_at': item['published_at'], 'retrieved_at': item['retrieved_at'],
                      'facts': item.get('excerpt', ''),
                      'retrieval_basis': 'feed_content' if item.get('feed_text') else 'feed_summary'}],
         'source_key': source_key, 'content_updated_at': datetime.now(timezone.utc).isoformat(),
-        'affiliate_links': [], 'score': None, 'llm_model': llm_model, 'image_source': image_source,
+        'affiliate_links': [], 'score': None, 'llm_model': llm_model,
+        'image_source': EDITORIAL_COVER_CREDIT,
     })
     try:
         result = supabase.table('articles').insert(record).execute()
