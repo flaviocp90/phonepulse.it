@@ -27,4 +27,4 @@ Non assegnare autore, categoria, stato, approvazione o metadata delle fonti: son
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON in uno di questi due formati:
 {"decision":"skip","reason":"Motivo concreto e conciso"}
-{"decision":"draft","title":"Titolo descrittivo","slug":"titolo-descrittivo","excerpt":"Massimo 155 caratteri","content":"Notizia originale in Markdown con due sezioni e fonte finale","source_urls":["URL originale fornito"]}
+{"decision":"draft","title":"Titolo descrittivo","slug":"titolo-descrittivo","excerpt":"Punta a 110–135 caratteri e resta entro 155","content":"Notizia originale in Markdown con due sezioni e fonte finale","source_urls":["URL originale fornito"]}
