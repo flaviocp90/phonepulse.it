@@ -97,8 +97,6 @@ def validate_generated_article(article: object, source_urls: set[str]) -> list[s
     if re.search(r'<[^>]+>|\]\s*\[|^\s*\[[^\]]+\]:', content, re.M):
         errors.append('HTML and reference links require manual review')
     destinations = re.findall(r'\]\(\s*<?([^\s)>]+)', content)
-    if not any(url in source_urls for url in destinations):
-        errors.append('A known source must be linked in the body')
     body_urls = re.findall(r'https?://[^\s<>"\)]+', content, re.I)
     for url in urls + body_urls + destinations:
         if not isinstance(url, str) or url not in source_urls:

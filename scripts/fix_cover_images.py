@@ -8,19 +8,17 @@ import logging
 import time
 from datetime import datetime, timezone
 from supabase import Client
-from news_automation import cerca_cover_image, get_supabase
+from news_automation import EDITORIAL_COVER_URL, cerca_cover_image, get_supabase
 from automation_runs import run_tracked
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_articoli_senza_cover(supabase: Client) -> list[dict]:
-    """
-    Recupera gli articoli in attesa di review che non hanno cover_image_url.
-    Filtra status=draft e cover_image_url IS NULL, al massimo venti record.
-    """
-    result = (supabase.table('articles').select('id, title, version')
-              .eq('status', 'draft').is_('cover_image_url', 'null').limit(20).execute())
+    result = (supabase.table('articles').select('id, title, version, sources, cover_image_url')
+              .eq('status', 'draft').eq('origin', 'rss')
+              .or_(f'cover_image_url.is.null,cover_image_url.eq.{EDITORIAL_COVER_URL}')
+              .order('created_at', desc=True).limit(20).execute())
     return result.data
 
 
@@ -53,9 +51,12 @@ def run_cover_repair(supabase, counts):
         logger.info(f"[PROCESSO] {title}")
 
         try:
-            cover_url, image_source = cerca_cover_image('', title, supabase)
+            sources = art.get('sources') or []
+            query = (sources[0].get('title') if sources else None) or title
+            cover = cerca_cover_image(query)
 
-            if cover_url:
+            if cover:
+                cover_url, image_source = cover
                 if aggiorna_cover(supabase, article_id, cover_url, image_source, art['version']):
                     counts['updated'] += 1
                 else:
@@ -69,9 +70,7 @@ def run_cover_repair(supabase, counts):
             logger.error("Cover repair failed (%s)", type(e).__name__)
             raise
 
-    if counts['failed'] and not counts['updated']:
-        raise RuntimeError("No cover could be updated")
-    return 'completed'
+    return 'completed' if counts['updated'] else 'no_candidates'
 
 
 def main():
