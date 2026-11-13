@@ -176,6 +176,8 @@ class AutomationTests(unittest.TestCase):
         self.assertEqual(record['sources'][0]['url'], URL)
         self.assertEqual(record['source_key'], URL)
         self.assertEqual(record['content_format'], 'news')
+        self.assertEqual(record['cover_image_url'], news.EDITORIAL_COVER_URL)
+        self.assertEqual(record['image_source'], news.EDITORIAL_COVER_CREDIT)
         self.assertNotIn('approved_version', record)
         notification.assert_not_called()
         with patch.object(news, 'genera_bozza', return_value=([], 'model')), \

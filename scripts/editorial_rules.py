@@ -80,10 +80,13 @@ def validate_generated_article(article: object, source_urls: set[str]) -> list[s
     word_count = len(re.findall(r"\b[\wÀ-ÿ]+(?:['’][\wÀ-ÿ]+)?\b", text_without_links))
     if word_count < 120:
         errors.append('Insufficient article substance (<120 words): manual research needed')
-    sections = re.findall(r'^##\s+(.+?)\s*$', article['content'], re.M)
-    source_sections = [name for name in sections if re.fullmatch(r'font[ei]', name.strip(), re.I)]
-    if len(sections) < 3 or len(source_sections) != 1:
-        errors.append('Require two informative sections plus one Sources section')
+    if re.search(r'^#{1,6}\s+(?:i fatti documentati|fatti documentati|cosa è documentato|'
+                 r'conseguenze concrete e limiti|cosa cambia e cosa manca|limiti e implicazioni)\s*$',
+                 article['content'], re.I | re.M):
+        errors.append('Use article-specific headings')
+    if re.search(r"\b(?:materiale RSS|dal feed RSS|le evidenze disponibili|"
+                 r"da verificare prima della pubblicazione)\b", article['content'], re.I):
+        errors.append('Keep editorial process language out of the article')
     urls = article.get('source_urls')
     if not isinstance(urls, list) or not urls:
         errors.append('Sources are required')

@@ -210,7 +210,7 @@ export default function ArticlePage() {
             )}
             {article.origin === 'rss' && (
               <aside className="mb-8 border-l-4 border-primary/30 pl-4 text-sm text-gray-600 font-body">
-                Bozza preparata con assistenza AI a partire dalle fonti. La verifica e le scelte di pubblicazione sono responsabilità dell’autore indicato.
+                Articolo preparato con assistenza AI e rivisto dalla redazione.
               </aside>
             )}
 

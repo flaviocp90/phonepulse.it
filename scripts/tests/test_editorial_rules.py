@@ -36,11 +36,13 @@ class EditorialRulesTests(unittest.TestCase):
     def test_substantive_structured_draft_is_valid(self):
         self.assertEqual(validate_generated_article(brief(), {URL}), [])
 
-    def test_rejects_thin_source_attribution_and_missing_structure(self):
+    def test_rejects_thin_drafts_and_editorial_process_language(self):
         thin = 'La redazione della fonte riferisce una funzione in arrivo. [Fonte](' + URL + ')'
         self.assertTrue(validate_generated_article(brief(content=thin), {URL}))
         no_sections = ' '.join(['Una funzione documentata in modo verificabile.'] * 45) + ' [Fonte](' + URL + ')'
-        self.assertTrue(validate_generated_article(brief(content=no_sections), {URL}))
+        self.assertEqual(validate_generated_article(brief(content=no_sections), {URL}), [])
+        for fragment in ('## Fatti documentati', 'Secondo il materiale RSS,'):
+            self.assertTrue(validate_generated_article(brief(content=fragment + '\n\n' + no_sections), {URL}))
         self.assertTrue(validate_generated_article(brief(decision='skip'), {URL}))
 
     def test_rejects_bad_json_fields_slug_and_excerpt(self):

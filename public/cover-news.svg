@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title">
+  <title id="title">PhonePulse — Illustrazione editoriale</title>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#111219"/>
+      <stop offset="1" stop-color="#322123"/>
+    </linearGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#fff" stroke-opacity=".07"/>
+    </pattern>
+  </defs>
+  <path fill="url(#background)" d="M0 0h1200v675H0z"/>
+  <path fill="url(#grid)" d="M0 0h1200v675H0z"/>
+  <circle cx="825" cy="332" r="226" fill="#ff5c1a" fill-opacity=".09" stroke="#ff8254" stroke-opacity=".28"/>
+  <circle cx="825" cy="332" r="184" fill="none" stroke="#ff8254" stroke-opacity=".3" stroke-dasharray="4 9"/>
+  <g transform="translate(734 161) rotate(12 91 171)">
+    <rect width="182" height="342" rx="33" fill="#201c24" stroke="#ff8254" stroke-width="5"/>
+    <rect x="12" y="12" width="158" height="318" rx="23" fill="#33242b"/>
+    <rect x="70" y="27" width="42" height="5" rx="2.5" fill="#ffb193"/>
+    <path d="M28 176h32l13-31 25 61 19-43h37" fill="none" stroke="#ff8254" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M124 291h48l15-34 22 61 16-27h35" fill="none" stroke="#ff8254" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="120" y="388" fill="#fff8f2" font-family="Arial,sans-serif" font-weight="700" font-size="73">PhonePulse</text>
+  <text x="124" y="440" fill="#ffb193" font-family="Arial,sans-serif" font-size="20" letter-spacing="3.5">ILLUSTRAZIONE EDITORIALE</text>
+</svg>
