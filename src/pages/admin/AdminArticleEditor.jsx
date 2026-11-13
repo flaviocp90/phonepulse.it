@@ -344,7 +344,19 @@ export default function AdminArticleEditor() {
     </div>}
     <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setSuccess('') }} /></div>
     <div className={`${panelClass} mt-6`}>
-      <h2 className="font-heading font-bold">Revisione umana della versione</h2><p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-heading font-bold">Revisione umana della versione</h2>
+          <p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
+        </div>
+        <button
+          type="button"
+          className={buttonClass}
+          onClick={() => setReview(completeReview ? {} : Object.fromEntries(Object.keys(checklist).map(key => [key, true])))}
+        >
+          {completeReview ? 'Deseleziona tutto' : 'Spunta tutto'}
+        </button>
+      </div>
       {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
       {problem && <p className="text-amber-700 text-sm">{problem}</p>}
       {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
