@@ -1,6 +1,6 @@
 // Read-only HTML preview. Not wired to production routes; always noindex.
 import { marked } from 'marked';
-import { publicEditorial, safeExternalUrl } from '../src/lib/publicEditorial.js';
+import { publicEditorial, safeExternalUrl, stockPhotoCredit } from '../src/lib/publicEditorial.js';
 
 const SITE = 'https://www.phonepulse.it';
 export function escapeHtml(v) {
@@ -81,6 +81,7 @@ export function renderPreview(article) {
   const desc = String(article.seo_description || article.excerpt || '').slice(0, 500);
   const ed = publicEditorial(article);
   const cover = validUrl(article.cover_image_url);
+  const credit = stockPhotoCredit(article.image_source);
   const category = article.categories && !Array.isArray(article.categories) ? article.categories : null;
   const catSlug = category && /^[a-z0-9-]+$/.test(category.slug || '') ? category.slug : null;
   const crumbs = [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE + '/' }];
@@ -125,6 +126,8 @@ export function renderPreview(article) {
     (article.excerpt ? '<p>' + e(article.excerpt) + '</p>' : '') +
     (dates ? '<p>' + dates + '</p>' : '') + archiveNote +
     (cover ? '<img src="' + e(cover) + '" alt="' + e(article.title) + '">' : '') +
+    (cover && credit ? '<p>Foto illustrativa di <a href="' + e(credit.url) + '">' + e(credit.name) +
+      '</a> su <a href="' + e(credit.providerUrl) + '">' + e(credit.provider) + '</a></p>' : '') +
     '<div class="article-content">' + renderMarkdownSafe(article.content) + '</div>' + sources +
     '</article></main><footer>Anteprima tecnica non indicizzabile.</footer></body></html>';
 }
@@ -133,7 +136,7 @@ export async function loadPublishedArticle(slug, env = process.env, request = fe
   const key = env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
   if (!base || !key) throw new Error('Missing public Supabase credentials');
   const endpoint = new URL('/rest/v1/articles', base);
-  endpoint.searchParams.set('select', 'slug,title,seo_title,seo_description,excerpt,content,cover_image_url,published_at,content_updated_at,last_verified_at,version,approved_version,author,content_format,origin,sources,categories(name,slug)');
+  endpoint.searchParams.set('select', 'slug,title,seo_title,seo_description,excerpt,content,cover_image_url,image_source,published_at,content_updated_at,last_verified_at,version,approved_version,author,content_format,origin,sources,categories(name,slug)');
   endpoint.searchParams.set('slug', 'eq.' + slug);
   endpoint.searchParams.set('is_published', 'eq.true');
   endpoint.searchParams.set('limit', '1');

@@ -340,76 +340,66 @@ def _cerca_cover_google_cse(query: str, supabase: "Client | None" = None) -> str
     return None
 
 
-def _cerca_cover_unsplash(query: str) -> str | None:
-    """Cerca un'immagine su Unsplash (primo fallback)."""
+def _stock_cover(photo_url: str, image_host: str, author: str, credit_url: str,
+                 credit_host: str, provider: str) -> tuple[str, str] | None:
+    if not (author.strip() and _https_host(photo_url, image_host) and _https_host(credit_url, credit_host)):
+        return None
+    name = ' '.join(author.split()).replace('|', '')
+    return photo_url, f'{name} | {provider} | {credit_url}'
+
+
+def _https_host(url: str, host: str) -> bool:
+    parsed = urlsplit(url)
+    return (parsed.scheme == 'https' and parsed.netloc == host and bool(parsed.path))
+
+
+def _cerca_cover_unsplash(query: str) -> tuple[str, str] | None:
     if not UNSPLASH_ACCESS_KEY:
         return None
+    headers = {"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}
     try:
-        resp = requests.get(
-            "https://api.unsplash.com/search/photos",
-            params={"query": query, "orientation": "landscape", "per_page": 1},
-            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("results"):
-            url = data["results"][0]["urls"]["regular"]
-            logger.info(f"Unsplash cover trovata: {url[:60]}…")
-            return url
-        logger.warning("Unsplash: nessun risultato per la query")
-    except Exception as e:
-        logger.warning(f"Unsplash non disponibile: {e}")
+        response = requests.get("https://api.unsplash.com/search/photos",
+                                params={"query": query, "orientation": "landscape", "per_page": 1},
+                                headers=headers, timeout=8)
+        response.raise_for_status()
+        photo = next(iter(response.json().get("results", [])), None)
+        if not photo:
+            return None
+        profile = photo["user"]["links"]["html"]
+        separator = '&' if '?' in profile else '?'
+        cover = _stock_cover(photo["urls"]["regular"], "images.unsplash.com", photo["user"]["name"],
+                             profile + separator + 'utm_source=phonepulse&utm_medium=referral',
+                             "unsplash.com", "Unsplash")
+        download = photo["links"]["download_location"]
+        if cover and _https_host(download, "api.unsplash.com"):
+            tracked = requests.get(download, headers=headers, timeout=8)
+            tracked.raise_for_status()
+            return cover
+    except (requests.RequestException, ValueError, KeyError, TypeError, AttributeError) as error:
+        logger.warning("Unsplash cover lookup failed (%s)", type(error).__name__)
     return None
 
 
-def _cerca_cover_pexels(query: str) -> str | None:
-    """Cerca un'immagine su Pexels (secondo fallback)."""
+def _cerca_cover_pexels(query: str) -> tuple[str, str] | None:
     if not PEXELS_API_KEY:
         return None
     try:
-        resp = requests.get(
-            "https://api.pexels.com/v1/search",
-            params={"query": query, "per_page": 1, "orientation": "landscape"},
-            headers={"Authorization": PEXELS_API_KEY},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        photos = resp.json().get("photos", [])
-        if photos:
-            url = photos[0]["src"]["large"]
-            logger.info(f"Pexels cover trovata: {url[:60]}…")
-            return url
-        logger.warning("Pexels: nessun risultato per la query")
-    except Exception as e:
-        logger.warning(f"Pexels non disponibile: {e}")
+        response = requests.get("https://api.pexels.com/v1/search",
+                                params={"query": query, "per_page": 1, "orientation": "landscape"},
+                                headers={"Authorization": PEXELS_API_KEY}, timeout=8)
+        response.raise_for_status()
+        photo = next(iter(response.json().get("photos", [])), None)
+        if photo:
+            return _stock_cover(photo["src"]["large"], "images.pexels.com", photo["photographer"],
+                                photo["url"], "www.pexels.com", "Pexels")
+    except (requests.RequestException, ValueError, KeyError, TypeError, AttributeError) as error:
+        logger.warning("Pexels cover lookup failed (%s)", type(error).__name__)
     return None
 
 
-def cerca_cover_image(image_query: str, title_fallback: str, supabase: "Client | None" = None) -> tuple[str | None, str | None]:
-    """
-    Pipeline stratificata per la cover image.
-    Usa la query fornita; title_fallback quando la query è vuota.
-    Ordine: Google CSE → Unsplash → Pexels → None
-    Restituisce (url, nome_fonte) dove nome_fonte è 'google_cse' | 'unsplash' | 'pexels' | None.
-    """
-    query = image_query.strip() if image_query and image_query.strip() else title_fallback
-    logger.info(f"Cover image query: '{query}'")
-
-    url = _cerca_cover_google_cse(query, supabase)
-    if url:
-        return url, "google_cse"
-
-    url = _cerca_cover_unsplash(query)
-    if url:
-        return url, "unsplash"
-
-    url = _cerca_cover_pexels(query)
-    if url:
-        return url, "pexels"
-
-    logger.warning("Cover image: tutti i provider hanno fallito, nessuna immagine impostata")
-    return None, None
+def cerca_cover_image(title: str) -> tuple[str, str] | None:
+    """Find a stock photo with a traceable credit using configured providers."""
+    return _cerca_cover_unsplash(title) or _cerca_cover_pexels(title)
 
 
 # ---------------------------------------------------------------------------
@@ -475,10 +465,11 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
     if size and not has_list_items(item.get('excerpt', ''), size):
         logger.warning('Draft list is unsupported by supplied evidence')
         return 'failed'
+    cover_url, credit = cerca_cover_image(item['title']) or (EDITORIAL_COVER_URL, EDITORIAL_COVER_CREDIT)
     record = {field: article[field] for field in ('title', 'slug', 'excerpt', 'content')}
     record.update({
         'seo_title': article['title'], 'seo_description': article['excerpt'],
-        'category_id': category_id, 'cover_image_url': EDITORIAL_COVER_URL,
+        'category_id': category_id, 'cover_image_url': cover_url,
         'author': author, 'status': 'draft', 'origin': 'rss', 'content_format': 'news',
         'sources': [{'url': item['link'], 'title': item['title'], 'publisher': item.get('publisher'),
                      'published_at': item['published_at'], 'retrieved_at': item['retrieved_at'],
@@ -486,7 +477,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
                      'retrieval_basis': 'feed_content' if item.get('feed_text') else 'feed_summary'}],
         'source_key': source_key, 'content_updated_at': datetime.now(timezone.utc).isoformat(),
         'affiliate_links': [], 'score': None, 'llm_model': llm_model,
-        'image_source': EDITORIAL_COVER_CREDIT,
+        'image_source': credit,
     })
     try:
         result = supabase.table('articles').insert(record).execute()

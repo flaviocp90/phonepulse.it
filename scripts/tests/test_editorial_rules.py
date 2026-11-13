@@ -41,6 +41,8 @@ class EditorialRulesTests(unittest.TestCase):
         self.assertTrue(validate_generated_article(brief(content=thin), {URL}))
         no_sections = ' '.join(['Una funzione documentata in modo verificabile.'] * 45) + ' [Fonte](' + URL + ')'
         self.assertEqual(validate_generated_article(brief(content=no_sections), {URL}), [])
+        prose = brief()['content'].split('## Fonte')[0]
+        self.assertEqual(validate_generated_article(brief(content=prose), {URL}), [])
         for fragment in ('## Fatti documentati', 'Secondo il materiale RSS,'):
             self.assertTrue(validate_generated_article(brief(content=fragment + '\n\n' + no_sections), {URL}))
         self.assertTrue(validate_generated_article(brief(decision='skip'), {URL}))

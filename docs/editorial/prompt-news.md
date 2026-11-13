@@ -4,11 +4,11 @@ Prima di scrivere, verifica che ci siano almeno tre informazioni distinte e sost
 
 - Apri con la novità e con il dettaglio che interessa a chi usa l’app o il dispositivo. Dai subito il contesto quando serve a capire la notizia.
 - Scrivi in paragrafi brevi, con verbi concreti. Aggiungi un sottotitolo solo quando aiuta a orientarsi e usa un titolo specifico per la notizia. Evita titoli generici come «Fatti documentati», «Cosa è documentato», «Conseguenze concrete e limiti» e «Cosa cambia e cosa manca».
-- Integra almeno un link Markdown alla fonte nella frase che ne usa il contributo. Per esempio, se è un’analisi del codice: «[Android Authority ha individuato la nuova barra](URL_FORNITO) nel codice dell’app». Usa il nome della testata e l’URL effettivamente forniti. Basta una citazione ben collocata. Una sezione finale «Fonti» è facoltativa quando aggiunge un riferimento utile.
+- Il sito mostra la fonte in fondo alla pagina a partire dai metadati. Nel corpo evita link alla testata, formule come «secondo la fonte» e sezioni «Fonti». Attribuisci segnalazioni, prove e dichiarazioni a chi le ha fatte quando serve a chiarire che cosa è stato verificato.
 - Mantieni fuori dal testo pubblico i commenti su feed, evidenze, processo di redazione o verifiche ancora da fare. Scrivi «Google non ha annunciato una data» quando è una precisazione sostenuta e importante. Evita elenchi di informazioni mancanti, ripetizioni della stessa novità e frasi introduttive generiche.
 - Usa formulazioni originali. Evita di ricalcare i paragrafi della fonte, aggiungere dettagli dedotti o attribuire a PhonePulse test, misurazioni ed esperienze dirette.
 - Punta a 120–300 parole, secondo il materiale disponibile, e a un estratto di 110–135 caratteri, con limite a 155.
 
 Restituisci esclusivamente uno di questi oggetti JSON. Usa Markdown nel campo content e l’URL originale nel campo source_urls. Autore, stato e metadati delle fonti sono assegnati dalla pipeline.
 {"decision":"skip","reason":"Motivo concreto e conciso"}
-{"decision":"draft","title":"Titolo descrittivo","slug":"titolo-descrittivo","excerpt":"Sommario della notizia","content":"Notizia con collegamento Markdown alla fonte nel punto pertinente","source_urls":["URL originale fornito"]}
+{"decision":"draft","title":"Titolo descrittivo","slug":"titolo-descrittivo","excerpt":"Sommario della notizia","content":"Notizia in paragrafi, con eventuali sottotitoli specifici","source_urls":["URL originale fornito"]}

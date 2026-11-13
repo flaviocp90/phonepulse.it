@@ -7,7 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import CoverImage from "../components/CoverImage";
 import SEO from "../components/SEO";
-import { publicEditorial } from "../lib/publicEditorial";
+import { publicEditorial, stockPhotoCredit } from "../lib/publicEditorial";
 import { ArticleSchema, BreadcrumbSchema } from "../components/SchemaMarkup";
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -51,6 +51,7 @@ export default function ArticlePage() {
 
   const article = loadedArticle?.slug === slug ? loadedArticle : null;
   const editorial = article ? publicEditorial(article) : null;
+  const photoCredit = stockPhotoCredit(article?.image_source);
   const related = relatedResult?.slug === slug ? relatedResult.items : [];
 
   useEffect(() => {
@@ -216,14 +217,19 @@ export default function ArticlePage() {
 
             {/* Cover image */}
             {article.cover_image_url && (
-              <div className="relative aspect-[16/9] mb-10 rounded-2xl overflow-hidden border border-border">
-                <CoverImage
-                  src={article.cover_image_url}
-                  alt={article.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="eager"
-                />
-              </div>
+              <figure className="mb-10">
+                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden border border-border">
+                  <CoverImage
+                    src={article.cover_image_url}
+                    alt={article.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="eager"
+                  />
+                </div>
+                {photoCredit && <figcaption className="mt-2 text-xs text-gray-600">
+                  Foto illustrativa di <a className="underline" href={photoCredit.url}>{photoCredit.name}</a> su <a className="underline" href={photoCredit.providerUrl}>{photoCredit.provider}</a>
+                </figcaption>}
+              </figure>
             )}
 
             {/* Content */}

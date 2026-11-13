@@ -13,6 +13,16 @@ export function safeExternalUrl(value) {
   }
 }
 
+export function stockPhotoCredit(value) {
+  if (typeof value !== 'string') return undefined
+  const [name, provider, rawUrl, extra] = value.split(' | ')
+  const url = safeExternalUrl(rawUrl)
+  const host = { Unsplash: 'unsplash.com', Pexels: 'www.pexels.com' }[provider]
+  if (!name || extra !== undefined || !host || !url || new URL(url).hostname !== host) return undefined
+  return { name, provider, url, providerUrl: provider === 'Unsplash'
+    ? 'https://unsplash.com/?utm_source=phonepulse&utm_medium=referral' : 'https://www.pexels.com/' }
+}
+
 export function publicEditorial(article) {
   const publishedAt = validDate(article.published_at)
   const contentDate = validDate(article.content_updated_at)

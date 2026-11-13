@@ -85,6 +85,13 @@ class AutomationTests(unittest.TestCase):
         self.assertEqual(source['feed_text'], 'Extra details supplied by the feed.')
         self.assertIn(source['feed_text'], news.build_prompt(source))
 
+    def test_photo_search_falls_back_to_pexels_with_credit(self):
+        cover = ('https://images.pexels.com/photo.jpg', 'Author | Pexels | https://www.pexels.com/photo/123/')
+        with patch.object(news, '_cerca_cover_unsplash', return_value=None), \
+             patch.object(news, '_cerca_cover_pexels', return_value=cover) as pexels:
+            self.assertEqual(news.cerca_cover_image('Android update'), cover)
+            pexels.assert_called_once_with('Android update')
+
     def test_missing_free_provider_key_fails_before_database_access(self):
         with patch.object(news, 'OPENROUTER_API_KEY', ''), \
              patch.object(news, 'get_supabase') as db:
@@ -166,7 +173,7 @@ class AutomationTests(unittest.TestCase):
                                                      SimpleNamespace(data=[{'id': 'new'}])]
         with patch.object(news, 'genera_bozza', return_value=(brief(
                 author='Invented', status='published', approved_version=1), 'model')), \
-             patch.object(news, 'cerca_cover_image', return_value=(None, None)), \
+             patch.object(news, 'cerca_cover_image', return_value=None), \
              patch.object(news, 'invia_telegram') as notification:
             self.assertEqual(news.processa_articolo(item(), db, 'news', 'Editor'), 'created')
         record = db.table.return_value.insert.call_args.args[0]
