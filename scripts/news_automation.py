@@ -243,7 +243,7 @@ def chiama_gemini(supabase: Client, prompt: str) -> tuple[str | None, str | None
     return None, None
 
 
-OPENROUTER_MODELS = ("google/gemma-4-26b-a4b-it:free", "openrouter/free")
+OPENROUTER_MODELS = ("particle-ai/particle-1:free", "openrouter/free")
 
 
 def chiama_openrouter(prompt: str) -> tuple[dict | None, str | None]:
@@ -263,7 +263,6 @@ def chiama_openrouter(prompt: str) -> tuple[dict | None, str | None]:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3,
             "max_tokens": 4096,
-            "reasoning": {"effort": "none"},
             "response_format": {"type": "json_object"},
             "provider": {"max_price": {"prompt": 0, "completion": 0}},
         }
