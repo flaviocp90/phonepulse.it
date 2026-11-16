@@ -14,7 +14,8 @@ test('HTML initial document exposes editorial content and Vite client assets', (
   const html = composeArticleDocument(shell, renderPreview(article));
   assert.match(html, /<h1>Titolo specifico<\/h1>/);
   assert.match(html, /<h2>Guida<\/h2>/);
-  assert.match(html, /Fonte/);
+  assert.doesNotMatch(html, /<h2>Fonti<\/h2>/);
+  assert.doesNotMatch(html, /<a[^>]*>Fonte<\/a>/);
   assert.match(html, /assets\/index-test.js/);
   assert.match(html, /assets\/index-test.css/);
   assert.match(html, /rel="canonical"/);
@@ -54,7 +55,9 @@ test('returns real HTTP 404 for missing or unpublished article', async () => {
   const res = mockResponse();
   await handleArticleRequest({ method: 'GET', query: { slug: 'withdrawn' } }, res, deps(async () => null));
   assert.equal(res.code, 404);
-  assert.equal(res.headers['x-robots-tag'], 'noindex, nofollow');
+  assert.equal(res.headers['x-robots-tag'], 'noindex, follow');
+  assert.match(res.body, /Torna all’archivio/);
+  assert.match(res.body, /Pagina non trovata/);
   assert.doesNotMatch(res.body, /<article>/);
 });
 
@@ -65,6 +68,8 @@ test('returns 503 rather than missing article on transient Supabase failure', as
   assert.equal(res.code, 503);
   assert.equal(res.headers['cache-control'], 'no-store');
   assert.doesNotMatch(res.body, /Article not found/);
+  assert.match(res.body, /Riprova/);
+  assert.match(res.body, /href="\/"/);
 });
 
 test('serves HTTP 200 with published article metadata in preview only', async () => {

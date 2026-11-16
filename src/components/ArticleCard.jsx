@@ -42,8 +42,8 @@ export default function ArticleCard({ article, featured = false }) {
           <span
             className="inline-block text-[10px] font-body font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full w-fit"
             style={{
-              backgroundColor: categories.color ? `${categories.color}30` : '#FF5C1A30',
-              color: categories.color || '#FF5C1A',
+              backgroundColor: '#0D0D0D',
+              color: '#FFFFFF',
             }}
           >
             {categories.name}

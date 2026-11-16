@@ -98,11 +98,6 @@ export function renderPreview(article) {
     ed.publishedAt ? '<time datetime="' + e(ed.publishedAt) + '">Pubblicato: ' + e(formatDate(ed.publishedAt)) + '</time>' : '',
     ed.updatedAt ? '<time datetime="' + e(ed.updatedAt) + '">Aggiornato: ' + e(formatDate(ed.updatedAt)) + '</time>' : ''
   ].filter(Boolean).join(' · ');
-  const sources = ed.sources.length ? '<section><h2>Fonti</h2><ul>' + ed.sources.map(s =>
-    '<li><a href="' + e(s.url) + '" rel="noopener noreferrer">' + e(s.title) + '</a>' +
-    (s.publisher ? ' — ' + e(s.publisher) : '') +
-    (s.retrievedAt ? ' · Consultata: ' + e(formatDate(s.retrievedAt)) : '') +
-    '</li>').join('') + '</ul></section>' : '';
   const archiveNote = article.is_legacy === true
     ? '<aside>Articolo d’archivio: le informazioni non documentate non attestano prove dirette.</aside>'
     : '';
@@ -128,7 +123,7 @@ export function renderPreview(article) {
     (cover ? '<img src="' + e(cover) + '" alt="' + e(article.title) + '">' : '') +
     (cover && credit ? '<p>Foto illustrativa di <a href="' + e(credit.url) + '">' + e(credit.name) +
       '</a> su <a href="' + e(credit.providerUrl) + '">' + e(credit.provider) + '</a></p>' : '') +
-    '<div class="article-content">' + renderMarkdownSafe(article.content) + '</div>' + sources +
+    '<div class="article-content">' + renderMarkdownSafe(article.content) + '</div>' +
     '</article></main><footer>Anteprima tecnica non indicizzabile.</footer></body></html>';
 }
 export async function loadPublishedArticle(slug, env = process.env, request = fetch) {

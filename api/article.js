@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadPublishedArticle, renderPreview } from './seo-preview.js';
+import { sendError } from './not-found.js';
 
 const indexPath = fileURLToPath(new URL('../dist/index.html', import.meta.url));
 
@@ -25,17 +26,19 @@ export function composeArticleDocument(viteShell, articleMarkup) {
   const ssrStyles = '<style data-phonepulse-ssr="true">' +
     '.phonepulse-ssr{min-height:100vh;background:#F5F4F1;color:#0D0D0D;font-family:Figtree,sans-serif}' +
     '.phonepulse-ssr *{box-sizing:border-box}' +
-    '.phonepulse-ssr .site-header{background:#0D0D0D;color:#fff;padding:12px max(16px,calc((100vw - 1152px)/2));min-height:64px;display:flex;align-items:center}' +
+    '.phonepulse-ssr .site-header{background:#0D0D0D;color:#fff;padding:12px max(16px,calc((100vw - 1152px)/2));min-height:64px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:center}' +
+    '.phonepulse-ssr .site-header nav{display:flex;gap:16px;margin:0}.phonepulse-ssr .site-header nav a{display:inline-flex;align-items:center;min-height:44px;color:white;font-size:14px}' +
     '.phonepulse-ssr .brand{display:flex;align-items:center;gap:8px;color:#FF5C1A;text-decoration:none;font-family:"Bebas Neue",sans-serif;font-size:25px}' +
     '.phonepulse-ssr .brand img{height:40px;width:40px;border-radius:50%}' +
     '.phonepulse-ssr main{max-width:768px;margin:0 auto;padding:48px 16px}' +
     '.phonepulse-ssr nav{font-size:12px;color:#6B6560;margin-bottom:24px}' +
-    '.phonepulse-ssr a{color:#E04A0F}' +
+    '.phonepulse-ssr a{color:#B93808}' +
     '.phonepulse-ssr article>h1{font-family:Figtree,sans-serif;font-weight:700;font-size:clamp(30px,5vw,48px);line-height:1.2;margin:0 0 16px}' +
     '.phonepulse-ssr article>p{font-size:16px;line-height:1.8;color:#6B6560;margin:0 0 24px}' +
     '.phonepulse-ssr article>img{max-width:100%;height:auto;border-radius:16px;margin:8px 0 32px}' +
-    '.phonepulse-ssr .article-content{font-size:16px;line-height:1.8;color:#374151}' +
-    '.phonepulse-ssr .article-content h2{font-family:"Bebas Neue",sans-serif;font-size:27px;margin:40px 0 16px}' +
+    '.phonepulse-ssr .article-content{font-size:17px;line-height:1.8;color:#374151;overflow-wrap:anywhere}' +
+    '.phonepulse-ssr .article-content table{display:block;max-width:100%;overflow-x:auto}' +
+    '.phonepulse-ssr .article-content h2{font-family:Figtree,sans-serif;font-size:27px;margin:40px 0 16px}' +
     '.phonepulse-ssr .article-content p{margin:0 0 20px}' +
     '.phonepulse-ssr .article-content img{max-width:100%}' +
     '.phonepulse-ssr section{border-top:1px solid #E2DFD8;margin-top:40px;padding-top:24px}' +
@@ -44,7 +47,7 @@ export function composeArticleDocument(viteShell, articleMarkup) {
 
   const content = '<div class="phonepulse-ssr">' +
     '<header class="site-header"><a class="brand" href="/" aria-label="PhonePulse home">' +
-    '<img src="/logo.png" alt="">PHONEPULSE</a></header>' +
+    '<img src="/logo.png" alt="">PHONEPULSE</a><nav aria-label="Navigazione principale"><a href="/">Archivio</a><a href="/contatti">Contatti</a></nav></header>' +
     '<main>' + mainMatch[1] + '</main></div>';
 
   // The existing React bundle mounts on #root and takes control after JavaScript
@@ -68,17 +71,17 @@ export async function handleArticleRequest(req, res, {
   if (req.method !== 'GET') return res.status(405).send('Method not allowed');
   const slug = req.query?.slug;
   if (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{0,180}$/.test(slug))
-    return res.status(404).send('Article not found');
+    return sendError(res, 404);
   try {
     const article = await fetchArticle(slug);
-    if (!article) return res.status(404).send('Article not found');
+    if (!article) return sendError(res, 404);
     const shell = readShell();
     const html = composeArticleDocument(shell, render(article));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(html);
   } catch (error) {
     console.error('Article HTML rendering failed:', error?.message || 'Unknown error');
-    return res.status(503).send('Article temporarily unavailable');
+    return sendError(res, 503);
   }
 }
 

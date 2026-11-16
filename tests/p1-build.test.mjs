@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import retiredAdmin from '../api/retired-admin.js'
+import notFound from '../api/not-found.js'
 
 const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url)))
 const editorial = JSON.parse(readFileSync(new URL('../editorial/vercel.json', import.meta.url)))
@@ -23,4 +24,18 @@ test('every editorial path includes anti-frame, nosniff, referrer and reporting 
   assert.match(headers['content-security-policy-report-only'], /connect-src.*supabase/)
   assert.match(headers['content-security-policy-report-only'], /script-src 'self'/)
   assert.match(headers['content-security-policy'], /frame-ancestors 'none'/)
+})
+
+test('public routes retain the app shell while unknown paths return a useful HTTP 404', () => {
+  for (const source of ['/', '/contatti', '/privacy', '/categoria/:slug']) {
+    assert.equal(config.rewrites.find(rule => rule.source === source)?.destination, '/index.html')
+  }
+  assert.equal(config.rewrites.at(-1).destination, '/api/not-found')
+  const res = { headers: {}, setHeader(key, value) { this.headers[key] = value }, status(code) { this.code = code; return this }, send(body) { this.body = body; return this } }
+  notFound({}, res)
+  assert.equal(res.code, 404)
+  assert.equal(res.headers['Content-Type'], 'text/html; charset=utf-8')
+  assert.match(res.body, /lang="it"/)
+  assert.match(res.body, /Torna all’archivio/)
+  assert.match(res.body, /href="\/contatti"/)
 })

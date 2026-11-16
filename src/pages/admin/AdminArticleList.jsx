@@ -87,7 +87,7 @@ export default function AdminArticleList() {
     finally { setBusy(false) }
   }
   return <div className="min-w-0">
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6"><div><h1 className="text-2xl font-heading font-bold text-dark">Articoli</h1><p className="text-sm text-gray-500 mt-1">{loading ? 'Caricamento...' : count === null ? 'Conteggio —' : `${count} articoli`}</p></div><Link to="/admin/articoli/nuovo" className="bg-primary text-white px-4 py-2.5 rounded-xl">Nuovo articolo</Link></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-6"><div><h1 className="text-2xl font-heading font-bold text-dark">Articoli</h1><p className="text-sm text-gray-500 mt-1">{loading ? 'Caricamento...' : count === null ? 'Conteggio —' : `${count} articoli`}</p></div><Link to="/admin/articoli/nuovo" className="bg-action text-white px-4 py-2.5 rounded-xl">Nuovo articolo</Link></div>
     <nav aria-label="Viste articoli" className="flex flex-wrap gap-2 mb-5">{[['review', 'Da revisionare'], ['published', 'Pubblicati'], ['archive', 'Archivio']].map(([value, label]) => <Link key={value} to={`/admin/articoli?view=${value}`} aria-current={view === value ? 'page' : undefined} className={`${buttonClass} ${view === value ? 'bg-dark text-white' : 'text-gray-600'}`}>{label}</Link>)}</nav>
     {view === 'archive' && <StaleRssCleanup onDone={() => setReload(value => value + 1)} />}
     <div className="flex flex-wrap gap-2 mb-5">{filters.length > 1 && filters.map(([value, label]) => <button key={value} aria-pressed={filter === value} disabled={busy} onClick={() => { update({ status: value, page: null }); setSuccess('') }} className={`${buttonClass} ${filter === value ? 'bg-dark text-white' : 'text-gray-600'}`}>{label}</button>)}</div>
@@ -97,7 +97,7 @@ export default function AdminArticleList() {
     {loading ? <p role="status">Caricamento elenco...</p> : count !== null && <div className="bg-white border border-border rounded-2xl overflow-hidden">
       {articles.length === 0 ? <p className="p-8 text-gray-500">Nessun articolo trovato.</p> : articles.map(article => <div key={article.id} className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-3 p-5 border-b border-border last:border-0">
         <div className="flex-1 min-w-0"><p className="font-body font-medium break-words">{article.title}</p><p className="text-xs text-gray-500 mt-1">{statusLabels[article.status]} · {article.origin} · versione {article.version} · {article.content_format || 'Formato da definire'}</p>{article.excerpt && <p className="text-sm text-gray-500 mt-2 break-words">{article.excerpt}</p>}</div>
-        <div className="flex flex-wrap gap-2"><Link to={`/admin/articoli/${article.id}`} className={`${buttonClass} text-primary`}>Apri revisione</Link><button disabled={busy} onClick={() => changeStatus(article)} className={buttonClass}>{article.status === 'discarded' ? 'Recupera' : article.status === 'published' ? 'Ritira' : 'Scarta'}</button></div>
+        <div className="flex flex-wrap gap-2"><Link to={`/admin/articoli/${article.id}`} className={`${buttonClass} text-action`}>Apri revisione</Link><button disabled={busy} onClick={() => changeStatus(article)} className={buttonClass}>{article.status === 'discarded' ? 'Recupera' : article.status === 'published' ? 'Ritira' : 'Scarta'}</button></div>
         {article.status === 'published' && <SocialPanel key={`${article.id}:${article.version}`} article={article} />}
       </div>)}
     </div>}

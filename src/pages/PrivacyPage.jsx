@@ -7,8 +7,8 @@ export default function PrivacyPage() {
     <div className="min-h-screen flex flex-col">
       <SEO title="Informativa privacy" description="Come PhonePulse tratta i dati di navigazione, le richieste email e le preferenze sulle statistiche." canonical="/privacy" />
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto px-4 py-12 w-full font-body text-gray-600 leading-relaxed [&_h2]:font-heading [&_h2]:text-2xl [&_h2]:text-dark [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:mb-4 [&_a]:underline [&_a]:text-primary">
-        <h1 className="text-4xl font-heading text-dark mb-4">Informativa privacy</h1>
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-3xl mx-auto px-4 py-12 w-full font-body text-gray-600 leading-relaxed [&_h2]:font-body [&_h2]:font-semibold [&_h2]:text-2xl [&_h2]:text-dark [&_h2]:mt-8 [&_h2]:mb-3 [&_p]:mb-4 [&_a]:underline [&_a]:text-action">
+        <h1 className="text-4xl font-body font-semibold text-dark mb-4">Informativa privacy</h1>
         <p>Ultimo aggiornamento: <time dateTime="2026-11-16">16 novembre 2026</time>. Questa informativa riguarda il sito PhonePulse e descrive i trattamenti ai sensi degli articoli 12 e 13 del Regolamento (UE) 2016/679 (GDPR).</p>
 
         <h2>Titolare e contatti</h2>

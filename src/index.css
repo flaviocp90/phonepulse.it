@@ -31,31 +31,60 @@
 
 @layer base {
   :focus-visible {
-    outline: 2px solid #FF5C1A;
+    outline: 3px solid #B93808;
     outline-offset: 4px;
   }
+  header :focus-visible, footer :focus-visible {
+    outline-color: #FF5C1A;
+  }
+  html { scroll-padding-top: 8rem; }
+  main { scroll-margin-top: 8rem; }
+  main:focus { outline: none; }
+  button, summary { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
   body {
     @apply bg-bg text-dark font-body;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-body font-semibold;
   }
+}
+
+.skip-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 100;
+  padding: .75rem 1rem;
+  background: white;
+  color: #0D0D0D;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .group:hover img { transform: none !important; }
 }
 
 /* Article markdown content */
 .article-content {
   @apply text-gray-700 leading-relaxed;
   font-family: 'Figtree', sans-serif;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   line-height: 1.8;
+  overflow-wrap: anywhere;
 }
 
 .article-content h1,
 .article-content h2,
 .article-content h3,
 .article-content h4 {
-  @apply font-heading font-bold text-dark mt-10 mb-4;
-  font-family: 'Bebas Neue', sans-serif;
+  @apply font-body font-bold text-dark mt-10 mb-4;
 }
 
 .article-content h1 { @apply text-3xl; }
@@ -68,7 +97,7 @@
 }
 
 .article-content a {
-  @apply text-primary underline underline-offset-2 hover:text-primary-dark transition-colors;
+  @apply text-action underline underline-offset-2 hover:text-action-hover transition-colors;
 }
 
 .article-content strong {
@@ -103,7 +132,7 @@
 }
 
 .article-content code {
-  @apply bg-gray-100 text-primary text-sm px-1.5 py-0.5 rounded font-mono;
+  @apply bg-gray-100 text-action text-sm px-1.5 py-0.5 rounded font-mono;
 }
 
 .article-content pre code {
@@ -115,7 +144,7 @@
 }
 
 .article-content table {
-  @apply w-full border-collapse my-6 text-sm;
+  @apply block max-w-full overflow-x-auto border-collapse my-6 text-sm;
 }
 
 .article-content th {

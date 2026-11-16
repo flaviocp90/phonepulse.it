@@ -25,12 +25,13 @@ export default function NewsCard({ article }) {
           alt={title}
           className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
           loading="lazy"
+          sizes="80px"
         />
       </div>
 
       {/* Text */}
-      <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
-        <h3 className="font-body font-semibold text-dark text-lg leading-snug line-clamp-2 group-hover:underline transition-colors">
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        <h3 className="font-body font-semibold text-dark text-lg leading-snug break-words group-hover:underline transition-colors">
           {title}
         </h3>
         {excerpt && (

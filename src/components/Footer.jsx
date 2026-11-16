@@ -10,19 +10,19 @@ export default function Footer() {
             <span className="text-primary font-heading font-bold text-xl leading-none">PHONE</span>
             <span className="text-white font-heading font-bold text-xl leading-none">PULSE</span>
           </Link>
-          <p className="text-white/70 text-sm font-body">Smartphone e app, news e guide pratiche.</p>
+          <p className="inline-flex items-center min-h-11 text-white/70 text-sm font-body">Smartphone e app, news e guide pratiche.</p>
         </div>
 
         {/* Col 2: copyright + social */}
         <div className="flex flex-col items-center gap-2">
-          <p className="text-white/70 text-sm font-body">© PhonePulse {new Date().getFullYear()} — Tutti i diritti riservati</p>
+          <p className="inline-flex items-center min-h-11 text-white/70 text-sm font-body">© PhonePulse {new Date().getFullYear()} — Tutti i diritti riservati</p>
           <div className="flex items-center gap-4">
             <a
               href="https://www.instagram.com/phonepulse.it?igsh=MXc5cmhmeWIyY2xvdA%3D%3D&utm_source=qr"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
-              className="text-white/70 hover:text-primary transition-colors"
+              className="inline-flex items-center justify-center min-w-11 min-h-11 text-white/70 hover:text-primary transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -35,7 +35,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Telegram"
-              className="text-white/70 hover:text-primary transition-colors"
+              className="inline-flex items-center justify-center min-w-11 min-h-11 text-white/70 hover:text-primary transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 14.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.942z"/>
@@ -46,14 +46,14 @@ export default function Footer() {
 
         {/* Col 3: legal links */}
         <div className="flex flex-wrap justify-center items-center gap-4">
-          <Link to="/contatti" className="text-white/70 text-sm font-body hover:text-white transition-colors">Contatti</Link>
-          <Link to="/" className="text-white/70 text-sm font-body hover:text-white transition-colors">
+          <Link to="/contatti" className="inline-flex items-center min-h-11 text-white/70 text-sm font-body hover:text-white transition-colors">Contatti</Link>
+          <Link to="/" className="inline-flex items-center min-h-11 text-white/70 text-sm font-body hover:text-white transition-colors">
             Archivio
           </Link>
-          <Link to="/privacy" className="text-white/70 text-sm font-body hover:text-white transition-colors">
+          <Link to="/privacy" className="inline-flex items-center min-h-11 text-white/70 text-sm font-body hover:text-white transition-colors">
             Privacy Policy
           </Link>
-          <button onClick={() => window.dispatchEvent(new Event('phonepulse:privacy'))} className="text-white/70 text-sm font-body hover:text-white transition-colors">
+          <button onClick={() => window.dispatchEvent(new Event('phonepulse:privacy'))} className="inline-flex items-center min-h-11 text-white/70 text-sm font-body hover:text-white transition-colors">
             Preferenze privacy
           </button>
         </div>
