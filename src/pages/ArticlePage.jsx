@@ -209,12 +209,6 @@ export default function ArticlePage() {
                 <strong>Articolo d’archivio</strong>. Le informazioni di produzione non documentate non attestano prove dirette del dispositivo.
               </aside>
             )}
-            {article.origin === 'rss' && (
-              <aside className="mb-8 border-l-4 border-primary/30 pl-4 text-sm text-gray-600 font-body">
-                Articolo preparato con assistenza AI e rivisto dalla redazione.
-              </aside>
-            )}
-
             {/* Cover image */}
             {article.cover_image_url && (
               <figure className="mb-10">
