@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
@@ -23,6 +24,26 @@ function CardSkeleton() {
 }
 
 export default function CategoryPage() {
+  const { slug } = useParams()
+  if (['recensioni', 'comparativi', 'guide', 'offerte'].includes(slug)) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SEO title="Categoria non disponibile" />
+        <Helmet><meta name="robots" content="noindex,follow" /></Helmet>
+        <Header />
+        <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
+          <h1 className="text-4xl font-heading text-dark mb-4">Categoria non disponibile</h1>
+          <p className="font-body text-gray-600 mb-6">Questa sezione è stata ritirata mentre verifichiamo la classificazione dei contenuti.</p>
+          <Link to="/categoria/news" className="font-body text-primary underline">Leggi le news</Link>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+  return <CategoryFeed />
+}
+
+function CategoryFeed() {
   const { slug } = useParams()
   const [loadedCategory, setCategory] = useState(null)
   const [articles, setArticles] = useState([])

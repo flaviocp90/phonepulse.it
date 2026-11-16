@@ -3,7 +3,6 @@ PhonePulse — Job B: pubblica soltanto versioni approvate dalla redazione.
 """
 import os
 import logging
-import subprocess
 import argparse
 import requests
 from datetime import datetime, timezone
@@ -36,105 +35,6 @@ def invia_telegram(messaggio: str):
         )
     except Exception as e:
         logger.warning("Telegram notification failed (%s)", type(e).__name__)
-
-
-def update_sitemap(supabase_client):
-    try:
-        result = (
-            supabase_client.table("articles")
-            .select("slug, published_at")
-            .eq("is_published", True)
-            .order("published_at", desc=True)
-            .execute()
-        )
-        articoli = result.data or []
-
-        urls = []
-
-        urls.append(
-            "  <url>\n"
-            "    <loc>https://www.phonepulse.it/</loc>\n"
-            "    <changefreq>daily</changefreq>\n"
-            "    <priority>1.0</priority>\n"
-            "  </url>"
-        )
-
-        for a in articoli:
-            lastmod = ""
-            if a.get("published_at"):
-                lastmod = f"\n    <lastmod>{a['published_at'][:10]}</lastmod>"
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>https://www.phonepulse.it/articoli/{a['slug']}</loc>{lastmod}\n"
-                f"    <changefreq>weekly</changefreq>\n"
-                f"    <priority>0.8</priority>\n"
-                f"  </url>"
-            )
-
-        categories = [
-            ("recensioni", "weekly", "0.6"),
-            ("comparativi", "weekly", "0.6"),
-            ("guide", "weekly", "0.6"),
-            ("news", "daily", "0.7"),
-            ("offerte", "daily", "0.6"),
-        ]
-        for slug, freq, priority in categories:
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>https://www.phonepulse.it/categoria/{slug}</loc>\n"
-                f"    <changefreq>{freq}</changefreq>\n"
-                f"    <priority>{priority}</priority>\n"
-                f"  </url>"
-            )
-
-        urls.append(
-            "  <url>\n"
-            "    <loc>https://www.phonepulse.it/chi-siamo</loc>\n"
-            "    <changefreq>monthly</changefreq>\n"
-            "    <priority>0.3</priority>\n"
-            "  </url>"
-        )
-        urls.append(
-            "  <url>\n"
-            "    <loc>https://www.phonepulse.it/contatti</loc>\n"
-            "    <changefreq>monthly</changefreq>\n"
-            "    <priority>0.3</priority>\n"
-            "  </url>"
-        )
-
-        xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        xml += "\n".join(urls)
-        xml += "\n</urlset>\n"
-
-        sitemap_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "public",
-            "sitemap.xml",
-        )
-        with open(sitemap_path, "w", encoding="utf-8") as f:
-            f.write(xml)
-
-        subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True)
-        subprocess.run(["git", "add", "public/sitemap.xml"], check=True)
-        commit = subprocess.run(
-            ["git", "commit", "-m", "chore: aggiorna sitemap.xml con articoli pubblicati [skip ci]"],
-            capture_output=True,
-            text=True,
-        )
-        if commit.returncode != 0:
-            if "nothing to commit" in commit.stdout + commit.stderr:
-                logger.info("Sitemap non modificata, nessun commit necessario.")
-            else:
-                raise RuntimeError("Sitemap commit failed")
-        subprocess.run(["git", "push"], check=True)
-
-        logger.info(f"Sitemap aggiornata con {len(articoli)} articoli e pushata.")
-        return True
-    except Exception as e:
-        logger.warning("Sitemap distribution failed (%s)", type(e).__name__)
-        return False
 
 
 def candidate_reason(article: dict, now) -> str | None:
@@ -210,13 +110,9 @@ def run_publication(supabase, dry_run=False, publish_count=1, *, require_evidenc
                            '\n' + SITE_URL + '/articoli/' + article['slug'])
         else:
             summary['unchanged'] += 1
-    # Until U5 is deployed, retain git-based sitemap and recover failed distribution even with no new articles.
-    distributed = update_sitemap(supabase)
-    logger.info('Publication results: %s; distribution=%s', summary, distributed)
+    logger.info('Publication results: %s', summary)
     if summary['failed']:
         raise RuntimeError('Publication RPC failures; check logged IDs before retry')
-    if not distributed:
-        raise RuntimeError('Sitemap distribution failed; DB publication remains committed')
     return summary
 
 

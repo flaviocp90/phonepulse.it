@@ -4,21 +4,17 @@ import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
+import { loadPublishedIndex, sitemapPages } from '../lib/publicSitemap'
 
 export default function SitemapPage() {
   const [byCategory, setByCategory] = useState({})
+  const [error, setError] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchArticles() {
       try {
-        const { data, error } = await supabase
-          .from('articles')
-          .select('slug, title, published_at, categories(name, slug)')
-          .eq('is_published', true)
-          .order('published_at', { ascending: false })
-
-        if (error) throw error
+        const data = await loadPublishedIndex(supabase)
 
         const grouped = {}
         for (const article of data || []) {
@@ -28,6 +24,7 @@ export default function SitemapPage() {
         }
         setByCategory(grouped)
       } catch (err) {
+        setError(true)
         console.error(err)
       } finally {
         setLoading(false)
@@ -37,16 +34,10 @@ export default function SitemapPage() {
     fetchArticles()
   }, [])
 
-  const staticLinks = [
-    { label: 'Home', to: '/' },
-    { label: 'Chi siamo', to: '/chi-siamo' },
-    { label: 'Contatti', to: '/contatti' },
-    { label: 'Recensioni', to: '/categoria/recensioni' },
-    { label: 'Comparativi', to: '/categoria/comparativi' },
-    { label: 'Guide', to: '/categoria/guide' },
-    { label: 'News', to: '/categoria/news' },
-    { label: 'Offerte', to: '/categoria/offerte' },
-  ]
+  const staticLinks = [...sitemapPages]
+  if (Object.values(byCategory).flat().some(article => article.categories?.slug === 'news')) {
+    staticLinks.push({ label: 'News', to: '/categoria/news' })
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -78,6 +69,7 @@ export default function SitemapPage() {
           </ul>
         </section>
 
+        {error && <p role="alert" className="font-body text-red-700">Impossibile caricare la mappa del sito. Riprova più tardi.</p>}
         {/* Articles by category */}
         {loading ? (
           <p className="text-gray-400 font-body text-sm">Caricamento articoli…</p>

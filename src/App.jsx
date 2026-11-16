@@ -8,6 +8,7 @@ import AboutPage from './pages/AboutPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import SitemapPage from './pages/SitemapPage.jsx'
+import PrivacyPage from './pages/PrivacyPage.jsx'
 
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'))
@@ -26,6 +27,7 @@ function App() {
         <Route path="/categoria/:slug" element={<CategoryPage />} />
         <Route path="/chi-siamo" element={<AboutPage />} />
         <Route path="/contatti" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/sitemap" element={<SitemapPage />} />
 
         {/* Admin auth */}
