@@ -10,7 +10,7 @@ const article = {
   seo_title: 'Guida SEO completa',
   seo_description: 'Descrizione per i motori di ricerca',
   content: '## Un passo reale\n\nTesto con **enfasi** e [fonte](https://example.org/).',
-  origin: 'manual',
+  public_revision: 7,
   content_format: 'guide',
   author: 'PhonePulse',
   published_at: '2026-11-09T12:00:00Z',
@@ -40,13 +40,14 @@ test.describe('server HTML without JavaScript', () => {
     await expect(page.getByRole('heading', { name: article.title })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Un passo reale' })).toBeVisible()
     await expect(page.locator('.phonepulse-ssr .site-header')).toBeVisible()
-    await expect(page.locator('.phonepulse-ssr article > h1')).toHaveCSS('text-transform', 'uppercase')
+    await expect(page.locator('.phonepulse-ssr article > h1')).toHaveCSS('text-transform', 'none')
     const headingBounds = await page.locator('.phonepulse-ssr article > h1').boundingBox()
     expect(headingBounds.width).toBeGreaterThan(150)
     expect(headingBounds.width).toBeLessThanOrEqual(768)
     await expect(page.getByRole('link', { name: 'Fonte verificata' })).toHaveAttribute('href', 'https://example.org/')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical)
     await expect(page).toHaveTitle('Guida SEO completa — PhonePulse')
+    await expect(page.locator('meta[name="phonepulse:article-version"]')).toHaveAttribute('content', '7')
   })
 })
 
@@ -61,7 +62,7 @@ test('React takes over article and keeps metadata and navigation correct', async
   await page.route('**/rest/v1/**', async route => {
     const url = new URL(route.request().url())
     if (url.hostname !== 'supabase.test') return route.abort()
-    if (url.pathname.endsWith('/articles')) {
+    if (url.pathname.endsWith('/published_articles')) {
       await route.fulfill({ status: 200, contentType: 'application/json', json: article })
       return
     }

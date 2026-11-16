@@ -14,7 +14,7 @@ export default function StaleRssCleanup({ onDone }) {
     setBusy(true); setError(''); setMessage(''); setCandidates(null)
     const date = cutoffIso()
     try {
-      const { data, error: queryError } = await supabase.from('articles')
+      const { data, error: queryError } = await supabase.rpc('editor_articles')
         .select('id,title,slug,version,status,origin,content_format,created_at')
         .eq('status', 'draft').eq('origin', 'rss').eq('content_format', 'news')
         .eq('version', 1).lt('created_at', date)
@@ -42,7 +42,7 @@ export default function StaleRssCleanup({ onDone }) {
       for (const row of snapshot) {
         if (!eligibleStaleRssDraft(row, cutoff)) throw new Error('Selezione modificata: interrompo la pulizia.')
         // Re-read before each action: do not discard rows changed after inspection.
-        const { data: current, error: recheckError } = await supabase.from('articles')
+        const { data: current, error: recheckError } = await supabase.rpc('editor_articles')
           .select('id,version,status,origin,content_format,created_at')
           .eq('id', row.id).single()
         if (recheckError || !current || !eligibleStaleRssDraft(current, cutoff) ||

@@ -100,7 +100,7 @@ export default function AdminArticleEditor() {
       return () => { active = false }
     }
     setLoading(true)
-    supabase.from('articles').select('*, article_tags(tag_id)').eq('id', id).single().then(async ({ data, error }) => {
+    supabase.rpc('editor_articles').select('*, article_tags(tag_id)').eq('id', id).single().then(async ({ data, error }) => {
       if (!active) return
       if (error || !data) throw error || new Error('Articolo non trovato')
       const next = Object.fromEntries(Object.keys(EMPTY_FORM).map(key => [key, data[key] ?? EMPTY_FORM[key]]))
@@ -150,7 +150,7 @@ export default function AdminArticleEditor() {
   useEffect(() => {
     if (!form.category_id) return
     let active = true
-    supabase.from('articles').select('id, title, slug').eq('is_published', true).eq('category_id', form.category_id).order('published_at', { ascending: false }).limit(4)
+    supabase.rpc('editor_articles').select('id, title, slug').eq('is_published', true).eq('category_id', form.category_id).order('published_at', { ascending: false }).limit(4)
       .then(({ data, error }) => { if (active && !error && Array.isArray(data)) setRelated({ category: form.category_id, items: data.filter(row => row.id !== id && /^[a-z0-9][a-z0-9-]{0,180}$/.test(row.slug)) }) }).catch(() => {})
     return () => { active = false }
   }, [form.category_id, id])
@@ -265,7 +265,7 @@ export default function AdminArticleEditor() {
       if (kind === 'discard' || kind === 'restore') { dirtyRef.current = false; setReload(value => value + 1); return }
       // Enrich server-owned metadata without overwriting local content.
       try {
-        const { data, error } = await supabase.from('articles').select('id, version, status, origin, approved_version, approved_at, approved_by, last_verified_at, published_at').eq('id', id).single()
+        const { data, error } = await supabase.rpc('editor_articles').select('id, version, status, origin, approved_version, approved_at, approved_by, last_verified_at, published_at').eq('id', id).single()
         if (!current()) return
         if (error || !data || data.version !== result.version || data.status !== result.status) setMetadataWarning('Operazione confermata. Metadata aggiornati indisponibili: ricarica la versione server per verificarli.')
         else { setRecord(previous => ({ ...previous, ...data })); setMetadataWarning('') }
@@ -282,25 +282,26 @@ export default function AdminArticleEditor() {
   return <div className="max-w-4xl mx-auto min-w-0">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div><Link to="/admin/articoli" className="text-xs text-primary">Articoli</Link><h1 className="text-2xl font-heading font-bold text-dark">{isNew ? 'Nuovo articolo' : 'Revisione articolo'}</h1></div>
-      <button onClick={() => setPreview(value => !value)} className={buttonClass}>{preview ? 'Editor' : 'Preview'}</button>
+      <button onClick={() => setPreview(value => !value)} className={buttonClass}>{preview ? 'Editor' : 'Anteprima'}</button>
     </div>
     {error && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 break-words">{error}</p>}
+    {!isNew && (error || metadataWarning) && <button onClick={reloadServer} disabled={saving} className={`${buttonClass} mb-4`}>Ricarica versione server</button>}
     {editorId && ((isNew && !record) || record?.id === id) && <DraftRecovery ref={recoveryRef} key={`${editorId}:${id || 'nuovo'}:${reload}`} userId={editorId} articleId={id || 'nuovo'} version={record?.version ?? null} dirty={dirtyRef.current} value={{ form, tags: selectedTags, claims: claimReviews, provenance: importProvenance }} onRestore={copy => { setForm(copy.form); setSelectedTags(copy.tags); setClaimReviews(copy.claims); setImportProvenance(copy.provenance); setReview({}); setSuccess('Copia ripristinata. Verifica il contenuto e salva la bozza sul server.') }} />}
     {importProvenance?.source_checks && <aside className="border border-border rounded-xl p-4 mb-4 text-sm"><p>Indipendenza delle fonti da verificare manualmente.</p>{importProvenance.source_checks.duplicate_content?.length > 0 && <p className="text-amber-700">Rilevati testi identici tra fonti: {JSON.stringify(importProvenance.source_checks.duplicate_content)}. Non considerarli conferme indipendenti.</p>}{importProvenance.source_checks.same_host?.length > 0 && <p>Fonti dello stesso sito: {JSON.stringify(importProvenance.source_checks.same_host)}.</p>}</aside>}
     {photoWarning && <p role="alert" className="text-amber-700 text-sm mb-4">{photoWarning}</p>}
     {metadataWarning && <p className="text-amber-700 text-sm mb-4">{metadataWarning}</p>}
     {success && <p role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4">{success}</p>}
-    <div className={`${panelClass} mb-5 text-sm break-words`}>
+    {!isNew && <details className={`${panelClass} mb-5 text-sm break-words`}><summary className="cursor-pointer font-semibold">Stato e cronologia della versione</summary>
       <p>Stato: {statusLabels[status]}</p><p>Versione: {record?.version ?? 'Da salvare'} · Origine: {record?.origin ?? 'manual (alla creazione)'}</p>
       <p>Approvazione: versione {record?.approved_version ?? '—'} · {dateLabel(record?.approved_at)} · Revisore: {record?.approved_by ?? '—'}</p>
       <p>Ultima verifica: {dateLabel(record?.last_verified_at)} · Pubblicazione originaria: {dateLabel(record?.published_at)}</p>
       {dirty && <p className="text-amber-700">Modifiche non salvate: salva prima di approvare o pubblicare. La checklist va ripetuta dopo il salvataggio.</p>}
-      {!isNew && <button onClick={reloadServer} disabled={saving} className={buttonClass}>Ricarica versione server</button>}
-    </div>
+
+    </details>}
     {reviewVersion && (status === 'draft' || aiReview?.event) && aiReview?.id === id && aiReview.version === reviewVersion &&
       <AiDraftReview event={aiReview.event} error={aiReview.error} />}
     <fieldset disabled={saving} className="min-w-0">
-    {isNew && <div className={`${panelClass} mb-5`}><label className="block text-sm font-semibold">Importa ricerca multi-fonte<input type="file" accept="application/json,.json" onChange={importResearch} className="block w-full text-xs mt-2" /></label><p className="text-xs text-gray-500">Importa un file di ricerca PhonePulse (massimo 100 KB). Nessun articolo viene salvato o approvato automaticamente; le affermazioni richiedono una nuova revisione.</p></div>}
+    {isNew && <details className={`${panelClass} mb-5`}><summary className="cursor-pointer font-semibold">Importa ricerca multi-fonte</summary><label className="block text-sm font-semibold">Importa ricerca multi-fonte<input type="file" accept="application/json,.json" onChange={importResearch} className="block w-full text-xs mt-2" /></label><p className="text-xs text-gray-500">Importa un file di ricerca PhonePulse (massimo 100 KB). Nessun articolo viene salvato o approvato automaticamente; le affermazioni richiedono una nuova revisione.</p></details>}
     {preview ? <div>
       <div className="flex flex-wrap gap-2 mb-4"><button onClick={() => setPreviewMobile(false)} aria-pressed={!previewMobile} className={buttonClass}>Desktop</button><button onClick={() => setPreviewMobile(true)} aria-pressed={previewMobile} className={buttonClass}>Mobile</button></div>
       <div className={`${panelClass} break-words mx-auto ${previewMobile ? 'max-w-[375px]' : 'max-w-3xl'}`}>
@@ -332,14 +333,14 @@ export default function AdminArticleEditor() {
           </div> })}
           <button onClick={() => change('sources', [...form.sources, { url: '', title: '', publisher: '', published_at: null, retrieved_at: null }])} className={buttonClass}>Aggiungi fonte</button>
         </div>
-        <div className={panelClass}>
+        <details className={panelClass}><summary className="cursor-pointer font-semibold">Opzioni avanzate: SEO e affiliazioni</summary>
           <Field label="SEO Title"><input className={inputClass} value={form.seo_title} onChange={e => change('seo_title', e.target.value)} /></Field>
           <p className="text-xs text-gray-500">Titolo: {form.seo_title.length}/60 · Descrizione: {form.seo_description.length}/160 caratteri consigliati.</p>
           <Field label="SEO Description"><textarea className={inputClass} rows={3} value={form.seo_description} onChange={e => change('seo_description', e.target.value)} /></Field>
           <div className="border-l-4 border-primary/30 pl-4 break-words"><p className="text-xs text-gray-500">Canonical</p><p className="text-xs">https://www.phonepulse.it/articoli/{form.slug}</p><h3 className="text-lg text-blue-800">{form.seo_title || form.title || 'Titolo da compilare'}</h3><p className="text-sm text-gray-600">{form.seo_description || form.excerpt || 'Descrizione da compilare'}</p></div>
           {related?.category === form.category_id && related.items.length > 0 && <section className="space-y-2" aria-label="Link interni suggeriti"><h3 className="text-sm font-semibold">Articoli pubblicati nella categoria</h3>{related.items.slice(0, 3).map(row => <button type="button" key={row.id} className="block text-left text-sm text-primary underline" onClick={() => insertContent(`[${row.title.replace(/[\\[\]]/g, '\\$&')}](/articoli/${row.slug})`)}>{row.title}</button>)}</section>}
           <Field label="Affiliate links (JSON)"><textarea className={`${inputClass} font-mono`} rows={4} value={form.affiliate_links} onChange={e => change('affiliate_links', e.target.value)} /></Field>
-        </div>
+        </details>
       </div>
       <div className="space-y-5 min-w-0">
         <div className={panelClass}>
@@ -360,9 +361,9 @@ export default function AdminArticleEditor() {
         <div className={panelClass}><h2 className="font-semibold text-sm">Tag</h2><Field label="Cerca tag"><input className={inputClass} value={tagSearch} onChange={e => setTagSearch(e.target.value)} /></Field><div className="flex flex-wrap gap-2">{tags.filter(tag => tag.name.toLocaleLowerCase('it').includes(tagSearch.toLocaleLowerCase('it'))).map(tag => <button key={tag.id} aria-pressed={selectedTags.includes(tag.id)} onClick={() => { setSelectedTags(previous => previous.includes(tag.id) ? previous.filter(id => id !== tag.id) : [...previous, tag.id]); setReview({}); setSuccess('') }} className={`text-xs px-3 py-1.5 rounded-full border ${selectedTags.includes(tag.id) ? 'bg-primary text-white border-primary' : 'border-border'}`}>{tag.name}</button>)}</div></div>
       </div>
     </div>}
-    <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setSuccess('') }} /></div>
-    <section className={`${panelClass} mt-6`} aria-labelledby="human-review-heading">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    {!isNew && <div className="mt-6"><ClaimReviewPanel claims={claimReviews} sources={form.sources} onChange={next => { setClaimReviews(next); setSuccess('') }} /></div>}
+    <section className={`${panelClass} mt-6`} aria-labelledby={isNew ? undefined : "human-review-heading"}>
+      {!isNew && <><div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="human-review-heading" className="font-heading font-bold">Revisione umana della versione</h2>
           <p className="text-xs text-gray-500">Leggi il contenuto completo, controlla fonti e preview. Le attestazioni non sono un fact-check automatico.</p>
@@ -378,9 +379,10 @@ export default function AdminArticleEditor() {
       {Object.entries(checklist).map(([key, label]) => <label key={key} className="flex items-start gap-3 text-sm"><input type="checkbox" checked={review[key] === true} onChange={e => setReview(previous => ({ ...previous, [key]: e.target.checked }))} className="mt-1" /><span>{label}</span></label>)}
       {problem && <p className="text-amber-700 text-sm">{problem}</p>}
       {status === 'discarded' && <p className="text-sm">Recupera prima come bozza. Una news storica richiede fatti e fonte aggiornati entro 72 ore per essere approvata di nuovo; la pubblicazione originaria resta conservata.</p>}
+      </>}
       <div className="flex flex-wrap gap-3">
-        {status !== 'discarded' && <button disabled={saving || !optionsReady || (status !== 'published' && !claimsReady) || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className={buttonClass}>{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
-        {status === 'draft' && <button disabled={saving || dirty || isNew || !completeReview || !!problem} onClick={() => action('approve')} className={buttonClass}>Approva</button>}
+        {status !== 'discarded' && <button disabled={saving || !optionsReady || (status !== 'published' && !claimsReady) || !form.title.trim() || !form.slug.trim() || (status === 'published' && (!completeReview || !!problem))} onClick={() => action('save')} className="px-4 py-2.5 rounded-xl bg-primary text-white disabled:opacity-40">{status === 'published' ? 'Salva correzione pubblicata' : 'Salva bozza'}</button>}
+        {!isNew && status === 'draft' && <button disabled={saving || dirty || isNew || !completeReview || !!problem} onClick={() => action('approve')} className={buttonClass}>Approva</button>}
         {status === 'approved' && <button disabled={saving || dirty || !!problem} onClick={() => action('publish')} className="px-4 py-2.5 rounded-xl bg-primary text-white disabled:opacity-40">Pubblica</button>}
         {!isNew && (status === 'discarded' ? <button onClick={() => action('restore')} className={buttonClass}>Recupera come bozza</button> : <button onClick={() => action('discard')} className={buttonClass}>{status === 'published' ? 'Ritira' : 'Scarta'}</button>)}
       </div>

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const categories = ['news', 'altro', 'recensioni'].map((slug, id) => ({ id: String(id), slug, name: slug === 'news' ? 'News' : slug === 'altro' ? 'Altro' : 'Recensioni' }))
+const categories = ['news', 'altro', 'tecnologia', 'recensioni'].map((slug, id) => ({ id: String(id), slug, name: slug === 'news' ? 'News' : slug === 'altro' ? 'Altro' : slug === 'tecnologia' ? 'Tecnologia' : 'Recensioni' }))
 const article = (slug, category = categories[0]) => ({ id: slug, slug, title: `Articolo ${slug}`, content: 'Contenuto fittizio', categories: category, published_at: '2026-10-01' })
 
 async function navigate(page, path) {
@@ -35,7 +35,7 @@ async function fixtures(page, handler = () => null) {
 test('articolo valido → non trovato/errore → recupero e indietro/avanti', async ({ page }) => {
   await fixtures(page, async (url, route) => {
     const slug = url.searchParams.get('slug')
-    if (url.pathname.endsWith('/articles') && ['eq.missing', 'eq.error'].includes(slug)) {
+    if (url.pathname.endsWith('/published_articles') && ['eq.missing', 'eq.error'].includes(slug)) {
       await route.fulfill({ status: slug === 'eq.missing' ? 406 : 503, json: { code: slug === 'eq.missing' ? 'PGRST116' : 'unavailable', details: slug === 'eq.missing' ? 'The result contains 0 rows' : 'Temporary outage' } })
       return true
     }
@@ -65,20 +65,20 @@ test('risposta categoria lenta non sovrascrive categoria veloce', async ({ page 
   const requested = new Promise(resolve => { started = resolve })
   const delayed = new Promise(resolve => { release = resolve })
   await fixtures(page, async (url, route) => {
-    if (url.pathname.endsWith('/categories') && url.searchParams.get('slug') === 'eq.news') {
+    if (url.pathname.endsWith('/categories') && url.searchParams.get('slug') === 'eq.tecnologia') {
       started()
       await delayed
-      await route.fulfill({ json: categories[0] })
+      await route.fulfill({ json: categories[2] })
       return true
     }
   })
-  await page.goto('/categoria/news')
+  await page.goto('/categoria/tecnologia')
   await requested
   await navigate(page, '/categoria/altro')
   await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
   release()
   await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Articolo tecnologia-0', exact: true })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Altro', exact: true })).toBeVisible()
 })
 
@@ -86,7 +86,7 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
   let release
   const delayed = new Promise(resolve => { release = resolve })
   await fixtures(page, async (url, route) => {
-    if (url.pathname.endsWith('/articles') && url.searchParams.get('category_id') === 'eq.1') {
+    if (url.pathname.endsWith('/published_articles') && url.searchParams.get('category_id') === 'eq.1') {
       if (url.searchParams.get('offset') === '12') {
         await route.fulfill({ json: [article('altro-12', categories[1])], headers: { 'content-range': '12-12/25', 'access-control-expose-headers': 'content-range' } })
       } else {
@@ -96,10 +96,10 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
       return true
     }
   })
-  await page.goto('/categoria/news')
+  await page.goto('/categoria/tecnologia')
   await expect(page.getByText('25 articoli trovati')).toBeVisible()
   await page.getByRole('button', { name: 'Successivo' }).click()
-  await expect(page.getByRole('heading', { name: 'Articolo news-12', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Articolo tecnologia-12', exact: true })).toBeVisible()
   await navigate(page, '/categoria/altro')
   await expect(page.getByRole('heading', { name: 'Altro', exact: true })).toBeVisible()
   await page.waitForTimeout(250) // Allow an incorrectly issued page-2 response to render while page 1 is held.
@@ -108,7 +108,7 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
   await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 3')).toBeVisible()
   await page.goBack()
-  await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Articolo tecnologia-0', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 3')).toBeVisible()
   await page.goForward()
   await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
@@ -117,17 +117,17 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
 test('errore categoria non mostra risultati vecchi o zero e recupera', async ({ page }) => {
   let fail = false
   await fixtures(page, async (url, route) => {
-    if (fail && url.pathname.endsWith('/articles')) {
+    if (fail && url.pathname.endsWith('/published_articles')) {
       await route.fulfill({ status: 503, json: { code: 'unavailable' } })
       return true
     }
   })
-  await page.goto('/categoria/news')
+  await page.goto('/categoria/tecnologia')
   await expect(page.getByText('25 articoli trovati')).toBeVisible()
   fail = true
   await page.getByRole('button', { name: 'Successivo' }).click()
   await expect(page.getByText('Categoria non trovata o errore nel caricamento.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Articolo tecnologia-0', exact: true })).toHaveCount(0)
   await expect(page.getByText(/articoli trovati/)).toHaveCount(0)
   fail = false
   await navigate(page, '/categoria/altro')
@@ -153,7 +153,6 @@ for (const width of [390, 1400]) {
     for (const path of ['/', '/sitemap']) {
       await page.goto(path)
       if (path === '/sitemap') await expect(page.locator('a[href="/articoli/news-0"]').first()).toBeVisible()
-      if (width === 390) await page.locator('header button').click()
       for (const slug of ['recensioni', 'comparativi', 'guide', 'offerte']) {
         await expect(page.locator(`a[href="/categoria/${slug}"]`)).toHaveCount(0)
       }
@@ -168,7 +167,7 @@ test('articolo lento non sostituisce URL veloce né metadati', async ({ page }) 
   const requested = new Promise(resolve => { started = resolve })
   const delayed = new Promise(resolve => { release = resolve })
   await fixtures(page, async (url, route) => {
-    if (url.pathname.endsWith('/articles') && url.searchParams.get('slug') === 'eq.lento') {
+    if (url.pathname.endsWith('/published_articles') && url.searchParams.get('slug') === 'eq.lento') {
       started()
       await delayed
       await route.fulfill({ json: article('lento') })
@@ -188,12 +187,12 @@ test('articolo lento non sostituisce URL veloce né metadati', async ({ page }) 
 
 test('count non disponibile non diventa zero né inventa pagine', async ({ page }) => {
   await fixtures(page, async (url, route) => {
-    if (url.pathname.endsWith('/articles')) {
+    if (url.pathname.endsWith('/published_articles')) {
       await route.fulfill({ json: [article('senza-count')] })
       return true
     }
   })
-  await page.goto('/categoria/news')
+  await page.goto('/categoria/altro')
   await expect(page.getByRole('heading', { name: 'Articolo senza-count', exact: true })).toBeVisible()
   await expect(page.getByText(/articoli trovati/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Successivo' })).toHaveCount(0)
@@ -205,7 +204,7 @@ test('cambio slug rimuove titolo e dati strutturati precedenti durante loading',
   const requested = new Promise(resolve => { started = resolve })
   const delayed = new Promise(resolve => { release = resolve })
   await fixtures(page, async (url, route) => {
-    if (url.pathname.endsWith('/articles') && url.searchParams.get('slug') === 'eq.nuovo') {
+    if (url.pathname.endsWith('/published_articles') && url.searchParams.get('slug') === 'eq.nuovo') {
       started()
       await delayed
       await route.fulfill({ json: article('nuovo') })
@@ -221,4 +220,49 @@ test('cambio slug rimuove titolo e dati strutturati precedenti durante loading',
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0)
   release()
   await expect(page).toHaveTitle(/Articolo nuovo/)
+})
+
+test('archivio persistente da URL, refresh, articolo e Indietro', async ({ page }) => {
+  await fixtures(page)
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Ultimi articoli', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Successiva', exact: true }).click()
+  await expect(page).toHaveURL('/?page=2')
+  await expect(page.getByRole('heading', { name: 'Articolo news-18', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Articolo news-18', exact: true })).toBeVisible()
+  await page.getByRole('heading', { name: 'Articolo news-18', exact: true }).click()
+  await expect(page).toHaveURL('/articoli/news-18')
+  await page.goBack()
+  await expect(page).toHaveURL('/?page=2')
+  await expect(page.getByRole('heading', { name: 'Articolo news-18', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Precedente', exact: true }).click()
+  await expect(page.getByText('Articolo più recente', { exact: true })).toBeVisible()
+  for (const path of ['/categoria/news', '/sitemap']) {
+    await page.goto(path)
+    await expect(page).toHaveURL('/')
+    await expect(page.getByRole('heading', { name: 'Ultimi articoli', exact: true })).toBeVisible()
+  }
+})
+
+test('titoli lunghi e copertina assente restano leggibili su telefono e desktop', async ({ page }, testInfo) => {
+  const title = 'Gemini su Android: tutte le novità per usare lo smartphone e le app con maggiore controllo su dati, impostazioni e funzioni disponibili in Italia'
+  await fixtures(page, async (url, route) => {
+    if (!url.pathname.endsWith('/published_articles')) return
+    const row = { ...article('titolo-lungo'), title, cover_image_url: null, excerpt: 'Una sintesi leggibile con limiti, disponibilità e fonti della notizia.' }
+    await route.fulfill({ json: url.searchParams.has('slug') ? row : [row], headers: { 'content-range': '0-0/1', 'access-control-expose-headers': 'content-range' } })
+    return true
+  })
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const path of ['/', '/articoli/titolo-lungo']) {
+      await page.goto(path)
+      const heading = page.getByRole('heading', { name: title, exact: true })
+      await expect(heading).toBeVisible()
+      await expect(heading).toHaveCSS('text-transform', 'none')
+      await expect(heading).toHaveCSS('font-family', /Figtree/)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`${path === '/' ? 'home' : 'articolo'}-${width}.png`), fullPage: true })
+    }
+  }
 })

@@ -32,3 +32,6 @@ test-results/
 playwright-report/
 supabase/.temp/
 supabase/tests/__pycache__/
+
+dist-admin/
+.vercel/

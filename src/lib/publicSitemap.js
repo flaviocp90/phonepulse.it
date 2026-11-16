@@ -10,8 +10,8 @@ export async function loadPublishedIndex(client) {
   const articles = new Map()
   let offset = 0
   for (;;) {
-    const { data, error } = await client.from('articles')
-      .select('id,slug,title,published_at,content_updated_at,origin,version,approved_version,last_verified_at,categories(name,slug)')
+    const { data, error } = await client.from('published_articles')
+      .select('id,slug,title,published_at,public_updated_at,categories(name,slug)')
       .eq('is_published', true).order('id').range(offset, offset + 99)
       .abortSignal(globalThis.AbortSignal.timeout(7000))
     if (error) throw error

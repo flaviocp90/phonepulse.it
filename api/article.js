@@ -31,7 +31,7 @@ export function composeArticleDocument(viteShell, articleMarkup) {
     '.phonepulse-ssr main{max-width:768px;margin:0 auto;padding:48px 16px}' +
     '.phonepulse-ssr nav{font-size:12px;color:#6B6560;margin-bottom:24px}' +
     '.phonepulse-ssr a{color:#E04A0F}' +
-    '.phonepulse-ssr article>h1{font-family:"Bebas Neue",sans-serif;font-size:clamp(42px,6vw,72px);line-height:1.05;text-transform:uppercase;margin:0 0 16px}' +
+    '.phonepulse-ssr article>h1{font-family:Figtree,sans-serif;font-weight:700;font-size:clamp(30px,5vw,48px);line-height:1.2;margin:0 0 16px}' +
     '.phonepulse-ssr article>p{font-size:16px;line-height:1.8;color:#6B6560;margin:0 0 24px}' +
     '.phonepulse-ssr article>img{max-width:100%;height:auto;border-radius:16px;margin:8px 0 32px}' +
     '.phonepulse-ssr .article-content{font-size:16px;line-height:1.8;color:#374151}' +

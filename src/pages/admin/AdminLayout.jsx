@@ -5,18 +5,6 @@ import { articleCount } from '../../lib/editorial'
 
 const navItems = [
   {
-    to: '/admin/dashboard',
-    label: 'Dashboard',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="1" y="1" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="10" y="1" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="1" y="10" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="10" y="10" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    ),
-  },
-  {
     to: '/admin/articoli',
     label: 'Articoli',
     icon: (
@@ -90,10 +78,10 @@ export default function AdminLayout() {
       >
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10">
-          <Link to="/" target="_blank" className="flex items-center gap-0.5 w-fit">
+          <a href="https://www.phonepulse.it/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 w-fit">
             <span className="text-primary font-heading font-bold text-xl leading-none">PHONE</span>
             <span className="text-white font-heading font-bold text-xl leading-none">PULSE</span>
-          </Link>
+          </a>
           <p className="text-white/25 text-xs font-body mt-1">Admin</p>
         </div>
 
@@ -114,32 +102,9 @@ export default function AdminLayout() {
               }
             >
               {item.icon}
-              {item.label}
+              {item.label}{item.to === '/admin/articoli' && <span className="ml-auto" aria-label="Bozze da revisionare">{pendingCount ?? '—'}</span>}
             </NavLink>
           ))}
-          {/* Review bozze */}
-          <NavLink
-            to="/admin/review"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary text-white'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`
-            }
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M2 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M6 9l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="flex-1">Review bozze</span>
-            {(pendingCount === null || pendingCount > 0) && (
-              <span className="bg-red-500 text-white text-xs font-body font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center leading-none">
-                {pendingCount ?? '—'}
-              </span>
-            )}
-          </NavLink>
         </nav>
 
         {/* User + logout */}

@@ -13,6 +13,8 @@ create table public."categories" ("id" uuid not null default gen_random_uuid(),
 alter table public."categories" add constraint "categories_pkey" PRIMARY KEY (id);
 alter table public."categories" add constraint "categories_slug_key" UNIQUE (slug);
 alter table public."categories" enable row level security;
+create policy "Public read categories" on public.categories for select using (true);
+grant select on public.categories to anon, authenticated, service_role;
 create table public."articles" ("id" uuid not null default gen_random_uuid(),
 "slug" text not null,
 "title" text not null,

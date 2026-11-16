@@ -34,7 +34,7 @@ export default function CategoryPage() {
         <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
           <h1 className="text-4xl font-heading text-dark mb-4">Categoria non disponibile</h1>
           <p className="font-body text-gray-600 mb-6">Questa sezione è stata ritirata mentre verifichiamo la classificazione dei contenuti.</p>
-          <Link to="/categoria/news" className="font-body text-primary underline">Leggi le news</Link>
+          <Link to="/" className="font-body text-primary underline">Leggi le news</Link>
         </main>
         <Footer />
       </div>
@@ -84,7 +84,7 @@ function CategoryFeed() {
         const to = from + PAGE_SIZE - 1
 
         const { data, error: artErr, count } = await supabase
-          .from('articles')
+          .from('published_articles')
           .select('id, slug, title, excerpt, cover_image_url, published_at, categories(id, name, slug, color)', { count: 'exact' })
           .eq('category_id', cat.id)
           .eq('is_published', true)

@@ -189,6 +189,20 @@ try:
                 assert len(migrations) == 1, 'exactly one automation migration required'
                 run('automation-migration', psql + ['-f', str(migrations[0])])
                 run('automation-green', psql + ['-f', 'supabase/tests/automation_runs.sql'])
+        if args.guided and args.social and args.automation:
+            run('p1-red', psql + ['-f', 'supabase/tests/p1_security.sql'], expected=3)
+            assert 'public projection absent' in (base / 'p1-red.stderr').read_text()
+            run('p1-projection', psql + ['-f', str(next((repo / 'supabase/migrations').glob('*_public_article_projection.sql')))])
+            run('p1-reader-hardening', psql + ['-f', str(next((repo / 'supabase/migrations').glob('*_harden_editor_reader.sql')))])
+            run('p1-unenrolled-editor', psql, sql="insert into auth.users(id,raw_app_meta_data) values ('11111111-1111-4111-8111-111111111111','{\"phonepulse_role\":\"editor\"}');")
+            mfa = str(next((repo / 'supabase/migrations').glob('*_editor_mfa.sql')))
+            run('p1-mfa-preflight-red', psql + ['-f', mfa], expected=3)
+            assert 'Enroll and verify TOTP' in (base / 'p1-mfa-preflight-red.stderr').read_text()
+            run('p1-enrolled-editor', psql, sql="insert into auth.mfa_factors(user_id,factor_type,status) values ('11111111-1111-4111-8111-111111111111','totp','verified');")
+            run('p1-mfa', psql + ['-f', mfa])
+            run('p1-column-grants', psql + ['-f', str(next((repo / 'supabase/migrations').glob('*_public_article_column_grants.sql')))])
+            run('p1-green', psql + ['-f', 'supabase/tests/p1_security.sql'])
+            run('p1-luna-regression', psql + ['-f', 'supabase/tests/ai_draft_review.sql', '-f', 'supabase/tests/publish_luna_review.sql'])
 finally:
     if started:
         run('stop', [str(pg / 'pg_ctl'), '-D', str(base / 'cluster'), 'stop', '-m', 'fast'])

@@ -11,7 +11,7 @@ function formatDate(dateString) {
 }
 
 export default function NewsCard({ article }) {
-  const { slug, title, excerpt, cover_image_url, published_at, categories } = article
+  const { slug, title, excerpt, cover_image_url, published_at } = article
 
   return (
     <Link
@@ -30,23 +30,15 @@ export default function NewsCard({ article }) {
 
       {/* Text */}
       <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
-        {categories && (
-          <span
-            className="text-[10px] font-body font-semibold uppercase tracking-wider"
-            style={{ color: categories.color || '#FF5C1A' }}
-          >
-            {categories.name}
-          </span>
-        )}
-        <h3 className="font-heading text-dark text-[15px] leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="font-body font-semibold text-dark text-lg leading-snug line-clamp-2 group-hover:underline transition-colors">
           {title}
         </h3>
         {excerpt && (
-          <p className="text-[11px] text-gray-400 font-body line-clamp-2 mt-0.5 leading-relaxed">
+          <p className="text-sm text-gray-700 font-body line-clamp-2 mt-0.5 leading-relaxed">
             {excerpt}
           </p>
         )}
-        <time className="text-[10px] text-gray-300 font-body mt-auto pt-1">
+        <time dateTime={published_at} className="text-sm text-gray-600 font-body mt-auto pt-1">
           {formatDate(published_at)}
         </time>
       </div>
