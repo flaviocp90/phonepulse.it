@@ -137,6 +137,13 @@ Comando riproducibile: `python3 supabase/tests/run_editorial_rpcs.py --pg-bin /o
 
 Il coordinatore ha verificato Pages configurato come build legacy da master `/`, cname null: Jekyll interpreta JSX nei documenti e il build fallisce con errore Liquid. Vercel produzione `dpl_4UoL48h7PY45wZUn4dDr7pZ68fqm` è READY sui domini PhonePulse. Il tentativo DELETE Pages ha restituito 404; GET conferma ancora enabled. Il token CLI non ha permessi admin/maintain/push: il problema non risulta risolto. Utente indirizzato a Settings → Pages → Branch None; nessun file applicativo modificato per questo incidente.
 
+
+### Correzione del 16 novembre 2026
+
+Pages era ancora configurato come legacy da `master` `/`, senza dominio personalizzato. L’errore Liquid ricorre perché Jekyll interpreta esempi JSX nella documentazione. Aggiunto `.nojekyll` nella sorgente di pubblicazione per saltare Jekyll in tutti i documenti. Il sito applicativo React/Vite e le API continuano a essere pubblicati da Vercel; questo segnale non compila l’app per GitHub Pages.
+
+Il tentativo di disattivare il sito Pages tramite CLI ha restituito 404: l’account CLI ha permessi di sola lettura. Riferimento ufficiale: https://github.blog/news-insights/the-library/bypassing-jekyll-on-github-pages/ . Verificare il successivo workflow dinamico Pages sul commit rilasciato; i run storici falliti restano nel registro.
+
 ## U6 — caricamento admin, verifica locale 5 ottobre 2026
 
 Le sei pagine admin sono importate con React.lazy, con attesa annunciata tramite role=status. ProtectedRoute resta all'esterno di AdminLayout e conserva il controllo sessione/redirect; le route e il login non cambiano. La seconda inclusione identica Ahrefs è rimossa da index.html; restano la prima inclusione e il meta di verifica. La gestione consenso resta un prerequisito separato.
