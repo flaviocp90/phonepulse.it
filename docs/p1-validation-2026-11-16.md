@@ -1,6 +1,6 @@
 # P1 PhonePulse: implementazione e verifica
 
-Branch `codex/resolve-p1-20261116`, base `master` `6fbcff0`. Questo documento descrive il candidato della [PR #79](https://github.com/flaviocp90/phonepulse.it/pull/79): il blog pubblico non è stato aggiornato. La proiezione additiva e il lettore privato sono stati applicati; il gate MFA e i grant restrittivi restano da applicare dopo i prerequisiti. Le prove Auth con account reali in staging restano aperte.
+Branch `codex/resolve-p1-20261116`, base `master` `6fbcff0`. Questo documento descrive il candidato della [PR #79](https://github.com/flaviocp90/phonepulse.it/pull/79): il blog pubblico non è stato aggiornato. La proiezione additiva e il lettore privato sono stati applicati; il gate MFA e i grant restrittivi restano da applicare dopo i prerequisiti. Le prove Auth/PostgREST/Storage e il recupero MFA su account sintetico sono passati nello stack Supabase locale isolato; il titolare ha confermato la preparazione del recupero dell’account reale.
 
 ## Modifiche
 
@@ -10,7 +10,7 @@ Branch `codex/resolve-p1-20261116`, base `master` `6fbcff0`. Questo documento de
 | #66 | Ultimo articolo in evidenza, titoli Figtree senza trasformazione in maiuscolo, sommari e date leggibili. Formato nell’articolo una volta sola; raccomandazioni cronologiche chiamate Ultimi articoli. Resa server coerente. |
 | #67 | Lista unica con viste Da revisionare, Pubblicati, Archivio. Ricerca, stato e pagina nell’URL. Dashboard e review reindirizzate; pulizia RSS nell’archivio. Azioni e distribuzione social conservate. |
 | #68 | Nuova bozza senza checklist o approvazione prima del salvataggio; SEO e importazione comprimibili. Anteprima con questa etichetta; recupero server visibile in caso di errore. Audit e controllo delle versioni conservati. |
-| #70 | Registrazione e challenge TOTP; controllo AAL2 nelle RPC, policy editoriali e Storage, e invii social. La migrazione rifiuta editor senza TOTP verificato. Recupero reale ancora da verificare. |
+| #70 | Registrazione e challenge TOTP; controllo AAL2 nelle RPC, policy editoriali e Storage, e invii social. La migrazione rifiuta editor senza TOTP verificato. Registrazione TOTP e preparazione del recupero confermate dal titolare; prova automatica del recupero su account isolato passata. |
 | #71 | Header per tutte le rotte private: anti-iframe, nosniff, referrer esplicito e CSP completa Report-Only. La CSP applicata ora limita iframe, oggetti e base URL; quella completa resta da misurare sul deployment. |
 | #72 | Build pubblico senza moduli/operazioni editoriali, 404 HTTP delle vecchie rotte admin, build privato distinto. Progetto Vercel dedicato `phonepulse-editorial` creato con Authentication `all` e Node 24. |
 | #73 | Vista `published_articles` con `security_invoker`, grant per le sole colonne pubbliche; letture editoriali tramite RPC protetta. Aggiornamento, stato archivio e revisione pubblica sono campi di presentazione calcolati dal database. Home, categorie, articolo, SSR e sitemap migrati; Storage continua a seguire pubblicazione e ritiro. |
@@ -30,7 +30,7 @@ Nessun test ha pubblicato articoli reali o inviato post ai canali social.
 
 ## Stato delle risorse e limiti
 
-Il progetto Supabase `phonepulse` è PostgreSQL 17 sul piano Free. C’è un editor e, all’ispezione, nessun suo TOTP verificato. Non ci sono branch di staging configurati. La [protezione password compromesse](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) richiede Pro: non è stata attivata e non è stato cambiato il piano.
+Il progetto Supabase `phonepulse` è PostgreSQL 17 sul piano Free. C’è un editor; il controllo successivo alla registrazione conferma un fattore TOTP verificato. Il titolare ha confermato login con Google Authenticator e completamento della preparazione del recupero (backup separato e accesso amministrativo a Supabase). Il fattore reale non è stato rimosso né modificato per le prove. Non ci sono branch di staging configurati. La [protezione password compromesse](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) richiede Pro: non è stata attivata e non è stato cambiato il piano.
 
 Il progetto Vercel privato è `prj_RqDxFqkCzi6QATKPWp7BgeFKjSAq`, team `team_AFDrK3bXiOEX5tbGU51F6W8O`; Authentication configurata su tutti i deployment. Sono configurate solo URL Supabase e chiave anon frontend. Non contiene credenziali service-role. Il progetto pubblico resta `phonepulse-it`.
 
@@ -55,3 +55,13 @@ Rollback applicativo e grant devono essere coordinati: ripristinare soltanto il 
 - La logica con privilegi del lettore è nello schema non esposto `editorial_private`; l’endpoint pubblico usa SECURITY INVOKER e mantiene il controllo attendibile del chiamante.
 
 Le migrazioni additive sono state applicate senza revocare i grant esistenti. Le restrizioni finali delle colonne, l’obbligo MFA, il rilascio della funzione social e il passaggio del blog restano da completare dopo recupero e staging. Non eseguire automaticamente tutte le migrazioni pendenti senza rispettare questi prerequisiti.
+
+## Gate di rilascio completati alle 21:15 UTC
+
+- Unico editor reale: TOTP verificato nel database. Login con Google Authenticator e preparazione del recupero confermati dal titolare. Nessun fattore reale modificato.
+- Staging locale isolato, con dati/account sintetici e servizi reali: Supabase CLI 3.2.0, runtime nativo, PostgreSQL 17.12, Auth 2.198, PostgREST 16.5, Storage 1.96. Gli archivi ufficiali sono stati verificati tramite checksum; nessun progetto remoto o servizio a pagamento creato.
+- Passati: registrazione/challenge TOTP e JWT AAL2; rifiuto di anonimo, non-editor AAL2 con ruolo contraffatto nei metadata utente ed editor AAL1; upload e letture private solo AAL2; RPC editoriali con embed categorie/tag; colonne operative negate; pubblicazione, correzione e ritiro con download Storage effettivi; stati social tramite Auth reale senza invii esterni; regressione SQL Luna completa; revoca sessioni, rimozione amministrativa del solo fattore sintetico, nuova registrazione e rientro AAL2.
+- La fixture SQL non conteneva la policy di lettura categorie già presente in produzione: allineata prima di verificare gli embed. Nessuna modifica a policy remote per questa correzione.
+- Evidenze locali: `/private/tmp/phonepulse-p1-staging/check.mjs` e `result.json`. Il test usa esclusivamente endpoint locali e vieta richieste social esterne.
+
+Restano il merge, i deployment e l’applicazione coordinata delle due migrazioni restrittive e della funzione social. La CSP completa resta Report-Only; non è stata dichiarata una misurazione esaustiva delle violazioni nel browser reale.
