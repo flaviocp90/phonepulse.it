@@ -37,7 +37,7 @@ test('paginates all published articles, deduplicates canonical slugs and rejects
   const xml = renderSitemap(index)
   assert.equal((xml.match(/<loc>https:\/\/www.phonepulse.it\/articoli\//g) || []).length, 205)
   assert.doesNotMatch(xml, /articolo-999|admin|categoria\/(guide|recensioni|comparativi|offerte)/)
-  assert.match(xml, /categoria\/news/)
+  assert.doesNotMatch(xml, /categoria\/news/)
   assert.doesNotMatch(renderSitemap([]), /categoria\//)
 })
 
@@ -69,9 +69,9 @@ test('failure on a later page returns 503 instead of a successful partial or emp
 })
 
 test('lastmod uses a verified editorial correction and configuration routes XML before the SPA', () => {
-  const xml = renderSitemap([article(1, { origin: 'manual', content_updated_at: '2026-11-16T12:00:00Z' })])
+  const xml = renderSitemap([article(1, { origin: 'manual', public_updated_at: '2026-11-16T12:00:00Z' })])
   assert.match(xml, /<lastmod>2026-11-16T12:00:00.000Z<\/lastmod>/)
   const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url)))
-  assert.deepEqual(config.rewrites[0], { source: '/sitemap.xml', destination: '/api/sitemap' })
+  assert.deepEqual(config.rewrites.find(rule => rule.source === '/sitemap.xml'), { source: '/sitemap.xml', destination: '/api/sitemap' })
   assert.match(readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8'), /Sitemap: https:\/\/www.phonepulse.it\/sitemap.xml/)
 })

@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import PrivacyPreferences from './components/PrivacyPreferences.jsx'
+import { Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -6,16 +7,7 @@ import ArticlePage from './pages/ArticlePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
 import AboutPage from './pages/AboutPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
-import SitemapPage from './pages/SitemapPage.jsx'
 import PrivacyPage from './pages/PrivacyPage.jsx'
-
-const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'))
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'))
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'))
-const AdminArticles = lazy(() => import('./pages/admin/AdminArticles.jsx'))
-const AdminArticleEditor = lazy(() => import('./pages/admin/AdminArticleEditor.jsx'))
-const AdminReview = lazy(() => import('./pages/admin/AdminReview.jsx'))
 
 function App() {
   return (
@@ -28,30 +20,12 @@ function App() {
         <Route path="/chi-siamo" element={<AboutPage />} />
         <Route path="/contatti" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/sitemap" element={<SitemapPage />} />
-
-        {/* Admin auth */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-
-        {/* Admin protected */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="articoli" element={<AdminArticles />} />
-          <Route path="articoli/nuovo" element={<AdminArticleEditor />} />
-          <Route path="articoli/:id" element={<AdminArticleEditor />} />
-          <Route path="review" element={<AdminReview />} />
-        </Route>
+        <Route path="/sitemap" element={<Navigate to="/" replace />} />
+        <Route path="/categoria/news" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <PrivacyPreferences />
     </Suspense>
   )
 }

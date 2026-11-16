@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async'
 const SITE_NAME = 'PhonePulse'
 const SITE_URL = 'https://www.phonepulse.it'
 
-export default function SEO({ title, description, image, canonical, type = 'website' }) {
+export default function SEO({ title, description, image, canonical, type = 'website', revision }) {
   const fullTitle = title
     ? `${title} — ${SITE_NAME}`
     : `${SITE_NAME} — Smartphone e app, news e guide pratiche`
@@ -13,6 +13,7 @@ export default function SEO({ title, description, image, canonical, type = 'webs
   return (
     <Helmet>
       <title>{fullTitle}</title>
+      {Number.isSafeInteger(revision) && <meta name="phonepulse:article-version" content={revision} />}
       {description && <meta name="description" content={description} />}
 
       {/* Open Graph */}

@@ -4,7 +4,6 @@ import { loadPublishedIndex, sitemapPages, SITE_URL } from '../src/lib/publicSit
 
 export function renderSitemap(articles) {
   const entries = sitemapPages.map(page => ({ path: page.to }))
-  if (articles.some(article => article.categories?.slug === 'news')) entries.push({ path: '/categoria/news' })
   for (const article of articles) {
     const dates = publicEditorial(article)
     entries.push({ path: '/articoli/' + article.slug, date: dates.updatedAt || dates.publishedAt })

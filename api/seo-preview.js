@@ -83,7 +83,7 @@ export function renderPreview(article) {
   const cover = validUrl(article.cover_image_url);
   const credit = stockPhotoCredit(article.image_source);
   const category = article.categories && !Array.isArray(article.categories) ? article.categories : null;
-  const catSlug = category && /^[a-z0-9-]+$/.test(category.slug || '') ? category.slug : null;
+  const catSlug = category?.slug !== 'news' && category && /^[a-z0-9-]+$/.test(category.slug || '') ? category.slug : null;
   const crumbs = [{ '@type': 'ListItem', position: 1, name: 'Home', item: SITE + '/' }];
   if (catSlug) crumbs.push({ '@type': 'ListItem', position: 2, name: category.name, item: SITE + '/categoria/' + catSlug });
   crumbs.push({ '@type': 'ListItem', position: crumbs.length + 1, name: article.title, item: url });
@@ -103,10 +103,9 @@ export function renderPreview(article) {
     (s.publisher ? ' — ' + e(s.publisher) : '') +
     (s.retrievedAt ? ' · Consultata: ' + e(formatDate(s.retrievedAt)) : '') +
     '</li>').join('') + '</ul></section>' : '';
-  const archiveNote = article.origin === 'legacy'
+  const archiveNote = article.is_legacy === true
     ? '<aside>Articolo d’archivio: le informazioni non documentate non attestano prove dirette.</aside>'
-    : article.origin === 'rss'
-      ? '<aside>Articolo preparato con assistenza AI e rivisto dalla redazione.</aside>' : '';
+    : '';
   return '<!doctype html><html lang="it"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>' + e(title) + ' — PhonePulse</title>' +
@@ -117,6 +116,7 @@ export function renderPreview(article) {
     '<meta property="og:url" content="' + e(url) + '">' +
     '<link rel="canonical" href="' + e(url) + '">' +
     (cover ? '<meta property="og:image" content="' + e(cover) + '">' : '') +
+    (Number.isSafeInteger(article.public_revision) ? '<meta name="phonepulse:article-version" content="' + article.public_revision + '">' : '') +
     '<meta name="robots" content="noindex,nofollow">' +
     '<script type="application/ld+json">' + jsonScript(schema) + '</script>' +
     '<script type="application/ld+json">' + jsonScript({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs }) + '</script>' +
@@ -135,8 +135,8 @@ export async function loadPublishedArticle(slug, env = process.env, request = fe
   const base = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
   const key = env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
   if (!base || !key) throw new Error('Missing public Supabase credentials');
-  const endpoint = new URL('/rest/v1/articles', base);
-  endpoint.searchParams.set('select', 'slug,title,seo_title,seo_description,excerpt,content,cover_image_url,image_source,published_at,content_updated_at,last_verified_at,version,approved_version,author,content_format,origin,sources,categories(name,slug)');
+  const endpoint = new URL('/rest/v1/published_articles', base);
+  endpoint.searchParams.set('select', 'slug,title,seo_title,seo_description,excerpt,content,cover_image_url,image_source,published_at,public_updated_at,author,content_format,is_legacy,public_revision,sources,categories(name,slug)');
   endpoint.searchParams.set('slug', 'eq.' + slug);
   endpoint.searchParams.set('is_published', 'eq.true');
   endpoint.searchParams.set('limit', '1');

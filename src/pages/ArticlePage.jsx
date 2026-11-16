@@ -57,7 +57,7 @@ export default function ArticlePage() {
   useEffect(() => {
     if (!article?.category_id) return;
     let active = true;
-    supabase.from("articles").select("id, slug, title")
+    supabase.from("published_articles").select("id, slug, title")
       .eq("is_published", true).eq("category_id", article.category_id).neq("id", article.id)
       .order("published_at", { ascending: false }).limit(3)
       .then(({ data, error }) => {
@@ -74,7 +74,7 @@ export default function ArticlePage() {
       setError(null);
       try {
         const { data, error: err } = await supabase
-          .from("articles")
+          .from("published_articles")
           .select(
             "*, categories(id, name, slug, color), article_tags(tags(id, name, slug))",
           )
@@ -110,15 +110,16 @@ export default function ArticlePage() {
             image={article.cover_image_url}
             canonical={`/articoli/${article.slug}`}
             type="article"
+            revision={article.public_revision}
           />
           <ArticleSchema article={article} />
           <BreadcrumbSchema
             items={[
               { name: 'Home', url: 'https://www.phonepulse.it/' },
-              {
-                name: article.categories?.name || 'Articoli',
-                url: `https://www.phonepulse.it/categoria/${article.categories?.slug || 'news'}`,
-              },
+              ...(article.categories && article.categories.slug !== 'news' ? [{
+                name: article.categories.name,
+                url: `https://www.phonepulse.it/categoria/${article.categories.slug}`,
+              }] : []),
               { name: article.title, url: `https://www.phonepulse.it/articoli/${article.slug}` },
             ]}
           />
@@ -144,12 +145,12 @@ export default function ArticlePage() {
         {!loading && !error && article && (
           <article className="max-w-3xl mx-auto px-4 py-12">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-xs text-gray-400 font-body mb-6">
+            <nav className="flex items-center gap-2 text-sm text-gray-600 font-body mb-6">
               <Link to="/" className="hover:text-gray-600 transition-colors">
                 Home
               </Link>
-              <span className="text-gray-400">&rsaquo;</span>
-              {article.categories && (
+              <span className="text-gray-600">&rsaquo;</span>
+              {article.categories && article.categories.slug !== 'news' && (
                 <>
                   <Link
                     to={`/categoria/${article.categories.slug}`}
@@ -157,7 +158,7 @@ export default function ArticlePage() {
                   >
                     {article.categories.name}
                   </Link>
-                  <span className="text-gray-400">&rsaquo;</span>
+                  <span className="text-gray-600">&rsaquo;</span>
                 </>
               )}
               <span className="text-gray-500 line-clamp-1">
@@ -167,7 +168,7 @@ export default function ArticlePage() {
 
             {/* Category */}
             <div className="flex items-center gap-3 mb-4">
-              {article.categories && (
+              {article.categories && article.categories.slug !== 'news' && (
                 <Link
                   to={`/categoria/${article.categories.slug}`}
                   className="inline-block text-xs font-body font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
@@ -185,7 +186,7 @@ export default function ArticlePage() {
             </div>
 
             {/* Title */}
-            <h1 className="text-5xl md:text-7xl font-heading text-dark leading-none mb-4 uppercase">
+            <h1 className="text-3xl md:text-5xl font-body font-bold text-dark leading-tight mb-4">
               {article.title}
             </h1>
 
@@ -204,7 +205,7 @@ export default function ArticlePage() {
               {editorial.updatedAt && <span>Aggiornato: <time dateTime={editorial.updatedAt}>{formatDate(editorial.updatedAt)}</time></span>}
             </div>
 
-            {article.origin === 'legacy' && (
+            {article.is_legacy === true && (
               <aside className="mb-8 border-l-4 border-border pl-4 text-sm text-gray-600 font-body">
                 <strong>Articolo d’archivio</strong>. Le informazioni di produzione non documentate non attestano prove dirette del dispositivo.
               </aside>
@@ -307,7 +308,7 @@ export default function ArticlePage() {
                       </a>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 font-body mt-3">
+                  <p className="text-sm text-gray-600 font-body mt-3">
                     * I link sopra possono contenere codici di affiliazione. Non
                     influenzano la valutazione.
                   </p>
@@ -318,17 +319,17 @@ export default function ArticlePage() {
             <div className="mt-12 pt-8 border-t border-border">
               {related.length > 0 && (
                 <section aria-labelledby="related-articles" className="mb-8">
-                  <h2 id="related-articles" className="text-2xl font-heading text-dark mb-4">Altri articoli in questa categoria</h2>
+                  <h2 id="related-articles" className="text-2xl font-heading text-dark mb-4">Ultimi articoli</h2>
                   <ul className="space-y-3 font-body text-sm">
                     {related.map(item => <li key={item.id}><Link to={`/articoli/${item.slug}`} className="text-dark underline underline-offset-4">{item.title}</Link></li>)}
                   </ul>
                 </section>
               )}
               <Link
-                to={article.categories ? `/categoria/${article.categories.slug}` : "/"}
+                to={article.categories && article.categories.slug !== 'news' ? `/categoria/${article.categories.slug}` : "/"}
                 className="inline-flex items-center gap-2 text-sm text-gray-500 font-body hover:text-primary transition-colors"
               >
-                ← {article.categories ? `Torna a ${article.categories.name}` : "Torna alla home"}
+                ← {article.categories && article.categories.slug !== 'news' ? `Torna a ${article.categories.name}` : "Torna all’archivio"}
               </Link>
             </div>
           </article>

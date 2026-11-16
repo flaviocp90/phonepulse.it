@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { editorialAction, filterArticles, statusLabels } from '../../lib/editorial'
 import StaleRssCleanup from './StaleRssCleanup'
@@ -39,10 +39,18 @@ function SocialPanel({ article }) {
   </div>
 }
 
-export default function AdminArticleList({ review = false }) {
-  const [filter, setFilter] = useState(review ? 'new' : 'all')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(0)
+export default function AdminArticleList() {
+  const [params, setParams] = useSearchParams()
+  const view = ['review', 'published', 'archive'].includes(params.get('view')) ? params.get('view') : 'review'
+  const filters = view === 'review' ? [['new', 'Nuove bozze'], ['approved', 'Approvati']] : view === 'published' ? [['published', 'Pubblicati']] : [['all', 'Tutti'], ['draft', 'Bozze'], ['legacy', 'Archivio legacy'], ['approved', 'Approvati'], ['published', 'Pubblicati'], ['discarded', 'Scartati']]
+  const filter = filters.some(([value]) => value === params.get('status')) ? params.get('status') : filters[0][0]
+  const search = params.get('q') || ''
+  const pageValue = Number(params.get('page') || 1)
+  const page = Number.isSafeInteger(pageValue) && pageValue > 0 ? pageValue - 1 : 0
+  const update = useCallback(values => {
+    setParams(previous => { const next = new URLSearchParams(previous); for (const [key, value] of Object.entries(values)) { if (value) next.set(key, value); else next.delete(key) } return next })
+  }, [setParams])
+  const setPage = useCallback(value => update({ page: String((typeof value === 'function' ? value(page) : value) + 1) }), [page, update])
   const [articles, setArticles] = useState([])
   const [count, setCount] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,7 +62,7 @@ export default function AdminArticleList({ review = false }) {
   useEffect(() => {
     const token = ++generation.current
     setLoading(true); setError(''); setCount(null)
-    let query = filterArticles(supabase.from('articles').select('id, title, slug, excerpt, status, origin, version, content_format, created_at, published_at, categories(name)', { count: 'exact' }), filter)
+    let query = filterArticles(supabase.rpc('editor_articles', {}, { count: 'exact' }).select('id, title, slug, excerpt, status, origin, version, content_format, created_at, published_at, categories(name)'), filter)
     if (search.trim()) query = query.ilike('title', `%${search.trim().replace(/[\\%_]/g, value => `\\${value}`)}%`)
     query.order('created_at', { ascending: false }).order('id', { ascending: false }).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1).then(({ data, count, error }) => {
       if (token !== generation.current) return
@@ -65,7 +73,7 @@ export default function AdminArticleList({ review = false }) {
     // This ref is a request counter, not a DOM node; cleanup invalidates pending callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { generation.current++ }
-  }, [filter, search, page, reload])
+  }, [filter, search, page, reload, setPage])
 
   async function changeStatus(article) {
     const restoring = article.status === 'discarded'
@@ -78,19 +86,18 @@ export default function AdminArticleList({ review = false }) {
     } catch (err) { setError(err.message || 'Operazione non riuscita.') }
     finally { setBusy(false) }
   }
-  const filters = review ? [['new', 'Nuove bozze'], ['legacy', 'Archivio legacy'], ['approved', 'Approvati'], ['published', 'Pubblicati'], ['discarded', 'Scartati']] : [['all', 'Tutti'], ['draft', 'Bozze'], ['approved', 'Approvati'], ['published', 'Pubblicati'], ['discarded', 'Scartati']]
   return <div className="min-w-0">
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6"><div><h1 className="text-2xl font-heading font-bold text-dark">{review ? 'Review bozze' : 'Articoli'}</h1><p className="text-sm text-gray-500 mt-1">{loading ? 'Caricamento...' : count === null ? 'Conteggio —' : `${count} articoli`}</p></div><Link to="/admin/articoli/nuovo" className="bg-primary text-white px-4 py-2.5 rounded-xl">Nuovo</Link></div>
-    {review && <p className="text-sm text-gray-500 mb-4">Nuove bozze RSS/manuali e archivio storico sono separati. Apri la revisione completa per approvare o pubblicare. Dopo la pubblicazione puoi verificare e avviare separatamente i canali social.</p>}
-    {review && <StaleRssCleanup onDone={() => setReload(value => value + 1)} />}
-    <div className="flex flex-wrap gap-2 mb-5">{filters.map(([value, label]) => <button key={value} aria-pressed={filter === value} disabled={busy} onClick={() => { setFilter(value); setPage(0); setSuccess('') }} className={`${buttonClass} ${filter === value ? 'bg-dark text-white' : 'text-gray-500'}`}>{label}</button>)}</div>
-    <label className="block text-sm mb-5 max-w-md">Cerca titolo<input type="search" value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} className="block w-full border border-border rounded-xl px-3 py-2 mt-2" /></label>
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-6"><div><h1 className="text-2xl font-heading font-bold text-dark">Articoli</h1><p className="text-sm text-gray-500 mt-1">{loading ? 'Caricamento...' : count === null ? 'Conteggio —' : `${count} articoli`}</p></div><Link to="/admin/articoli/nuovo" className="bg-primary text-white px-4 py-2.5 rounded-xl">Nuovo articolo</Link></div>
+    <nav aria-label="Viste articoli" className="flex flex-wrap gap-2 mb-5">{[['review', 'Da revisionare'], ['published', 'Pubblicati'], ['archive', 'Archivio']].map(([value, label]) => <Link key={value} to={`/admin/articoli?view=${value}`} aria-current={view === value ? 'page' : undefined} className={`${buttonClass} ${view === value ? 'bg-dark text-white' : 'text-gray-600'}`}>{label}</Link>)}</nav>
+    {view === 'archive' && <StaleRssCleanup onDone={() => setReload(value => value + 1)} />}
+    <div className="flex flex-wrap gap-2 mb-5">{filters.length > 1 && filters.map(([value, label]) => <button key={value} aria-pressed={filter === value} disabled={busy} onClick={() => { update({ status: value, page: null }); setSuccess('') }} className={`${buttonClass} ${filter === value ? 'bg-dark text-white' : 'text-gray-600'}`}>{label}</button>)}</div>
+    <label className="block text-sm mb-5 max-w-md">Cerca titolo<input type="search" value={search} onChange={e => { update({ q: e.target.value, page: null }) }} className="block w-full border border-border rounded-xl px-3 py-2 mt-2" /></label>
     {error && <div role="alert" className="bg-red-50 text-red-700 rounded-xl p-4 mb-5">{error}<button onClick={() => setReload(value => value + 1)} className={`${buttonClass} ml-3`}>Riprova</button></div>}
     {success && <p role="status" className="bg-green-50 text-green-700 rounded-xl p-4 mb-5">{success}</p>}
     {loading ? <p role="status">Caricamento elenco...</p> : count !== null && <div className="bg-white border border-border rounded-2xl overflow-hidden">
       {articles.length === 0 ? <p className="p-8 text-gray-500">Nessun articolo trovato.</p> : articles.map(article => <div key={article.id} className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-3 p-5 border-b border-border last:border-0">
-        <div className="flex-1 min-w-0"><p className="font-body font-medium break-words">{article.title}</p><p className="text-xs text-gray-500 mt-1">{statusLabels[article.status]} · {article.origin} · versione {article.version} · {article.content_format || 'Formato da definire'}</p>{review && article.excerpt && <p className="text-sm text-gray-500 mt-2 break-words">{article.excerpt}</p>}</div>
-        <div className="flex flex-wrap gap-2"><Link to={`/admin/articoli/${article.id}`} className={`${buttonClass} text-primary`}>{review ? 'Apri revisione' : 'Modifica'}</Link><button disabled={busy} onClick={() => changeStatus(article)} className={buttonClass}>{article.status === 'discarded' ? 'Recupera' : article.status === 'published' ? 'Ritira' : 'Scarta'}</button></div>
+        <div className="flex-1 min-w-0"><p className="font-body font-medium break-words">{article.title}</p><p className="text-xs text-gray-500 mt-1">{statusLabels[article.status]} · {article.origin} · versione {article.version} · {article.content_format || 'Formato da definire'}</p>{article.excerpt && <p className="text-sm text-gray-500 mt-2 break-words">{article.excerpt}</p>}</div>
+        <div className="flex flex-wrap gap-2"><Link to={`/admin/articoli/${article.id}`} className={`${buttonClass} text-primary`}>Apri revisione</Link><button disabled={busy} onClick={() => changeStatus(article)} className={buttonClass}>{article.status === 'discarded' ? 'Recupera' : article.status === 'published' ? 'Ritira' : 'Scarta'}</button></div>
         {article.status === 'published' && <SocialPanel key={`${article.id}:${article.version}`} article={article} />}
       </div>)}
     </div>}

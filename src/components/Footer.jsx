@@ -48,8 +48,8 @@ export default function Footer() {
         <div className="flex flex-wrap justify-center items-center gap-4">
           <Link to="/chi-siamo" className="text-white/70 text-sm font-body hover:text-white transition-colors">Chi siamo</Link>
           <Link to="/contatti" className="text-white/70 text-sm font-body hover:text-white transition-colors">Contatti</Link>
-          <Link to="/sitemap" className="text-white/70 text-sm font-body hover:text-white transition-colors">
-            Sitemap
+          <Link to="/" className="text-white/70 text-sm font-body hover:text-white transition-colors">
+            Archivio
           </Link>
           <Link to="/privacy" className="text-white/70 text-sm font-body hover:text-white transition-colors">
             Privacy Policy

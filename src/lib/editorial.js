@@ -18,7 +18,7 @@ export function filterArticles(query, filter) {
 }
 
 export async function articleCount(filter = 'all') {
-  const { count, error } = await filterArticles(supabase.from('articles').select('id', { count: 'exact', head: true }), filter)
+  const { count, error } = await filterArticles(supabase.rpc('editor_articles', {}, { count: 'exact', head: true }).select('id'), filter)
   if (error || count === null) throw error || new Error('Conteggio indisponibile')
   return count
 }

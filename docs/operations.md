@@ -508,3 +508,7 @@ colore scuro esistente e test sul rapporto effettivo (prima2.81:1, minimo4.5:1).
 Lint, build e41/41 prove browser passate. Nota minore differita: aggiungere casi
 browser legacy con data valida e versioni approvate coincidenti/diverse per
 rendere più specifica la regressione del guard, già verificato direttamente.
+
+## Candidato P1 del 16 novembre 2026
+
+La nuova implementazione, le verifiche e l’ordine di rilascio sono descritti in [P1: implementazione e verifica](p1-validation-2026-11-16.md). Il candidato separa archivio pubblico e pannello privato e richiede AAL2 alla redazione. Le sezioni storiche sopra non sono istruzioni per attivare il nuovo deployment. Prima del passaggio occorrono verifica del recupero MFA e prove del gateway in staging; migrazioni, grant e build vanno distribuiti nell’ordine indicato.

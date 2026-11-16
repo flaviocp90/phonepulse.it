@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import EditorMfa from './EditorMfa'
 
 export default function ProtectedRoute({ children }) {
   const [status, setStatus] = useState('loading')
@@ -20,7 +21,10 @@ export default function ProtectedRoute({ children }) {
         if (!data.session) { verifiedUser.current = null; setStatus('anonymous'); return }
         const result = await supabase.auth.getUser()
         if (result.error || !result.data.user) throw result.error || new Error('Utente non disponibile')
-        if (active && token === generation) { setError(''); verifiedUser.current = result.data.user.id; setStatus(result.data.user.app_metadata?.phonepulse_role === 'editor' ? 'editor' : 'denied') }
+        const editor = result.data.user.app_metadata?.phonepulse_role === 'editor'
+        const assurance = editor ? await supabase.auth.mfa.getAuthenticatorAssuranceLevel() : null
+        if (assurance?.error) throw assurance.error
+        if (active && token === generation) { setError(''); verifiedUser.current = result.data.user.id; setStatus(editor ? assurance.data.currentLevel === 'aal2' ? 'editor' : 'mfa' : 'denied') }
       } catch {
         if (active && token === generation) { if (!verifiedUser.current) setStatus('error'); setError('Impossibile verificare l’accesso. Riprova.') }
       }
@@ -48,6 +52,7 @@ export default function ProtectedRoute({ children }) {
 
   if (status === 'loading') return <div role="status" className="min-h-screen bg-bg flex items-center justify-center">Verifica accesso...</div>
   if (status === 'anonymous') return <Navigate to="/admin/login" replace />
+  if (status === 'mfa') return <EditorMfa onVerified={() => setRetry(value => value + 1)} />
   if (status === 'editor') return <>{error && <div role="alert" className="bg-red-50 p-4">{error}<button onClick={() => setRetry(value => value + 1)} className="text-primary ml-3">Riprova verifica accesso</button></div>}{children}</>
   return <div className="min-h-screen bg-bg flex items-center justify-center p-6"><div className="max-w-md space-y-4">
     <div role="alert">{status === 'denied' ? 'Questo account non ha il ruolo editor.' : error}{status === 'denied' && error && <p>{error}</p>}</div>

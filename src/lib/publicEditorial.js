@@ -25,10 +25,7 @@ export function stockPhotoCredit(value) {
 
 export function publicEditorial(article) {
   const publishedAt = validDate(article.published_at)
-  const contentDate = validDate(article.content_updated_at)
-  const verifiedLegacy = article.version != null && article.approved_version === article.version && validDate(article.last_verified_at)
-  const updatedAt = publishedAt && contentDate && Date.parse(contentDate) > Date.parse(publishedAt)
-    && (['manual', 'rss'].includes(article.origin) || verifiedLegacy) ? contentDate : undefined
+  const updatedAt = validDate(article.public_updated_at)
   return {
     author: typeof article.author === 'string' ? article.author.trim() || undefined : undefined,
     format: Object.hasOwn(formatLabels, article.content_format) ? formatLabels[article.content_format] : undefined,

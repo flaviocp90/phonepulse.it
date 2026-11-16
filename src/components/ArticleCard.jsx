@@ -49,10 +49,10 @@ export default function ArticleCard({ article, featured = false }) {
             {categories.name}
           </span>
         )}
-        <h3 className={`font-heading text-white leading-tight ${featured ? 'text-4xl' : 'text-2xl'}`}>
+        <h3 className={`font-body font-semibold text-white leading-tight ${featured ? 'text-4xl' : 'text-2xl'}`}>
           {title}
         </h3>
-        <time className="text-xs text-white/50 font-body">{formatDate(published_at)}</time>
+        <time className="text-sm text-white/90 font-body">{formatDate(published_at)}</time>
       </div>
     </Link>
   )

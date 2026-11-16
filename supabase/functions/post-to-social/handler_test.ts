@@ -47,12 +47,12 @@ function fixture(options: Record<string, unknown> = {}) {
   return { fetcher: fetcher as typeof fetch, calls, deliveries }
 }
 const request = (platforms = ['telegram']) => new Request('https://edge.test', {
-  method: 'POST', headers: { Authorization: 'Bearer fake' }, body: JSON.stringify({ article_id: id, platforms }) })
+  method: 'POST', headers: { Authorization: `Bearer e30.${btoa(JSON.stringify({ aal: 'aal2' }))}.synthetic` }, body: JSON.stringify({ article_id: id, platforms }) })
 Deno.test('methods, bad body, invalid token and fake user_metadata cannot send', async () => {
   const f = fixture()
   assert((await handleRequest(new Request('https://edge.test'), config, f.fetcher)).status === 405)
   assert((await handleRequest(new Request('https://edge.test', { method: 'POST', body: 'null' }), config, f.fetcher)).status === 401)
-  assert((await handleRequest(new Request('https://edge.test', { method: 'POST', headers: { Authorization: 'Bearer fake' }, body: 'null' }), config, f.fetcher)).status === 400)
+  assert((await handleRequest(new Request('https://edge.test', { method: 'POST', headers: { Authorization: `Bearer e30.${btoa(JSON.stringify({ aal: 'aal2' }))}.synthetic` }, body: 'null' }), config, f.fetcher)).status === 400)
   assert((await handleRequest(request(), config, fixture({ invalidToken: true }).fetcher)).status === 401)
   const fake = fixture({ fakeRole: true })
   assert((await handleRequest(request(), config, fake.fetcher)).status === 403)
@@ -91,4 +91,13 @@ Deno.test('empty selection only returns durable status and channel readiness', a
   const data = await response.json()
   assert(response.status === 200 && data.channels.instagram === false)
   assert(!f.calls.some(url => url.includes('api.telegram') || url.includes('graph.facebook') || url.includes('claim_social')))
+})
+
+Deno.test('a verified editor at AAL1 cannot read deliveries or send social posts', async () => {
+  const f = fixture()
+  const req = new Request('https://edge.test', { method: 'POST',
+    headers: { Authorization: `Bearer e30.${btoa(JSON.stringify({ aal: 'aal1' }))}.synthetic` },
+    body: JSON.stringify({ article_id: id, platforms: ['telegram'] }) })
+  assert((await handleRequest(req, config, f.fetcher)).status === 403)
+  assert(f.calls.length === 1 && f.calls[0].includes('/auth/v1/user'))
 })

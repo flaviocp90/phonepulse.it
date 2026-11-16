@@ -47,6 +47,11 @@ export async function handleRequest(req: Request, config: Config, request: typeo
     const user = await verified.json()
     if (!user.id) return reply({ error: 'Unauthorized' }, 401)
     if (user.app_metadata?.phonepulse_role !== 'editor') return reply({ error: 'Editor role required' }, 403)
+    // Auth has verified this same token; only then inspect its MFA assurance claim.
+    let assurance
+    try { assurance = JSON.parse(atob(authorization.slice(7).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).aal }
+    catch { return reply({ error: 'MFA required' }, 403) }
+    if (assurance !== 'aal2') return reply({ error: 'MFA required' }, 403)
     const headers = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, 'Content-Type': 'application/json' }
     const rpc = async (name: string, args: unknown) => {
       const response = await request(`${base}/rest/v1/rpc/${name}`, {

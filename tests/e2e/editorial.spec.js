@@ -10,7 +10,7 @@ const article = (overrides = {}) => ({ id, title: 'Notizia verificabile', slug: 
 async function fixture(page, options = {}) {
   const state = { row: article(options.article), calls: [], queries: [], violations: [], ...options }
   const user = { id, email: 'editor@example.test', app_metadata: { phonepulse_role: options.role === 'none' ? undefined : 'editor' } }
-  const session = { access_token: 'synthetic-access-token', refresh_token: 'synthetic-refresh', expires_at: Math.floor(Date.now() / 1000) + 36000, expires_in: 36000, token_type: 'bearer', user }
+  const session = { access_token: `e30.${Buffer.from(JSON.stringify({ sub: id, aal: options.aal || 'aal2', exp: Math.floor(Date.now() / 1000) + 36000 })).toString('base64url')}.c2lnbmF0dXJl`, refresh_token: 'synthetic-refresh', expires_at: Math.floor(Date.now() / 1000) + 36000, expires_in: 36000, token_type: 'bearer', user }
   if (!options.anonymous) await page.addInitScript(session => localStorage.setItem('sb-supabase-auth-token', JSON.stringify(session)), session)
   await page.route('**/*', async route => {
     const request = route.request()
@@ -28,7 +28,7 @@ async function fixture(page, options = {}) {
       if (state.storageGate) await state.storageGate
       return state.uploadError ? route.fulfill({ status: 403, json: { message: 'denied' } }) : route.fulfill({ json: { Key: url.pathname } })
     }
-    if (url.pathname.startsWith('/rest/v1/rpc/')) {
+    if (url.pathname.startsWith('/rest/v1/rpc/') && !url.pathname.endsWith('/editor_articles')) {
       const name = url.pathname.split('/').at(-1)
       const args = request.postDataJSON()
       state.calls.push({ name, args })
@@ -54,7 +54,7 @@ async function fixture(page, options = {}) {
       if (name === 'set_article_status') state.row.status = args.p_status
       return route.fulfill({ json: { id: args.p_id || id, version: state.row.version, status: state.row.status, ...(name === 'publish_article' ? { changed: true } : {}) } })
     }
-    if (request.method() !== 'GET' && request.method() !== 'HEAD') { state.violations.push('REST mutation'); return fail('Direct writes forbidden') }
+    if (request.method() !== 'GET' && request.method() !== 'HEAD' && !url.pathname.endsWith('/editor_articles')) { state.violations.push('REST mutation'); return fail('Direct writes forbidden') }
     if (url.pathname.endsWith('/article_events')) {
       const version = url.searchParams.get('version')
       return route.fulfill({ json: version === `eq.${state.aiReview?.version}` ? [state.aiReview] : [] })
@@ -62,7 +62,7 @@ async function fixture(page, options = {}) {
     if (url.pathname.endsWith('/article_review_drafts')) return route.fulfill({ json: state.claimDraft || null })
     if (url.pathname.endsWith('/categories')) return route.fulfill({ json: [] })
     if (url.pathname.endsWith('/tags')) return route.fulfill({ json: [{ id: tagId, name: 'Android' }] })
-    if (url.pathname.endsWith('/articles')) {
+    if (url.pathname.endsWith('/editor_articles')) {
       state.queries.push(Object.fromEntries(url.searchParams))
       if (url.searchParams.has('id')) return route.fulfill({ json: state.row })
       if (state.listError) return route.fulfill({ status: 503, json: { message: 'Unavailable' } })
@@ -107,7 +107,7 @@ test('refresh Auth conserva testo dirty e verifica di rete fallita resta recuper
 test('dashboard conteggi indisponibili mostra — e non zero', async ({ page }) => {
   await fixture(page, { listError: true })
   await page.goto('/admin/dashboard')
-  await expect(page.getByRole('alert')).toContainText('conteggi sono indisponibili')
+  await expect(page.getByRole('alert')).toContainText('Elenco indisponibile')
   await expect(page.getByText('0', { exact: true })).toHaveCount(0)
   await expect(page.getByText('—', { exact: true }).first()).toBeVisible()
 })
@@ -139,6 +139,7 @@ test('coda nuova separata, paginazione server, ricerca letterale e indisponibili
   await page.getByRole('button', { name: 'Successiva', exact: true }).click()
   await expect(page.getByText('Nuova bozza 10', { exact: true })).toBeVisible()
   expect(state.queries.some(q => q.offset === '10' && q.limit === '10' && q.status === 'eq.draft' && q.origin === 'in.(rss,manual)')).toBeTruthy()
+  await page.getByRole('link', { name: 'Archivio', exact: true }).click()
   await page.getByRole('button', { name: 'Archivio legacy', exact: true }).click()
   await expect(page.getByText('4359 articoli', { exact: true })).toBeVisible()
   await page.getByLabel('Cerca titolo').fill('100%_')
@@ -208,7 +209,7 @@ test('fonte draft malformata resta correggibile senza crash o approvazione', asy
   await expect(page.getByRole('button', { name: 'Approva', exact: true })).toBeDisabled()
   await page.getByLabel('URL 1', { exact: true }).fill('https://example.test/corretta')
   await expect(page.getByLabel('URL 1', { exact: true })).toHaveValue('https://example.test/corretta')
-  await page.getByRole('button', { name: 'Preview', exact: true }).click()
+  await page.getByRole('button', { name: 'Anteprima', exact: true }).click()
   await expect(page.locator('.article-content')).toContainText('Fatti documentati')
 })
 
@@ -223,6 +224,7 @@ test('fonte mancante e checklist incompleta bloccano approvazione', async ({ pag
 test('affiliate legacy object vuoto conserva draft e correzione published senza conversione', async ({ page }) => {
   const state = await fixture(page, { article: { affiliate_links: {} } })
   await page.goto(`/admin/articoli/${id}`)
+  await page.getByText('Opzioni avanzate: SEO e affiliazioni', { exact: true }).click()
   await expect(page.getByLabel('Affiliate links (JSON)')).toHaveValue('{}')
   await page.getByLabel('Titolo', { exact: true }).fill('Bozza legacy aggiornata')
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
@@ -247,12 +249,14 @@ test('affiliate legacy non vuoto visibile e invariato non revoca approved; modif
   const affiliate = { shop: 'Negozio storico', url: 'https://example.test/legacy-affiliate' }
   const state = await fixture(page, { article: { affiliate_links: affiliate, status: 'approved', approved_version: 1, approved_by: id, approved_at: new Date().toISOString() } })
   await page.goto(`/admin/articoli/${id}`)
+  await page.getByText('Opzioni avanzate: SEO e affiliazioni', { exact: true }).click()
   await expect(page.getByLabel('Affiliate links (JSON)')).toHaveValue(JSON.stringify(affiliate, null, 2))
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Versione approvata invariata')
   expect(state.calls[0].args.p_article).not.toHaveProperty('affiliate_links')
   expect(state.row.affiliate_links).toEqual(affiliate)
   expect(state.row.version).toBe(1)
+  await page.getByText('Stato e cronologia della versione', { exact: true }).click()
   await expect(page.getByText('Stato: Approvato', { exact: true })).toBeVisible()
   await page.getByLabel('Affiliate links (JSON)').fill('{"changed":true}')
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
@@ -277,6 +281,7 @@ test('salvataggio invariato conserva null e approvazione; verifica published no-
   expect(state.calls[0].args.p_article).not.toHaveProperty('affiliate_links')
   expect(state.row.affiliate_links).toBe(null)
   expect(state.row.version).toBe(1)
+  await page.getByText('Stato e cronologia della versione', { exact: true }).click()
   await expect(page.getByText('Stato: Approvato', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Pubblica', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('pubblicato')
@@ -298,13 +303,14 @@ test('modifica approved revoca approvazione e conflitto preserva testo', async (
   state.conflict = false
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Bozza salvata' })).toBeVisible()
+  await page.getByText('Stato e cronologia della versione', { exact: true }).click()
   await expect(page.getByText('Stato: Bozza', { exact: true })).toBeVisible()
 })
 
 test('correzione published storica, preview sanificata e ritiro separato', async ({ page }) => {
   const state = await fixture(page, { article: { status: 'published', sources: [{ ...source(), url: 'http://example.test/storica', published_at: '2020-01-01T10:00:00Z' }] } })
   await page.goto(`/admin/articoli/${id}`)
-  await page.getByRole('button', { name: 'Preview', exact: true }).click()
+  await page.getByRole('button', { name: 'Anteprima', exact: true }).click()
   await expect(page.locator('.article-content script')).toHaveCount(0)
   await page.getByRole('button', { name: 'Editor', exact: true }).click()
   await page.getByLabel('Titolo', { exact: true }).fill('Correzione storica')
@@ -315,6 +321,7 @@ test('correzione published storica, preview sanificata e ritiro separato', async
   expect(state.calls[0].args.p_article.sources[0].url).toMatch(/^http:/)
   page.once('dialog', dialog => dialog.accept())
   await page.getByRole('button', { name: 'Ritira', exact: true }).click()
+  await page.getByText('Stato e cronologia della versione', { exact: true }).click()
   await expect(page.getByText('Stato: Scartato', { exact: true })).toBeVisible()
   expect(state.calls.at(-1).name).toBe('set_article_status')
 })
@@ -381,6 +388,7 @@ test('RPC vecchia dopo A→B→A non aggiorna versione o baseline locale', async
   } finally { release() }
   await expect.poll(() => state.row.version).toBe(2)
   await expect(page.getByLabel('Titolo', { exact: true })).toHaveValue('Nuovo testo A dopo ritorno')
+  await page.getByText('Stato e cronologia della versione', { exact: true }).click()
   await expect(page.getByText('Versione: 1', { exact: false })).toBeVisible()
   await expect(page.getByRole('status')).toHaveCount(0)
 })
@@ -474,7 +482,7 @@ test('template, ricerca tag e anteprima mobile non richiedono scrittura del mark
   await expect(page.getByRole('button', { name: 'Android', exact: true })).toHaveCount(0)
   await page.getByLabel('Cerca tag').fill('andro')
   await expect(page.getByRole('button', { name: 'Android', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Preview', exact: true }).click()
+  await page.getByRole('button', { name: 'Anteprima', exact: true }).click()
   await page.getByRole('button', { name: 'Mobile', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Procedura', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Mobile', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -523,12 +531,13 @@ test('import ricerca prepara solo una bozza, conserva provenienza e richiede nuo
     article: { title: 'Ricerca documentale di prova', excerpt: 'Sommario documentato', content: 'Un fatto da revisionare [c1](https://example.test/fonte).', content_format: 'guide', sources: [source()] },
     claims: [{ statement: 'Un fatto documentale da verificare nel CMS.', source_url: source().url, evidence: 'Imported evidence must not become approval.', rationale: 'Imported rationale is not an authenticated decision.', decision: 'supported' }],
     provenance: { manifest_sha256: 'a'.repeat(64), model: 'synthetic-model', authentication_verified: true } }
+  await page.getByText('Importa ricerca multi-fonte', { exact: true }).first().click()
   await page.getByLabel('Importa ricerca multi-fonte').setInputFiles({ name: 'research.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) })
   await expect(page.getByLabel('Titolo', { exact: true })).toHaveValue(payload.article.title)
   await page.getByRole('textbox', { name: 'Contenuto visuale' }).click()
   await page.getByLabel('Titolo', { exact: true }).click()
-  await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveValue('unknown')
-  await expect(page.getByLabel('Motivazione della revisione')).toHaveValue('')
+  await expect(page.getByRole('combobox', { name: 'Esito', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toHaveCount(0)
   expect(state.calls).toEqual([])
   await page.getByLabel('Autore', { exact: true }).fill('Editor sintetico')
   await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
@@ -647,4 +656,14 @@ test('salvare una nuova bozza elimina la copia locale prima del cambio di URL', 
   await page.goto('/admin/articoli/nuovo')
   await expect(page.getByRole('textbox', { name: 'Contenuto visuale' })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Recupero bozza' })).toHaveCount(0)
+})
+
+test('nuova bozza mostra salvataggio e nasconde la revisione fino al primo salvataggio', async ({ page }) => {
+  await fixture(page)
+  await page.goto('/admin/articoli/nuovo')
+  await expect(page.getByLabel('Titolo', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Salva bozza', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Approva', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Spunta tutto', exact: true })).toHaveCount(0)
+  await expect(page.getByText('Approvazione:', { exact: false })).toHaveCount(0)
 })
