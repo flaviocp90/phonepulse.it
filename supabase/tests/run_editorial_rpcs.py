@@ -168,6 +168,10 @@ try:
             assert len(ai_review) == 1
             run('ai-review-migration', psql + ['-f', str(ai_review[0])])
             run('ai-review-green', psql + ['-f', 'supabase/tests/ai_draft_review.sql'])
+            luna_publish = list((repo / 'supabase/migrations').glob('*_publish_luna_review.sql'))
+            assert len(luna_publish) == 1
+            run('luna-publish-migration', psql + ['-f', str(luna_publish[0])])
+            run('luna-publish-green', psql + ['-f', 'supabase/tests/publish_luna_review.sql'])
         if args.social:
             run('social-red', psql + ['-f', 'supabase/tests/social_delivery.sql'], expected=3)
             assert 'social delivery RPCs absent' in (base / 'social-red.stderr').read_text(), 'wrong social RED failure'
