@@ -2,7 +2,7 @@ name: Job A — Generazione gratuita bozze per review
 
 on:
   schedule:
-    - cron: '23 2 * * *'
+    - cron: '23 2,10,18 * * *'
   workflow_dispatch:
 
 permissions:

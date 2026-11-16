@@ -68,6 +68,16 @@ class AutomationTests(unittest.TestCase):
                 for call in request.call_args_list:
                     self.assertEqual(call.kwargs['json']['provider']['max_price'], {'prompt': 0, 'completion': 0})
 
+    def test_provider_budget_includes_failed_calls_and_prevents_fallback_when_exhausted(self):
+        response = Mock(status_code=503)
+        with patch.object(news, 'OPENROUTER_API_KEY', 'fake'), \
+             patch.object(news.requests, 'post', return_value=response) as request:
+            slots = iter(range(3))
+            news.chiama_openrouter('first', slots)
+            news.chiama_openrouter('second', slots)
+            news.chiama_openrouter('third', slots)
+        self.assertEqual(request.call_count, 3)
+
     def test_atom_entry_uses_feed_content_and_updated_date_when_publish_date_is_absent(self):
         xml = b"""<feed xmlns="http://www.w3.org/2005/Atom"><title>Example</title><entry>
           <title>Android update</title><link href="https://example.com/news" />
@@ -106,11 +116,11 @@ class AutomationTests(unittest.TestCase):
             gemini.assert_not_called()
 
     def test_candidate_scan_is_bounded_even_when_every_item_is_skipped(self):
-        sources = [item(link=f'https://example.com/{i}') for i in range(30)]
+        sources = [item(link=f'https://example.com/{i}') for i in range(40)]
         with patch.object(news, 'raccogli_tutti_i_feed', return_value=sources), \
              patch.object(news, 'processa_articolo', return_value='skipped') as process:
             self.assertEqual(news.run_generation(database([{'id': 'news'}]), {}, 'Editor'), 'no_candidates')
-            self.assertEqual(process.call_count, 10)
+            self.assertEqual(process.call_count, news.MAX_CANDIDATES_PER_RUN)
 
     def setUp(self):
         sleeper = patch.object(news.time, 'sleep')
@@ -224,7 +234,7 @@ class AutomationTests(unittest.TestCase):
             news.processa_articolo(item(), db, 'news', 'Editor')
 
     def test_full_rss_queue_does_not_fetch_or_generate(self):
-        db = database(count=20)
+        db = database(count=news.MAX_OPEN_DRAFTS)
         with patch.dict(os.environ, {'PHONEPULSE_EDITOR_AUTHOR': 'Editor'}), \
              patch.object(news, 'get_supabase', return_value=db), \
              patch.object(news, 'raccogli_tutti_i_feed') as feeds:
@@ -243,7 +253,7 @@ class AutomationTests(unittest.TestCase):
              patch.object(news, 'raccogli_tutti_i_feed', return_value=sources), \
              patch.object(news, 'processa_articolo', return_value='created') as process:
             news.run_generation(db, {}, 'Editor')
-            self.assertEqual(process.call_count, 5)
+            self.assertEqual(process.call_count, news.MAX_DRAFTS_PER_RUN)
         with patch.dict(os.environ, {'PHONEPULSE_EDITOR_AUTHOR': 'Editor'}), \
              patch.object(news, 'get_supabase', return_value=db), \
              patch.object(news, 'raccogli_tutti_i_feed', return_value=[item()]), \

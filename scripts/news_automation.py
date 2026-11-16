@@ -67,9 +67,11 @@ OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 GEMINI_DAILY_LIMIT = 50
 GOOGLE_CSE_DAILY_LIMIT = 99
 
-MAX_DRAFTS_PER_RUN = 5
-MAX_OPEN_DRAFTS = 20
-MAX_CANDIDATES_PER_RUN = 10
+MAX_DRAFTS_PER_RUN = 8
+MAX_OPEN_DRAFTS = 40
+MAX_CANDIDATES_PER_RUN = 35
+# Three scheduled runs use at most 48 requests, including provider fallbacks.
+MAX_PROVIDER_CALLS_PER_RUN = 16
 PREFERRED_EVIDENCE_CHARS = 400
 MAX_FEED_BYTES = 2 * 1024 * 1024
 EDITORIAL_COVER_URL = 'https://www.phonepulse.it/cover-news.svg'
@@ -248,7 +250,7 @@ def chiama_gemini(supabase: Client, prompt: str) -> tuple[str | None, str | None
 OPENROUTER_MODELS = ("particle-ai/particle-1:free", "openrouter/free")
 
 
-def chiama_openrouter(prompt: str) -> tuple[dict | None, str | None]:
+def chiama_openrouter(prompt: str, call_slots=None) -> tuple[dict | None, str | None]:
     """Return the first usable JSON response from the free models."""
     if not OPENROUTER_API_KEY:
         return None, None
@@ -260,6 +262,8 @@ def chiama_openrouter(prompt: str) -> tuple[dict | None, str | None]:
     }
 
     for model in OPENROUTER_MODELS:
+        if call_slots is not None and next(call_slots, None) is None:
+            break
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -292,9 +296,9 @@ def chiama_openrouter(prompt: str) -> tuple[dict | None, str | None]:
     return None, None
 
 
-def genera_bozza(supabase: Client, item: dict) -> tuple[dict | None, str | None]:
+def genera_bozza(supabase: Client, item: dict, call_slots=None) -> tuple[dict | None, str | None]:
     """Draft only through free models with the zero-price request cap."""
-    return chiama_openrouter(build_prompt(item))
+    return chiama_openrouter(build_prompt(item), call_slots)
 
 
 # ---------------------------------------------------------------------------
@@ -443,14 +447,14 @@ def invia_telegram(messaggio: str):
 # ---------------------------------------------------------------------------
 # Pipeline principale per un singolo articolo
 # ---------------------------------------------------------------------------
-def processa_articolo(item: dict, supabase: Client, category_id: str, author: str) -> str:
+def processa_articolo(item: dict, supabase: Client, category_id: str, author: str, call_slots=None) -> str:
     if not eligible_item(item):
         return 'skipped'
     source_key = normalize_source_url(item['link'])
     duplicate = supabase.table('articles').select('id').eq('source_key', source_key).execute()
     if duplicate.data:
         return 'skipped'
-    article, llm_model = genera_bozza(supabase, item)
+    article, llm_model = genera_bozza(supabase, item, call_slots)
     if article is None:
         logger.error('Free generation unavailable for candidate')
         return 'failed'
@@ -473,7 +477,7 @@ def processa_articolo(item: dict, supabase: Client, category_id: str, author: st
         'author': author, 'status': 'draft', 'origin': 'rss', 'content_format': 'news',
         'sources': [{'url': item['link'], 'title': item['title'], 'publisher': item.get('publisher'),
                      'published_at': item['published_at'], 'retrieved_at': item['retrieved_at'],
-                     'facts': item.get('excerpt', ''),
+                     'facts': item.get('feed_text') or item.get('excerpt', ''),
                      'retrieval_basis': 'feed_content' if item.get('feed_text') else 'feed_summary'}],
         'source_key': source_key, 'content_updated_at': datetime.now(timezone.utc).isoformat(),
         'affiliate_links': [], 'score': None, 'llm_model': llm_model,
@@ -515,7 +519,14 @@ def run_generation(supabase, counts, author):
         reverse=True,
     )
     seen = set()
-    counts.update(created=0, failed=0, skipped=0)
+    counts.update(created=0, failed=0, skipped=0, provider_calls=0)
+
+    def provider_slots():
+        for slot in range(MAX_PROVIDER_CALLS_PER_RUN):
+            counts['provider_calls'] += 1
+            yield slot
+
+    call_slots = provider_slots()
     for source in candidates:
         if not eligible_item(source):
             continue
@@ -523,9 +534,11 @@ def run_generation(supabase, counts, author):
         if key in seen:
             continue
         seen.add(key)
-        outcome = processa_articolo(source, supabase, category_id, author)
+        outcome = processa_articolo(source, supabase, category_id, author, call_slots)
         counts[outcome] += 1
-        if counts['created'] >= capacity or sum(counts.values()) >= MAX_CANDIDATES_PER_RUN:
+        if (counts['created'] >= capacity
+                or counts['created'] + counts['failed'] + counts['skipped'] >= MAX_CANDIDATES_PER_RUN
+                or counts['provider_calls'] >= MAX_PROVIDER_CALLS_PER_RUN):
             break
     if counts['failed'] and not counts['created']:
         raise RuntimeError('All draft generation attempts failed')

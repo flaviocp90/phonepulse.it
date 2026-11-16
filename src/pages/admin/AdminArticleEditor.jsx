@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { checklist, editorialAction, statusLabels } from '../../lib/editorial'
 import { claimReviewAudit, claimReviewSummary, readClaimDraft } from '../../lib/claimReview'
 import ClaimReviewPanel from './ClaimReviewPanel'
+import AiDraftReview from './AiDraftReview'
 import PhotoInsert from './PhotoInsert'
 import DraftRecovery from './DraftRecovery'
 import { mediaPath } from '../../lib/privateMedia'
@@ -36,6 +37,7 @@ export default function AdminArticleEditor() {
   const isNew = !id || id === 'nuovo'
   const [form, setForm] = useState(EMPTY_FORM)
   const [record, setRecord] = useState(null)
+  const [aiReview, setAiReview] = useState(null)
   const [categories, setCategories] = useState([])
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([])
@@ -117,6 +119,20 @@ export default function AdminArticleEditor() {
     }).catch(() => { if (active) { setError('Articolo indisponibile. Riprova il caricamento.'); setRecord(null); setLoading(false) } })
     return () => { active = false }
   }, [id, isNew, reload])
+
+  const reviewVersion = record?.id === id && record?.origin !== 'legacy' ? record?.version : null
+  useEffect(() => {
+    if (!reviewVersion) return
+    let active = true
+    const remember = (event, error) => {
+      if (active) setAiReview({ id, version: reviewVersion, event, error })
+    }
+    supabase.from('article_events').select('version, created_at, review')
+      .eq('article_id', id).eq('version', reviewVersion).eq('action', 'ai_reviewed').maybeSingle()
+      .then(({ data, error }) => remember(data, error))
+      .catch(error => remember(null, error))
+    return () => { active = false }
+  }, [id, reviewVersion, reload])
 
   useEffect(() => {
     function beforeUnload(event) { if (dirtyRef.current) { event.preventDefault(); event.returnValue = '' } }
@@ -281,6 +297,8 @@ export default function AdminArticleEditor() {
       {dirty && <p className="text-amber-700">Modifiche non salvate: salva prima di approvare o pubblicare. La checklist va ripetuta dopo il salvataggio.</p>}
       {!isNew && <button onClick={reloadServer} disabled={saving} className={buttonClass}>Ricarica versione server</button>}
     </div>
+    {reviewVersion && (status === 'draft' || aiReview?.event) && aiReview?.id === id && aiReview.version === reviewVersion &&
+      <AiDraftReview event={aiReview.event} error={aiReview.error} />}
     <fieldset disabled={saving} className="min-w-0">
     {isNew && <div className={`${panelClass} mb-5`}><label className="block text-sm font-semibold">Importa ricerca multi-fonte<input type="file" accept="application/json,.json" onChange={importResearch} className="block w-full text-xs mt-2" /></label><p className="text-xs text-gray-500">Importa un file di ricerca PhonePulse (massimo 100 KB). Nessun articolo viene salvato o approvato automaticamente; le affermazioni richiedono una nuova revisione.</p></div>}
     {preview ? <div>
