@@ -5,7 +5,6 @@ import Home from './pages/Home.jsx'
 import NotFound from './pages/NotFound.jsx'
 import ArticlePage from './pages/ArticlePage.jsx'
 import CategoryPage from './pages/CategoryPage.jsx'
-import AboutPage from './pages/AboutPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import PrivacyPage from './pages/PrivacyPage.jsx'
 
@@ -17,7 +16,6 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/articoli/:slug" element={<ArticlePage />} />
         <Route path="/categoria/:slug" element={<CategoryPage />} />
-        <Route path="/chi-siamo" element={<AboutPage />} />
         <Route path="/contatti" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/sitemap" element={<Navigate to="/" replace />} />

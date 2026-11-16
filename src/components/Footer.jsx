@@ -46,7 +46,6 @@ export default function Footer() {
 
         {/* Col 3: legal links */}
         <div className="flex flex-wrap justify-center items-center gap-4">
-          <Link to="/chi-siamo" className="text-white/70 text-sm font-body hover:text-white transition-colors">Chi siamo</Link>
           <Link to="/contatti" className="text-white/70 text-sm font-body hover:text-white transition-colors">Contatti</Link>
           <Link to="/" className="text-white/70 text-sm font-body hover:text-white transition-colors">
             Archivio

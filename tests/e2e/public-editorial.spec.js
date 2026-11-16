@@ -64,12 +64,12 @@ test('archivio non inventa autore formato date o prove', async ({ page }) => {
   expect(schema.datePublished).toBeUndefined()
 })
 
-test('presentazione dichiara responsabilità e metodo senza promettere prove inesistenti', async ({ page }) => {
+test('Chi siamo è disattivata e la home resta raggiungibile', async ({ page }) => {
   await fixtures(page, record)
   await page.goto('/chi-siamo')
-  await expect(page.getByText('Flavio Coppola', { exact: true })).toBeVisible()
-  await expect(page.getByText('Usiamo i dispositivi per settimane, non per ore.')).toHaveCount(0)
-  await expect(page.getByText(/Ogni recensione è il risultato di un utilizzo reale/)).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Pagina non trovata', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Chi siamo', exact: true })).toHaveCount(0)
+  await expect(page.locator('a[href="/chi-siamo"]')).toHaveCount(0)
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Ultimi articoli', exact: true })).toBeVisible()
   await expect(page.locator('header a')).toHaveCount(1)

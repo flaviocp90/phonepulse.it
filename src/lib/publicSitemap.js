@@ -1,7 +1,6 @@
 export const SITE_URL = 'https://www.phonepulse.it'
 export const sitemapPages = [
   { label: 'Home', to: '/' },
-  { label: 'Chi siamo', to: '/chi-siamo' },
   { label: 'Contatti', to: '/contatti' },
   { label: 'Privacy', to: '/privacy' },
 ]

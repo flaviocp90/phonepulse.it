@@ -7,6 +7,7 @@ const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url
 const editorial = JSON.parse(readFileSync(new URL('../editorial/vercel.json', import.meta.url)))
 test('public admin URLs return real 404 without a private destination', () => {
   assert.deepEqual(config.rewrites.find(rule => rule.source === '/admin/:path*'), { source: '/admin/:path*', destination: '/api/retired-admin' })
+  assert.deepEqual(config.rewrites.find(rule => rule.source === '/chi-siamo'), { source: '/chi-siamo', destination: '/api/retired-admin' })
   const res = { headers: {}, setHeader(key, value) { this.headers[key] = value }, status(code) { this.code = code; return this }, send(body) { this.body = body; return this } }
   retiredAdmin({}, res)
   assert.equal(res.code, 404)
