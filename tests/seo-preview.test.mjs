@@ -57,8 +57,9 @@ test('formats Markdown with safe links, headings and lists but escapes raw HTML'
   assert.match(html, /<li>/);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(html, /href="javascript:/);
-  assert.match(html, /Fonti/);
-  assert.match(html, /Fonte primaria/);
+  assert.doesNotMatch(html, /<h2>Fonti<\/h2>/);
+  assert.doesNotMatch(html, /Fonte primaria/);
+  assert.match(html, /"citation":\["https:\/\/example.org\/fonte"\]/);
   assert.match(html, /Di Autore/);
   assert.match(html, /"@type":"Article"/);
   assert.match(html, /noindex,nofollow/);

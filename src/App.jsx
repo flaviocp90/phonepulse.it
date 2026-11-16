@@ -11,6 +11,7 @@ import PrivacyPage from './pages/PrivacyPage.jsx'
 function App() {
   return (
     <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center">Caricamento...</div>}>
+      <PrivacyPreferences />
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -23,7 +24,6 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <PrivacyPreferences />
     </Suspense>
   )
 }

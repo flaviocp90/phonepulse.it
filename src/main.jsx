@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import App from '#app'
+import PageNavigation from './components/PageNavigation'
 import './index.css'
 
 // The initial HTTP response may already contain SEO metadata from the server.
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <HelmetProvider>
       <BrowserRouter>
+        <PageNavigation />
         <App />
       </BrowserRouter>
     </HelmetProvider>

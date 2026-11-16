@@ -35,13 +35,13 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-dark flex flex-col items-center justify-center px-4">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-dark flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
           <span className="text-primary text-3xl font-heading font-bold leading-none">PHONE</span>
           <span className="text-white text-3xl font-heading font-bold leading-none">PULSE</span>
-          <p className="text-white/30 text-xs font-body mt-2 uppercase tracking-widest">Pannello admin</p>
+          <p className="text-white/70 text-xs font-body mt-2 uppercase tracking-widest">Pannello admin</p>
         </div>
 
         {/* Form */}
@@ -90,7 +90,7 @@ export default function AdminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary-dark text-white font-body font-semibold text-sm py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-action hover:bg-action-hover text-white font-body font-semibold text-sm py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -103,6 +103,6 @@ export default function AdminLogin() {
           </button>
         </form>
       </div>
-    </div>
+    </main>
   )
 }

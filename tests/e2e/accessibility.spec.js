@@ -37,7 +37,7 @@ test('testata essenziale navigabile da tastiera e social nel footer', async ({ p
   await expect(home).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL('/')
-  await expect(page.locator('header button, header nav')).toHaveCount(0)
+  await expect(page.locator('header').getByRole('navigation', { name: 'Navigazione principale' })).toBeVisible()
   await expect(page.locator('footer').getByRole('link', { name: 'Instagram', exact: true })).toBeVisible()
 })
 

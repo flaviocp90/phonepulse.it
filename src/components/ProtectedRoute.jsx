@@ -53,10 +53,10 @@ export default function ProtectedRoute({ children }) {
   if (status === 'loading') return <div role="status" className="min-h-screen bg-bg flex items-center justify-center">Verifica accesso...</div>
   if (status === 'anonymous') return <Navigate to="/admin/login" replace />
   if (status === 'mfa') return <EditorMfa onVerified={() => setRetry(value => value + 1)} />
-  if (status === 'editor') return <>{error && <div role="alert" className="bg-red-50 p-4">{error}<button onClick={() => setRetry(value => value + 1)} className="text-primary ml-3">Riprova verifica accesso</button></div>}{children}</>
+  if (status === 'editor') return <>{error && <div role="alert" className="bg-red-50 p-4">{error}<button onClick={() => setRetry(value => value + 1)} className="text-action ml-3">Riprova verifica accesso</button></div>}{children}</>
   return <div className="min-h-screen bg-bg flex items-center justify-center p-6"><div className="max-w-md space-y-4">
     <div role="alert">{status === 'denied' ? 'Questo account non ha il ruolo editor.' : error}{status === 'denied' && error && <p>{error}</p>}</div>
-    {status === 'error' && <button onClick={() => setRetry(value => value + 1)} className="text-primary">Riprova</button>}
-    <button onClick={logout} className="block text-primary">Logout</button>
+    {status === 'error' && <button onClick={() => setRetry(value => value + 1)} className="text-action">Riprova</button>}
+    <button onClick={logout} className="block text-action">Logout</button>
   </div></div>
 }

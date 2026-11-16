@@ -31,10 +31,10 @@ export default function CategoryPage() {
         <SEO title="Categoria non disponibile" />
         <Helmet><meta name="robots" content="noindex,follow" /></Helmet>
         <Header />
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
-          <h1 className="text-4xl font-heading text-dark mb-4">Categoria non disponibile</h1>
+        <main id="main-content" tabIndex={-1} className="flex-1 max-w-3xl mx-auto px-4 py-16">
+          <h1 className="text-4xl font-body font-semibold text-dark mb-4">Categoria non disponibile</h1>
           <p className="font-body text-gray-600 mb-6">Questa sezione è stata ritirata mentre verifichiamo la classificazione dei contenuti.</p>
-          <Link to="/" className="font-body text-primary underline">Leggi le news</Link>
+          <Link to="/" className="font-body text-action underline">Leggi le news</Link>
         </main>
         <Footer />
       </div>
@@ -125,7 +125,7 @@ function CategoryFeed() {
       )}
       <Header />
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} aria-busy={loading} className="flex-1">
         {/* Category header */}
         <section className="bg-dark border-b border-white/10">
           <div className="max-w-6xl mx-auto px-4 py-12">
@@ -141,11 +141,11 @@ function CategoryFeed() {
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: category.color || '#FF5C1A' }}
                   />
-                  <span className="text-xs font-body text-white/40 uppercase tracking-widest">Categoria</span>
+                  <span className="text-xs font-body text-white/70 uppercase tracking-widest">Categoria</span>
                 </div>
-                <h1 className="text-4xl font-heading font-bold text-white">{category.name}</h1>
+                <h1 className="text-4xl font-body font-bold text-white">{category.name}</h1>
                 {category.description && (
-                  <p className="text-white/50 font-body mt-2 text-base">{category.description}</p>
+                  <p className="text-white/70 font-body mt-2 text-base">{category.description}</p>
                 )}
               </>
             ) : null}
@@ -161,7 +161,7 @@ function CategoryFeed() {
           )}
 
           {!loading && !error && total !== null && (
-            <p className="text-sm text-gray-400 font-body mb-8">
+            <p className="text-sm text-gray-600 font-body mb-8">
               {total} {total === 1 ? 'articolo' : 'articoli'} trovati
             </p>
           )}
@@ -172,10 +172,10 @@ function CategoryFeed() {
             </div>
           ) : articles.length === 0 && !error ? (
             <div className="text-center py-20">
-              <p className="text-gray-400 font-body">
+              <p className="text-gray-600 font-body">
                 {slug === 'recensioni' ? 'Non sono ancora disponibili prove pubblicate.' : 'Nessun articolo in questa categoria ancora.'}
               </p>
-              <Link to="/" className="inline-block mt-6 text-sm text-primary font-body hover:underline">
+              <Link to="/" className="inline-block mt-6 text-sm text-action font-body hover:underline">
                 Leggi gli ultimi articoli
               </Link>
             </div>

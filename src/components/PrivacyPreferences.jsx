@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -16,9 +16,18 @@ function savedChoice() {
 export default function PrivacyPreferences() {
   const [analytics, setAnalytics] = useState(savedChoice)
   const [open, setOpen] = useState(() => savedChoice() === null)
+  const panel = useRef(null)
+  const trigger = useRef(null)
 
   useEffect(() => {
-    const show = () => setOpen(true)
+    const show = () => {
+      trigger.current = document.activeElement
+      setOpen(true)
+      window.requestAnimationFrame(() => {
+        panel.current?.focus({ preventScroll: true })
+        panel.current?.scrollIntoView({ block: 'start' })
+      })
+    }
     const sync = event => { if (event.key === STORAGE_KEY || event.key === null) window.location.reload() }
     window.addEventListener('phonepulse:privacy', show)
     window.addEventListener('storage', sync)
@@ -58,17 +67,21 @@ export default function PrivacyPreferences() {
     }
     setAnalytics(value)
     setOpen(false)
+    window.requestAnimationFrame(() => {
+      const target = trigger.current?.isConnected ? trigger.current : document.querySelector('main')
+      target?.focus({ preventScroll: true })
+    })
     // Reload on withdrawal to stop timers and handlers already installed by providers.
     if (analytics === true && !value) window.location.reload()
   }
 
   return <>
     {analytics === true && <Analytics />}
-    {open && <aside aria-label="Preferenze privacy" className="bg-white border-t border-border px-4 py-5 font-body text-sm">
+    {open && <aside ref={panel} tabIndex={-1} aria-label="Preferenze privacy" className="bg-white border-b border-border px-4 py-5 font-body text-sm">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <p className="flex-1">Usiamo strumenti tecnici per far funzionare il sito. Solo se accetti attiviamo Google Analytics, Ahrefs e Vercel Web Analytics per misurare le visite. Puoi cambiare scelta dal footer. <Link to="/privacy" className="text-primary underline">Informativa privacy</Link>.</p>
-        <button onClick={() => choose(false)} className="border border-dark rounded-lg px-4 py-2 text-dark">Rifiuta statistiche</button>
-        <button onClick={() => choose(true)} className="border border-dark rounded-lg px-4 py-2 text-dark">Accetta statistiche</button>
+        <p className="flex-1">Usiamo strumenti tecnici per far funzionare il sito. Solo se accetti attiviamo Google Analytics, Ahrefs e Vercel Web Analytics per misurare le visite. Puoi cambiare scelta dal footer. <Link to="/privacy" className="text-action underline">Informativa privacy</Link>.</p>
+        <button onClick={() => choose(false)} className="min-h-11 border border-dark rounded-lg px-4 py-3 text-dark">Rifiuta statistiche</button>
+        <button onClick={() => choose(true)} className="min-h-11 border border-dark rounded-lg px-4 py-3 text-dark">Accetta statistiche</button>
       </div>
     </aside>}
   </>

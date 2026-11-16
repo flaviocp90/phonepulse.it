@@ -45,8 +45,11 @@ function ArticleSkeleton() {
 export default function ArticlePage() {
   const { slug } = useParams();
   const [loadedArticle, setArticle] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [fetchLoading, setLoading] = useState(true);
+  const [loadedSlug, setLoadedSlug] = useState(null);
+  const loading = fetchLoading || loadedSlug !== slug;
   const [error, setError] = useState(null);
+  const [retry, setRetry] = useState(0);
   const [relatedResult, setRelated] = useState(null);
 
   const article = loadedArticle?.slug === slug ? loadedArticle : null;
@@ -91,13 +94,13 @@ export default function ArticlePage() {
         setError("Impossibile caricare l’articolo. Riprova più tardi.");
         console.error(err);
       } finally {
-        if (active) setLoading(false);
+        if (active) { setLoadedSlug(slug); setLoading(false); }
       }
     }
 
     fetchArticle();
     return () => { active = false; };
-  }, [slug]);
+  }, [slug, retry]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -127,15 +130,16 @@ export default function ArticlePage() {
       )}
       <Header />
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} aria-busy={loading} className="flex-1">
         {loading && <ArticleSkeleton />}
 
         {!loading && error && (
           <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-            <p className="text-gray-500 font-body mb-6">{error}</p>
+            <p role="alert" className="text-gray-600 font-body mb-6">{error}</p>
+            {error.startsWith("Impossibile") && <button onClick={() => setRetry(value => value + 1)} className="block mx-auto mb-6 bg-action text-white px-5 py-3 rounded-lg hover:bg-action-hover">Riprova</button>}
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-primary font-body font-medium hover:underline"
+              className="inline-flex items-center gap-2 text-action font-body font-medium hover:underline"
             >
               ← Torna alla home
             </Link>
@@ -176,7 +180,7 @@ export default function ArticlePage() {
                     backgroundColor: article.categories.color
                       ? `${article.categories.color}18`
                       : "#FF5C1A18",
-                    color: article.categories.color || "#FF5C1A",
+                    color: "#0D0D0D",
                   }}
                 >
                   {article.categories.name}
@@ -237,23 +241,6 @@ export default function ArticlePage() {
               />
             )}
 
-            {editorial.sources.length > 0 && (
-              <section aria-labelledby="article-sources" className="mt-10 pt-8 border-t border-border font-body">
-                <h2 id="article-sources" className="text-2xl font-heading text-dark mb-4">Fonti</h2>
-                <ul className="space-y-4 text-sm break-words">
-                  {editorial.sources.map((source, index) => (
-                    <li key={index}>
-                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-dark underline underline-offset-4">{source.title}</a>
-                      <p className="text-gray-600 mt-1">
-                        {source.publisher}
-                        {source.retrievedAt && <span>{source.publisher ? ' · ' : ''}Consultata: <time dateTime={source.retrievedAt}>{formatDate(source.retrievedAt)}</time></span>}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
             {/* Tags */}
             {article.article_tags && article.article_tags.length > 0 && (
               <div className="mt-10 pt-8 border-t border-border">
@@ -277,7 +264,7 @@ export default function ArticlePage() {
               Array.isArray(article.affiliate_links) &&
               article.affiliate_links.length > 0 && (
                 <div className="mt-10 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
-                  <h3 className="text-sm font-body font-semibold text-primary uppercase tracking-wide mb-4">
+                  <h3 className="text-sm font-body font-semibold text-action uppercase tracking-wide mb-4">
                     Dove acquistare
                   </h3>
                   <div className="flex flex-col gap-3">
@@ -289,11 +276,11 @@ export default function ArticlePage() {
                         rel="noopener noreferrer sponsored"
                         className="inline-flex items-center justify-between gap-3 bg-white border border-border px-4 py-2.5 rounded-xl hover:border-primary/60 hover:shadow-md transition-all duration-200 group"
                       >
-                        <span className="text-sm font-body font-medium text-dark group-hover:text-primary transition-colors">
+                        <span className="text-sm font-body font-medium text-dark group-hover:text-action transition-colors">
                           {link.label || link.url || link}
                         </span>
                         <svg
-                          className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors shrink-0"
+                          className="w-4 h-4 text-gray-400 group-hover:text-action transition-colors shrink-0"
                           viewBox="0 0 20 20"
                           fill="none"
                         >
@@ -327,7 +314,7 @@ export default function ArticlePage() {
               )}
               <Link
                 to={article.categories && article.categories.slug !== 'news' ? `/categoria/${article.categories.slug}` : "/"}
-                className="inline-flex items-center gap-2 text-sm text-gray-500 font-body hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 text-sm text-gray-500 font-body hover:text-action transition-colors"
               >
                 ← {article.categories && article.categories.slug !== 'news' ? `Torna a ${article.categories.name}` : "Torna all’archivio"}
               </Link>

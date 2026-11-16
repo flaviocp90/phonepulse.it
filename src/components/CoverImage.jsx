@@ -1,6 +1,18 @@
 import { useState } from 'react'
 
-export default function CoverImage({ src, alt, className = '', loading = 'lazy' }) {
+export function imageSrcSet(src) {
+  try {
+    const url = new URL(src)
+    if (url.protocol !== 'https:' || !['images.pexels.com', 'images.unsplash.com'].includes(url.hostname)) return undefined
+    return [160, 320, 640, 940].map(width => {
+      url.searchParams.set('w', String(width))
+      url.searchParams.delete('h')
+      return `${url.href} ${width}w`
+    }).join(', ')
+  } catch { return undefined }
+}
+
+export default function CoverImage({ src, alt, className = '', loading = 'lazy', sizes = '(min-width: 768px) 736px, calc(100vw - 32px)' }) {
   const [failedSrc, setFailedSrc] = useState(null)
   if (!src || failedSrc === src) {
     return (
@@ -12,5 +24,5 @@ export default function CoverImage({ src, alt, className = '', loading = 'lazy' 
       </div>
     )
   }
-  return <img key={src} src={src} alt={alt} className={className} loading={loading} decoding="async" onError={() => setFailedSrc(src)} />
+  return <img key={src} src={src} srcSet={imageSrcSet(src)} sizes={sizes} alt={alt} className={className} loading={loading} decoding="async" onError={() => setFailedSrc(src)} />
 }
