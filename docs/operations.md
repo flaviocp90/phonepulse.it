@@ -482,7 +482,7 @@ mapping. Prima pubblicazione valida da published_at; aggiornamento sostanziale d
 content_updated_at solo se successivo. Per legacy richiede last_verified_at e
 approvazione della versione corrente: updated_at tecnico non diventa dateModified.
 
-Origin rss dichiara assistenza AI; legacy segnala che le informazioni incomplete
+Per gli articoli di archivio, la pagina segnala che le informazioni incomplete
 non attestano prove dirette. Voti e giudizi automatici rimossi da articolo e card:
 il campo score resta nell’editor/database, ma un metodo pubblico verificabile
 serve prima di renderlo nuovamente. I suggerimenti leggono fino a tre articoli
@@ -491,7 +491,7 @@ l’articolo. Le liste conservano query compatibili con lo schema precedente;
 il formato è esposto nel dettaglio quando presente, non inventato dalla categoria.
 
 Verifica: pilota sintetico browser con autore/fonti/date, legacy incompleto,
-URL fonte pericoloso, firma PhonePulse Organization e disclosure AI; schermata
+URL fonte pericoloso, firma PhonePulse Organization e assenza della nota AI negli articoli RSS; schermata
 mobile390px controllata. Nessuna riscrittura di testi live, nuovo evento analytics
 o attivazione monitor. Pilota reale, consenso, HTML server U4 e rollout coordinato
 restano aperti; questa verifica locale non autorizza l’attivazione dei job.
