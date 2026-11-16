@@ -55,6 +55,10 @@ async function fixture(page, options = {}) {
       return route.fulfill({ json: { id: args.p_id || id, version: state.row.version, status: state.row.status, ...(name === 'publish_article' ? { changed: true } : {}) } })
     }
     if (request.method() !== 'GET' && request.method() !== 'HEAD') { state.violations.push('REST mutation'); return fail('Direct writes forbidden') }
+    if (url.pathname.endsWith('/article_events')) {
+      const version = url.searchParams.get('version')
+      return route.fulfill({ json: version === `eq.${state.aiReview?.version}` ? [state.aiReview] : [] })
+    }
     if (url.pathname.endsWith('/article_review_drafts')) return route.fulfill({ json: state.claimDraft || null })
     if (url.pathname.endsWith('/categories')) return route.fulfill({ json: [] })
     if (url.pathname.endsWith('/tags')) return route.fulfill({ json: [{ id: tagId, name: 'Android' }] })
@@ -144,6 +148,26 @@ test('coda nuova separata, paginazione server, ricerca letterale e indisponibili
   await expect(page.getByRole('alert')).toContainText('indisponibile')
   await expect(page.getByText('0 articoli', { exact: true })).toHaveCount(0)
   expect(state.queries.filter(q => q.limit).every(q => !q.select.split(',').includes('content'))).toBeTruthy()
+})
+
+test('mostra la motivazione di Luna solo per la versione salvata', async ({ page }) => {
+  await fixture(page, { aiReview: {
+    version: 1,
+    created_at: '2026-11-16T10:00:00Z',
+    review: {
+      outcome: 'needs_attention',
+      filters: { us_only: { status: 'no', reason: 'Disponibile anche in Italia' }, discount: { status: 'no', reason: 'Prezzo di listino' } },
+      checks: Object.fromEntries(reviewKeys.map(key => [key, { status: 'uncertain', reason: 'Controllo sintetico' }])),
+    },
+  } })
+  await page.goto(`/admin/articoli/${id}`)
+  await page.getByText('Revisione GPT-6 Luna · Da verificare').click()
+  await expect(page.getByText('Disponibile anche in Italia')).toBeVisible()
+  await expect(page.getByText('Controllo sintetico')).toHaveCount(7)
+  await page.getByLabel('Titolo', { exact: true }).fill('Titolo aggiornato')
+  await page.getByRole('button', { name: 'Salva bozza', exact: true }).click()
+  await expect(page.getByText('Revisione GPT-6 Luna · In attesa')).toBeVisible()
+  await expect(page.getByText('Disponibile anche in Italia')).toHaveCount(0)
 })
 
 test('salva tag atomicamente, approva versione salvata, pubblica separatamente', async ({ page }) => {

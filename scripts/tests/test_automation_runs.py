@@ -54,7 +54,7 @@ class RunTests(unittest.TestCase):
             run_tracked(db, 'generation', lambda client, counts: 'no_candidates')
 
     def test_generation_queue_full_and_no_candidates_are_distinct(self):
-        for queued, sources, expected in ((20, [], 'skipped_queue_full'), (0, [], 'no_candidates')):
+        for queued, sources, expected in ((news.MAX_OPEN_DRAFTS, [], 'skipped_queue_full'), (0, [], 'no_candidates')):
             with patch.object(news, 'raccogli_tutti_i_feed', return_value=sources), \
                  patch.object(news, 'get_category_id_news', return_value='news'):
                 self.assertEqual(news.run_generation(database(count=queued), {}, 'Editor'), expected)

@@ -164,6 +164,10 @@ try:
             assert len(optional) == 1
             run('optional-claims-migration', psql + ['-f', str(optional[0])])
             run('guided-legacy-regression', psql + ['-f', 'supabase/tests/editorial_rpcs.sql'])
+            ai_review = list((repo / 'supabase/migrations').glob('*_ai_draft_review.sql'))
+            assert len(ai_review) == 1
+            run('ai-review-migration', psql + ['-f', str(ai_review[0])])
+            run('ai-review-green', psql + ['-f', 'supabase/tests/ai_draft_review.sql'])
         if args.social:
             run('social-red', psql + ['-f', 'supabase/tests/social_delivery.sql'], expected=3)
             assert 'social delivery RPCs absent' in (base / 'social-red.stderr').read_text(), 'wrong social RED failure'
