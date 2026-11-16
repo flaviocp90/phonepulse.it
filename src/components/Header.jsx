@@ -3,11 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 
 const navLinks = [
   { to: '/', label: 'Home', exact: true },
-  { to: '/categoria/recensioni', label: 'Recensioni' },
-  { to: '/categoria/comparativi', label: 'Comparativi' },
-  { to: '/categoria/guide', label: 'Guide' },
   { to: '/categoria/news', label: 'News' },
-  { to: '/categoria/offerte', label: 'Offerte' },
 ]
 
 export default function Header() {

@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
 
 import publish_article as publishing
 
@@ -29,14 +29,12 @@ class PublishArticleTests(unittest.TestCase):
         db = database([article(status='draft'), article(), article(id='old', sources=[{
             'published_at': (datetime.now(timezone.utc) - timedelta(hours=73)).isoformat()}]),
             article(id='legacy', origin='legacy'), article(id='modified', approved_version=1)])
-        with patch.object(publishing, 'update_sitemap') as sitemap, \
-             patch.object(publishing, 'invia_telegram') as telegram:
+        with patch.object(publishing, 'invia_telegram') as telegram:
             result = publishing.run_publication(db, dry_run=True, publish_count=3)
             self.assertEqual(result['candidates'], ['fresh'])
             self.assertEqual(result['expired'], 1)
             db.rpc.assert_not_called()
             db.table.return_value.update.assert_not_called()
-            sitemap.assert_not_called()
             telegram.assert_not_called()
 
     def test_evidence_required_mode_excludes_older_approvals(self):
@@ -52,16 +50,13 @@ class PublishArticleTests(unittest.TestCase):
     def test_evidence_required_mode_fails_before_writes_if_migration_missing(self):
         db = database([])
         db.table.return_value.execute.side_effect = RuntimeError('claims_required unavailable')
-        with patch.object(publishing, 'update_sitemap') as sitemap:
-            with self.assertRaisesRegex(RuntimeError, 'claims_required'):
-                publishing.run_publication(db, require_evidence=True)
-            db.rpc.assert_not_called()
-            sitemap.assert_not_called()
+        with self.assertRaisesRegex(RuntimeError, 'claims_required'):
+            publishing.run_publication(db, require_evidence=True)
+        db.rpc.assert_not_called()
 
     def test_publishes_via_rpc_with_expected_version(self):
         db = database([article()])
-        with patch.object(publishing, 'update_sitemap', return_value=True), \
-             patch.object(publishing, 'invia_telegram'):
+        with patch.object(publishing, 'invia_telegram'):
             result = publishing.run_publication(db, publish_count=1)
         self.assertEqual(result['published'], 1)
         db.rpc.assert_called_once_with('publish_article', {'p_id': 'fresh', 'p_expected_version': 2})
@@ -72,15 +67,13 @@ class PublishArticleTests(unittest.TestCase):
         error.code = '40001'
         db = database([article()])
         db.rpc.return_value.execute.side_effect = error
-        with patch.object(publishing, 'update_sitemap', return_value=True), \
-             patch.object(publishing, 'invia_telegram') as telegram:
+        with patch.object(publishing, 'invia_telegram') as telegram:
             result = publishing.run_publication(db)
             self.assertEqual(result['conflicts'], 1)
             telegram.assert_not_called()
         db.rpc.return_value.execute.side_effect = None
         db.rpc.return_value.execute.return_value.data['changed'] = False
-        with patch.object(publishing, 'update_sitemap', return_value=True), \
-             patch.object(publishing, 'invia_telegram') as telegram:
+        with patch.object(publishing, 'invia_telegram') as telegram:
             self.assertEqual(publishing.run_publication(db)['unchanged'], 1)
             telegram.assert_not_called()
 
@@ -89,45 +82,17 @@ class PublishArticleTests(unittest.TestCase):
                        article(id='guide', content_format='guide', sources=[{'published_at': None}])])
         self.assertEqual(publishing.run_publication(db, dry_run=True)['candidates'], ['guide'])
 
-    def test_distribution_recovery_runs_without_new_candidates(self):
+    def test_empty_queue_has_no_publication_or_distribution_effects(self):
         db = database([])
-        with patch.object(publishing, 'update_sitemap', return_value=True) as sitemap:
+        with patch.object(publishing, 'invia_telegram') as telegram:
             self.assertEqual(publishing.run_publication(db)['published'], 0)
-            sitemap.assert_called_once_with(db)
-        with patch.object(publishing, 'update_sitemap', return_value=False):
-            with self.assertRaisesRegex(RuntimeError, 'distribution'):
-                publishing.run_publication(db)
-
-    def test_generated_sitemap_keeps_www_canonical(self):
-        db = database([{'slug': 'articolo-esempio', 'published_at': '2026-11-09T08:00:00Z'}])
-        with patch('builtins.open', mock_open()) as handle, \
-             patch.object(publishing.subprocess, 'run') as run:
-            run.return_value = SimpleNamespace(returncode=0, stdout='', stderr='')
-            self.assertTrue(publishing.update_sitemap(db))
-            generated = ''.join(call.args[0] for call in handle().write.call_args_list)
-            self.assertIn('<loc>https://www.phonepulse.it/</loc>', generated)
-            self.assertIn('<loc>https://www.phonepulse.it/articoli/articolo-esempio</loc>', generated)
-            self.assertNotIn('<loc>https://phonepulse.it/', generated)
-            run.assert_called()
-
-    def test_retry_pushes_existing_sitemap_commit(self):
-        db = database([])
-        def failed_push(command, **kwargs):
-            if command == ['git', 'commit', '-m', 'chore: aggiorna sitemap.xml con articoli pubblicati [skip ci]']:
-                return SimpleNamespace(returncode=1, stdout='nothing to commit', stderr='')
-            if command == ['git', 'push']:
-                raise RuntimeError('push unavailable')
-            return SimpleNamespace(returncode=0, stdout='', stderr='')
-        with patch('builtins.open', mock_open()), \
-             patch.object(publishing.subprocess, 'run', side_effect=failed_push) as run:
-            self.assertFalse(publishing.update_sitemap(db))
-            self.assertEqual(run.call_args.args[0], ['git', 'push'])
+            db.rpc.assert_not_called()
+            telegram.assert_not_called()
 
     def test_rpc_failure_cannot_report_success(self):
         db = database([article()])
         db.rpc.return_value.execute.side_effect = RuntimeError('DB down')
-        with patch.object(publishing, 'update_sitemap', return_value=True), \
-             patch.object(publishing, 'invia_telegram') as telegram:
+        with patch.object(publishing, 'invia_telegram') as telegram:
             with self.assertRaises(RuntimeError):
                 publishing.run_publication(db)
             telegram.assert_not_called()

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const categories = ['news', 'guide', 'recensioni'].map((slug, id) => ({ id: String(id), slug, name: slug === 'news' ? 'News' : slug === 'guide' ? 'Guide' : 'Recensioni' }))
+const categories = ['news', 'altro', 'recensioni'].map((slug, id) => ({ id: String(id), slug, name: slug === 'news' ? 'News' : slug === 'altro' ? 'Altro' : 'Recensioni' }))
 const article = (slug, category = categories[0]) => ({ id: slug, slug, title: `Articolo ${slug}`, content: 'Contenuto fittizio', categories: category, published_at: '2026-10-01' })
 
 async function navigate(page, path) {
@@ -74,12 +74,12 @@ test('risposta categoria lenta non sovrascrive categoria veloce', async ({ page 
   })
   await page.goto('/categoria/news')
   await requested
-  await page.locator('header').getByRole('link', { name: 'Guide', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Articolo guide-0', exact: true })).toBeVisible()
+  await navigate(page, '/categoria/altro')
+  await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
   release()
   await page.waitForLoadState('networkidle')
   await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Guide', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Altro', exact: true })).toBeVisible()
 })
 
 test('paginazione conta tutti i risultati e resetta al cambio categoria', async ({ page }) => {
@@ -88,10 +88,10 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
   await fixtures(page, async (url, route) => {
     if (url.pathname.endsWith('/articles') && url.searchParams.get('category_id') === 'eq.1') {
       if (url.searchParams.get('offset') === '12') {
-        await route.fulfill({ json: [article('guide-12', categories[1])], headers: { 'content-range': '12-12/25', 'access-control-expose-headers': 'content-range' } })
+        await route.fulfill({ json: [article('altro-12', categories[1])], headers: { 'content-range': '12-12/25', 'access-control-expose-headers': 'content-range' } })
       } else {
         await delayed
-        await route.fulfill({ json: [article('guide-0', categories[1])], headers: { 'content-range': '0-0/25', 'access-control-expose-headers': 'content-range' } })
+        await route.fulfill({ json: [article('altro-0', categories[1])], headers: { 'content-range': '0-0/25', 'access-control-expose-headers': 'content-range' } })
       }
       return true
     }
@@ -100,18 +100,18 @@ test('paginazione conta tutti i risultati e resetta al cambio categoria', async 
   await expect(page.getByText('25 articoli trovati')).toBeVisible()
   await page.getByRole('button', { name: 'Successivo' }).click()
   await expect(page.getByRole('heading', { name: 'Articolo news-12', exact: true })).toBeVisible()
-  await page.locator('header').getByRole('link', { name: 'Guide', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Guide', exact: true })).toBeVisible()
+  await navigate(page, '/categoria/altro')
+  await expect(page.getByRole('heading', { name: 'Altro', exact: true })).toBeVisible()
   await page.waitForTimeout(250) // Allow an incorrectly issued page-2 response to render while page 1 is held.
-  await expect(page.getByRole('heading', { name: 'Articolo guide-12', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Articolo altro-12', exact: true })).toHaveCount(0)
   release()
-  await expect(page.getByRole('heading', { name: 'Articolo guide-0', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 3')).toBeVisible()
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 3')).toBeVisible()
   await page.goForward()
-  await expect(page.getByRole('heading', { name: 'Articolo guide-0', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Articolo altro-0', exact: true })).toBeVisible()
 })
 
 test('errore categoria non mostra risultati vecchi o zero e recupera', async ({ page }) => {
@@ -130,18 +130,37 @@ test('errore categoria non mostra risultati vecchi o zero e recupera', async ({ 
   await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toHaveCount(0)
   await expect(page.getByText(/articoli trovati/)).toHaveCount(0)
   fail = false
-  await page.locator('header').getByRole('link', { name: 'Guide', exact: true }).click()
+  await navigate(page, '/categoria/altro')
   await expect(page.getByText('25 articoli trovati')).toBeVisible()
 })
 
-test('Recensioni vuota spiega le prove e suggerisce contenuti pubblicati', async ({ page }) => {
-  await fixtures(page)
-  await page.goto('/categoria/recensioni')
-  await expect(page.getByText('Non sono ancora disponibili prove pubblicate.')).toBeVisible()
-  await page.getByRole('link', { name: 'Leggi gli ultimi articoli' }).click()
-  await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toBeVisible()
-})
+for (const slug of ['recensioni', 'comparativi', 'guide', 'offerte']) {
+  test(`categoria ritirata ${slug} non reindirizza e offre il feed`, async ({ page }) => {
+    await fixtures(page)
+    await page.goto(`/categoria/${slug}`)
+    await expect(page.getByRole('heading', { name: 'Categoria non disponibile' })).toBeVisible()
+    await expect(page).toHaveURL(`/categoria/${slug}`)
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,follow')
+    await page.getByRole('link', { name: 'Leggi le news', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Articolo news-0', exact: true })).toBeVisible()
+  })
+}
 
+for (const width of [390, 1400]) {
+  test(`categorie ritirate assenti da home, menu e mappa a ${width}px`, async ({ page }) => {
+    await fixtures(page)
+    await page.setViewportSize({ width, height: 900 })
+    for (const path of ['/', '/sitemap']) {
+      await page.goto(path)
+      if (path === '/sitemap') await expect(page.locator('a[href="/articoli/news-0"]').first()).toBeVisible()
+      if (width === 390) await page.locator('header button').click()
+      for (const slug of ['recensioni', 'comparativi', 'guide', 'offerte']) {
+        await expect(page.locator(`a[href="/categoria/${slug}"]`)).toHaveCount(0)
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+  })
+}
 
 test('articolo lento non sostituisce URL veloce né metadati', async ({ page }) => {
   let release

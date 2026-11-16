@@ -54,6 +54,9 @@ export default function Footer() {
           <Link to="/privacy" className="text-white/70 text-sm font-body hover:text-white transition-colors">
             Privacy Policy
           </Link>
+          <button onClick={() => window.dispatchEvent(new Event('phonepulse:privacy'))} className="text-white/70 text-sm font-body hover:text-white transition-colors">
+            Preferenze privacy
+          </button>
         </div>
       </div>
     </footer>

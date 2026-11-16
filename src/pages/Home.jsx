@@ -1,76 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 
-const CATEGORY_ICONS = {
-  recensioni: (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="w-6 h-6"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  ),
-  comparativi: (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="w-6 h-6"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  ),
-  guide: (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="w-6 h-6"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    </svg>
-  ),
-  news: (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="w-6 h-6"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  ),
-  offerte: (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="w-6 h-6"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-      <line x1="7" y1="7" x2="7.01" y2="7" />
-    </svg>
-  ),
-};
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Header from "../components/Header";
@@ -97,7 +26,6 @@ function NewsCardSkeleton() {
 
 export default function Home() {
   const [articles, setArticles] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -130,16 +58,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [, categoriesRes] = await Promise.all([
-          fetchArticles(0, false),
-          supabase
-            .from("categories")
-            .select("id, name, slug, description, color")
-            .order("name"),
-        ]);
-
-        if (categoriesRes.error) throw categoriesRes.error;
-        setCategories(categoriesRes.data || []);
+        await fetchArticles(0, false);
       } catch (err) {
         setError("Impossibile caricare i contenuti. Riprova più tardi.");
         console.error(err);
@@ -195,12 +114,6 @@ export default function Home() {
                   >
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
-                </Link>
-                <Link
-                  to="/categoria/guide"
-                  className="inline-flex items-center gap-2 border border-white/20 hover:border-white/40 text-white text-sm font-body font-semibold px-5 py-2.5 rounded-full transition-colors"
-                >
-                  Esplora le guide
                 </Link>
               </div>
             </div>
@@ -263,37 +176,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* Categories */}
-        {categories.length > 0 && (
-          <section className="bg-dark">
-            <div className="max-w-6xl mx-auto px-4 py-12">
-              <h2 className="text-3xl font-heading text-white uppercase mb-6">
-                Esplora per categoria
-              </h2>
-              <div className="flex flex-wrap justify-center gap-3">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    to={`/categoria/${cat.slug}`}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors"
-                  >
-                    <span style={{ color: cat.color || "#FF5C1A" }}>
-                      {CATEGORY_ICONS[cat.slug] || (
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: cat.color || "#FF5C1A" }}
-                        />
-                      )}
-                    </span>
-                    <span className="text-sm font-body uppercase tracking-widest">
-                      {cat.name}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
       </main>
 
       <Footer />

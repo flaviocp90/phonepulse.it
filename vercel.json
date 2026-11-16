@@ -5,6 +5,7 @@
     }
   },
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/articoli/:slug", "destination": "/api/article?slug=:slug" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
