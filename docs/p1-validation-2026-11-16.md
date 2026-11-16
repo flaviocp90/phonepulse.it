@@ -1,6 +1,6 @@
 # P1 PhonePulse: implementazione e verifica
 
-Branch `codex/resolve-p1-20261116`, base `master` `6fbcff0`. Questo documento descrive il candidato: non attesta un rilascio pubblico o una verifica Auth/PostgREST in staging.
+Branch `codex/resolve-p1-20261116`, base `master` `6fbcff0`. Questo documento descrive il candidato della [PR #79](https://github.com/flaviocp90/phonepulse.it/pull/79): il blog pubblico non è stato aggiornato. La proiezione additiva e il lettore privato sono stati applicati; il gate MFA e i grant restrittivi restano da applicare dopo i prerequisiti. Le prove Auth con account reali in staging restano aperte.
 
 ## Modifiche
 
@@ -40,8 +40,18 @@ Il progetto Vercel privato è `prj_RqDxFqkCzi6QATKPWp7BgeFKjSAq`, team `team_AFD
 2. Pubblicare e provare il pannello protetto; controllare che dominio privato, URL Vercel e preview richiedano autenticazione anche per asset e sottorotte. Misurare CSP Report-Only con login, TOTP, API, foto e anteprima; correggere le violazioni prima di applicare la policy completa.
 3. Verificare con il titolare l’accesso amministrativo a Supabase e la procedura di recupero se perde il dispositivo: verifica dell’identità, rimozione amministrativa del fattore perso, revoca delle sessioni e nuova registrazione TOTP. Conservare il segreto di backup separatamente dal dispositivo e provarne il ripristino. Non rimuovere fattori reali per un test.
 4. Registrare e verificare TOTP per ogni editor prima della migrazione MFA. Un login con sola password non deve leggere la redazione.
-5. Coordinare database e applicazioni: applicare prima `20261116161433_public_article_projection.sql` (compatibile con il sito precedente), pubblicare i due build, verificare il recupero/registrazione TOTP, applicare `20261116161935_editor_mfa.sql` e infine `20261116164445_public_article_column_grants.sql`. Non applicare i grant restrittivi prima di aver aggiornato le applicazioni: il vecchio sito usa ancora `articles.select('*')`.
+5. Coordinare database e applicazioni: applicare prima `20261116161433_public_article_projection.sql` e `20261116165453_harden_editor_reader.sql` (compatibili con il sito precedente), pubblicare i due build, verificare il recupero/registrazione TOTP, applicare `20261116161935_editor_mfa.sql` e infine `20261116164445_public_article_column_grants.sql`. Non applicare i grant restrittivi prima di aver aggiornato le applicazioni: il vecchio sito usa ancora `articles.select('*')`.
 6. Distribuire anche la funzione `post-to-social` aggiornata. Verificare i soli stati prima di qualsiasi invio e poi il controllo della revisione presente nell’HTML pubblico.
 7. Controllare in HTTP gli header privati e il 404 delle vecchie rotte sul dominio pubblico, senza redirect o riferimenti al dominio privato. Provare home, archivio, articoli, sitemap, correzione e ritiro. Chiudere le issue solo dopo i rispettivi criteri reali.
 
 Rollback applicativo e grant devono essere coordinati: ripristinare soltanto il vecchio build dopo la restrizione delle colonne rompe le sue letture. Nessun contenuto viene eliminato dalle migrazioni.
+
+## Evidenze remote sul candidato 82112e5
+
+- [Critical checks](https://github.com/flaviocp90/phonepulse.it/actions/runs/43911874897) e [suite editoriale](https://github.com/flaviocp90/phonepulse.it/actions/runs/43911874942): success. Le esecuzioni identificano SHA e ambiente Ubuntu con Node 24, Python 3.11 e PostgreSQL isolato.
+- [Pannello protetto](https://phonepulse-editorial.vercel.app/admin/login): deployment `dpl_Gb334VXC6gAtfY4PKe16njT6V4vx` READY. Richiesta senza autenticazione: 302 verso autenticazione Vercel. Richiesta autorizzata: 200 con DENY, nosniff, referrer esplicito, CSP Report-Only e no-store/noindex.
+- Preview pubblica `dpl_GdZzdCFU8RNsEmADoyV2JZruAaE1` READY: `/admin/login` restituisce 404 senza redirect o destinazione privata; `/sitemap.xml` 200 con 106 URL di articoli; redirect News torna alla home.
+- API anonima reale della vista: 106 pubblicati, embed categorie/tag disponibili, sole colonne dichiarate. La RPC editoriale rifiuta anonimo con HTTP 401 e SQLSTATE 42501. Questo non sostituisce le prove con account AAL1/AAL2.
+- La logica con privilegi del lettore è nello schema non esposto `editorial_private`; l’endpoint pubblico usa SECURITY INVOKER e mantiene il controllo attendibile del chiamante.
+
+Le migrazioni additive sono state applicate senza revocare i grant esistenti. Le restrizioni finali delle colonne, l’obbligo MFA, il rilascio della funzione social e il passaggio del blog restano da completare dopo recupero e staging. Non eseguire automaticamente tutte le migrazioni pendenti senza rispettare questi prerequisiti.

@@ -193,6 +193,7 @@ try:
             run('p1-red', psql + ['-f', 'supabase/tests/p1_security.sql'], expected=3)
             assert 'public projection absent' in (base / 'p1-red.stderr').read_text()
             run('p1-projection', psql + ['-f', str(next((repo / 'supabase/migrations').glob('*_public_article_projection.sql')))])
+            run('p1-reader-hardening', psql + ['-f', str(next((repo / 'supabase/migrations').glob('*_harden_editor_reader.sql')))])
             run('p1-unenrolled-editor', psql, sql="insert into auth.users(id,raw_app_meta_data) values ('11111111-1111-4111-8111-111111111111','{\"phonepulse_role\":\"editor\"}');")
             mfa = str(next((repo / 'supabase/migrations').glob('*_editor_mfa.sql')))
             run('p1-mfa-preflight-red', psql + ['-f', mfa], expected=3)

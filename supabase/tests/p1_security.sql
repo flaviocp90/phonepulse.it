@@ -2,6 +2,8 @@
 begin;
 do $$ begin
   if to_regclass('public.published_articles') is null then raise exception 'public projection absent'; end if;
+  if (select prosecdef from pg_proc where oid='public.editor_articles()'::regprocedure) then raise exception 'privileged exposed reader'; end if;
+  if not (select prosecdef from pg_proc where oid='editorial_private.editor_articles()'::regprocedure) then raise exception 'private reader absent'; end if;
 end $$;
 insert into auth.users(id) values ('11111111-1111-4111-8111-111111111111') on conflict do nothing;
 insert into public.articles(id,slug,title,content,status,origin,author,content_format,sources,published_at,content_updated_at)
