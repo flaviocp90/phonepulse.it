@@ -31,7 +31,7 @@ test('header conserva spazio e nessun overflow a 390, 768, 1200 e testo 200%', a
 
 test('testata essenziale navigabile da tastiera e social nel footer', async ({ page }) => {
   await fixtures(page)
-  await page.goto('/chi-siamo')
+  await page.goto('/contatti')
   const home = page.locator('header').getByRole('link', { name: 'PhonePulse home' })
   await home.focus()
   await expect(home).toBeFocused()
@@ -50,13 +50,12 @@ test('login ha label associate e annuncia errore simulato', async ({ page }) => 
   await expect(page.getByRole('alert')).toHaveText('Email o password non corretti.')
 })
 
-test('footer rende reperibili Chi siamo e Contatti', async ({ page }) => {
+test('footer mantiene Contatti e non mostra Chi siamo', async ({ page }) => {
   await fixtures(page)
-  await page.goto('/chi-siamo')
+  await page.goto('/')
+  await expect(page.locator('footer').getByRole('link', { name: 'Chi siamo', exact: true })).toHaveCount(0)
   await page.locator('footer').getByRole('link', { name: 'Contatti', exact: true }).click()
   await expect(page).toHaveURL('/contatti')
-  await page.locator('footer').getByRole('link', { name: 'Chi siamo', exact: true }).click()
-  await expect(page).toHaveURL('/chi-siamo')
 })
 
 

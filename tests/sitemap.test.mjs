@@ -38,6 +38,7 @@ test('paginates all published articles, deduplicates canonical slugs and rejects
   assert.equal((xml.match(/<loc>https:\/\/www.phonepulse.it\/articoli\//g) || []).length, 205)
   assert.doesNotMatch(xml, /articolo-999|admin|categoria\/(guide|recensioni|comparativi|offerte)/)
   assert.doesNotMatch(xml, /categoria\/news/)
+  assert.doesNotMatch(xml, /chi-siamo/)
   assert.doesNotMatch(renderSitemap([]), /categoria\//)
 })
 
