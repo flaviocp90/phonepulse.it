@@ -75,9 +75,10 @@ test('presentazione dichiara responsabilità e metodo senza promettere prove ine
   await expect(page.getByRole('link', { name: 'Leggi le news', exact: true })).toHaveAttribute('href', '/categoria/news')
 })
 
-test('firma del sito è un’organizzazione e la bozza AI è dichiarata', async ({ page }) => {
+test('la firma PhonePulse è un’organizzazione e l’articolo RSS non mostra la nota AI', async ({ page }) => {
   await fixtures(page, { ...record, author: 'PhonePulse', origin: 'rss' })
   await page.goto('/articoli/pilot')
-  await expect(page.locator('article').getByText(/Articolo preparato con assistenza AI/)).toBeVisible()
+  await expect(page.locator('article h1')).toBeVisible()
+  await expect(page.locator('article').getByText(/preparat[oa] con assistenza AI/i)).toHaveCount(0)
   await expect.poll(async () => page.locator('script[type="application/ld+json"]').evaluateAll(nodes => nodes.map(node => JSON.parse(node.textContent)).find(data => data['@type'] === 'Article')?.author)).toEqual({ '@type': 'Organization', name: 'PhonePulse' })
 })
